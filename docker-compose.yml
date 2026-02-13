@@ -1,0 +1,55 @@
+# AllFi Docker Compose 编排
+# 用法: cp .env.example .env && docker-compose up -d
+
+services:
+  backend:
+    build: ./core
+    container_name: allfi-backend
+    restart: unless-stopped
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    volumes:
+      - allfi-data:/app/data
+    environment:
+      - ALLFI_MASTER_KEY=${ALLFI_MASTER_KEY}
+      - ETHERSCAN_API_KEY=${ETHERSCAN_API_KEY}
+      - BSCSCAN_API_KEY=${BSCSCAN_API_KEY}
+      - COINGECKO_API_KEY=${COINGECKO_API_KEY}
+      # 代理配置（可选，国内用户在 .env 中启用）
+      - HTTP_PROXY=${HTTP_PROXY:-}
+      - HTTPS_PROXY=${HTTPS_PROXY:-}
+      - NO_PROXY=${NO_PROXY:-localhost,127.0.0.1}
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/logs
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    build: ./webapp
+    container_name: allfi-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./certs:/etc/nginx/certs:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /var/run
+
+volumes:
+  allfi-data:
+    driver: local

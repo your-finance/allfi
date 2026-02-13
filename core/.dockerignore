@@ -1,0 +1,9 @@
+*.db
+*.sqlite
+*.log
+.git
+.env
+logs/
+data/
+allfi
+server

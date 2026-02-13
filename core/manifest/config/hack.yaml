@@ -1,0 +1,41 @@
+# GoFrame CLI 工具配置文件
+# 用于代码生成工具 (gf gen dao/service/ctrl)
+
+gfcli:
+  # 代码生成配置
+  gen:
+    # DAO 层代码生成配置
+    dao:
+      - link: "sqlite:../data/allfi.db"
+        tables: "exchange_accounts,wallet_addresses,manual_assets,asset_details,asset_snapshots,exchange_rates,system_config"
+        removePrefix: ""
+        descriptionTag: true
+        noModelComment: false
+        path: "./internal"
+        group: "default"
+        jsonCase: "CamelLower"
+        stdTime: true
+        gJsonSupport: true
+        overwriteDao: true
+
+    # Service 接口生成配置
+    service:
+      # Logic 层实现目录
+      srcFolder: "internal/logic"
+      # Service 接口输出目录
+      dstFolder: "internal/service"
+      # 文件名命名规则（Snake/Camel/CamelLower）
+      dstFileNameCase: "Snake"
+      # 监听的文件变化路径
+      watchFile: "internal/logic/**/*.go"
+      # 是否清空目标目录
+      clear: false
+      # 接口名称前缀
+      stPattern: "s([A-Z]\\w+)"
+
+    # Controller 层代码生成配置
+    ctrl:
+      # API 定义目录
+      srcFolder: "internal/api"
+      # Controller 输出目录
+      dstFolder: "internal/controller"

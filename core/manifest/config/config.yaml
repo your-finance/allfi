@@ -1,0 +1,131 @@
+# AllFi 应用配置文件
+# 请根据实际环境修改配置项
+
+# 服务器配置
+server:
+  # 监听地址
+  address: "0.0.0.0:8080"
+  # 服务器运行模式 (development/production)
+  serverAgent: "AllFi"
+  # 日志路径
+  logPath: "./logs/server"
+  # 日志级别
+  logLevel: "all"
+  # 错误日志启用
+  errorLogEnabled: true
+  # 访问日志启用
+  accessLogEnabled: true
+  # 优雅关闭超时时间(秒)
+  gracefulTimeout: 10
+  # OpenAPI 文档配置
+  openapiPath: "/api.json"
+  swaggerPath: "/swagger"
+
+# 应用信息
+app:
+  name: "AllFi"
+  version: "0.1.0"
+  env: "development"
+
+# 数据库配置
+database:
+  default:
+    # SQLite 数据库文件路径（GoFrame v2.9+ SQLite驱动格式）
+    link: "sqlite::@file(./data/allfi.db)"
+    # 是否开启调试模式（打印SQL）
+    debug: true
+    # 字符集
+    charset: "utf8mb4"
+    # 是否dry-run（仅打印SQL不执行）
+    dryRun: false
+    # 最大空闲连接数
+    maxIdle: 10
+    # 最大打开连接数
+    maxOpen: 100
+    # 连接最大存活时间(秒)
+    maxLifetime: 3600
+
+# 日志配置
+logger:
+  # 日志级别 (ALL/DEV/PROD/DEBUG/INFO/NOTICE/WARNING/ERROR/CRITICAL)
+  level: "all"
+  # 日志输出路径
+  path: "./logs"
+  # 日志文件名
+  file: "{Y-m-d}.log"
+  # 标准输出
+  stdout: true
+  # 是否包含调用行号
+  stdoutColorDisabled: false
+  # 时间格式
+  timeFormat: "2006-01-02 15:04:05.000"
+
+# 安全配置
+security:
+  # AES-256-GCM 主加密密钥（32字节）
+  # 生产环境请使用环境变量 ALLFI_MASTER_KEY
+  masterKey: "12345678901234567890123456789012"
+  # HTTPS 配置
+  httpsEnabled: false
+  httpsCertPath: ""
+  httpsKeyPath: ""
+
+# 外部 API 配置
+externalAPIs:
+  # Etherscan API (用于 Ethereum 区块链查询)
+  etherscan:
+    apiKey: ""
+    baseURL: "https://api.etherscan.io/api"
+    timeout: 30
+
+  # BscScan API (用于 BSC 区块链查询)
+  bscscan:
+    apiKey: ""
+    baseURL: "https://api.bscscan.com/api"
+    timeout: 30
+
+  # CoinGecko API (用于价格查询)
+  coingecko:
+    apiKey: ""
+    baseURL: "https://api.coingecko.com/api/v3"
+    timeout: 30
+
+  # Yahoo Finance (用于汇率查询)
+  yahooFinance:
+    baseURL: "https://query1.finance.yahoo.com/v8/finance"
+    timeout: 30
+
+# 定时任务配置
+cron:
+  # 资产快照间隔（分钟）
+  snapshotInterval: 60
+  # 价格缓存TTL（分钟）
+  priceCacheTTL: 5
+  # 汇率缓存TTL（分钟）
+  rateCacheTTL: 60
+
+# 默认配置
+defaults:
+  # 默认计价货币
+  baseCurrency: "USDC"
+  # 支持的计价货币
+  supportedCurrencies: ["USDC", "BTC", "ETH", "CNY"]
+  # 历史数据保留天数
+  historyRetentionDays: 90
+
+# CORS 配置
+cors:
+  # 是否允许跨域
+  enabled: true
+  # 允许的源
+  allowOrigin: "*"
+  # 允许的方法
+  allowMethods: "GET,POST,PUT,DELETE,OPTIONS"
+  # 允许的请求头
+  allowHeaders: "Origin,Content-Type,Accept,Authorization"
+  # 暴露的响应头
+  exposeHeaders: "Content-Length,Access-Control-Allow-Origin,Access-Control-Allow-Headers,Content-Type"
+  # 是否允许携带凭证
+  allowCredentials: false
+  # 预检请求缓存时间(秒)
+  maxAge: 3600

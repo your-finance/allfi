@@ -1,0 +1,97 @@
+# macOS
+.DS_Store
+.claude
+docs/lib
+.shared
+.AppleDouble
+.LSOverride
+
+# IDE
+.claude
+.cursor
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Golang
+core/allfi
+core/main
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+
+# Node.js / Frontend
+node_modules/
+webapp/dist/
+webapp/build/
+webapp/.next/
+webapp/.nuxt/
+webapp/.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+data/*.db
+data/*.sqlite
+
+# Config & Secrets
+core/config/config.yaml
+*.env
+*.env.local
+.env
+.env.*
+!.env.example
+!webapp/.env
+!webapp/.env.mock
+config/config.yaml
+!config/config.example.yaml
+
+# Logs
+*.log
+logs/
+core/logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Build artifacts
+dist/
+build/
+*.tar.gz
+*.zip
+
+# Backups
+backups/
+
+# TLS certificates
+certs/
+
+# Documentation build
+docs/lib
+.playwright-mcp
+core/server
+.sisyphus
+.shared
+.cursor
+.claude
+CLAUDE.md
+docs/plans/
+.kiro
+.windsurf
+.github
+.agent

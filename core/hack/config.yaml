@@ -1,0 +1,14 @@
+gfcli:
+  gen:
+    dao:
+      - link: "sqlite::@file(./data/allfi.db)"
+        path: "./internal"
+        group: "default"
+        stdTime: true
+        withTime: true
+        descriptionTag: true
+        noJsonTag: false
+        noModelComment: false
+        overwriteDao: false
+        jsonCase: "Snake"
+        tables: "exchange_accounts,wallet_addresses,manual_assets,asset_snapshots,asset_details,exchange_rates,system_config,notifications,notification_preferences,web_push_subscriptions,price_alerts,reports,nft_caches,unified_transactions,transaction_daily_summaries,strategies,user_achievements,sync_metadata,goals"
