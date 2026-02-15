@@ -44,33 +44,73 @@ All data is stored locally. API keys are encrypted with AES-256-GCM and never le
 
 ## Quick Start
 
-### Docker (Recommended)
+### Option 1: Docker Deployment (Recommended) 🐳
+
+**Only requires Docker — no need to install Go / Node.js / pnpm locally.**
+
+Prerequisites: Docker 20.10+, Docker Compose v2+
+
+#### One-click Script Deployment
+
+```bash
+# Clone repo and deploy
+git clone https://github.com/your-finance/allfi.git
+cd allfi
+bash deploy/docker-deploy.sh
+```
+
+The script automatically: checks Docker environment → generates `.env` + security keys → builds and starts all services.
+
+#### Manual Docker Deployment
 
 ```bash
 git clone https://github.com/your-finance/allfi.git
 cd allfi
 
-# Configure environment variables
+# Generate .env (required for first run)
 cp .env.example .env
-# Edit .env — set ALLFI_MASTER_KEY (generate with: openssl rand -base64 32)
+# Edit .env — set ALLFI_MASTER_KEY (or auto-generate with the line below)
+sed -i "s|CHANGE_ME_USE_openssl_rand_base64_32|$(openssl rand -base64 32)|" .env
 
 # Start services
-docker-compose up -d
+docker compose up -d --build
 ```
 
 Visit http://localhost:3174 to get started. First-time access requires setting a PIN code (4–8 digits).
 
-### Manual Development
+```bash
+# Common Docker commands
+docker compose logs -f       # View logs
+docker compose down          # Stop services
+docker compose restart       # Restart services
+docker compose up -d --build # Rebuild and restart
+```
+
+### Option 2: Local Development
+
+For developers who need to modify the code. Requires: Go 1.24+, Node.js 20+, pnpm.
 
 ```bash
-# Backend
-cd core
-go run cmd/server/main.go     # http://localhost:8080
-
-# Frontend (new terminal)
-cd webapp
-pnpm install && pnpm dev      # http://localhost:3174
+git clone https://github.com/your-finance/allfi.git
+cd allfi
+make setup    # Generate .env + install dependencies
+make dev      # Start both backend and frontend dev servers
 ```
+
+Visit http://localhost:3174 to get started. First-time access requires setting a PIN code (4–8 digits).
+
+> **Note**: `make setup` auto-detects your environment. If Go or pnpm is missing, it will skip the corresponding dependency installation and show a warning.
+
+### Option 3: Mock Mode (No Backend)
+
+Just want to see the UI? No backend needed. Requires: Node.js 20+, pnpm.
+
+```bash
+cd allfi
+cd webapp && pnpm install && pnpm dev:mock
+```
+
+Visit http://localhost:3174 — all data is simulated.
 
 > See the [Deployment Guide](./docs/guides/deployment-guide.md) for detailed instructions.
 

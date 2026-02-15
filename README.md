@@ -99,31 +99,66 @@ AllFi 是一个**开源、自托管**的全资产聚合平台，统一管理你�
 
 ## 快速开始
 
-### 方式一：一键启动（推荐）
+### 方式一：Docker 部署（推荐） 🐳
+
+**仅需 Docker，无需本地安装 Go / Node.js / pnpm。**
+
+前置条件：Docker 20.10+, Docker Compose v2+
+
+#### 一键脚本部署
+
+```bash
+# 克隆仓库并一键启动
+git clone https://github.com/your-finance/allfi.git
+cd allfi
+bash deploy/docker-deploy.sh
+```
+
+脚本自动完成：自动检测 Docker 环境 → 生成 `.env` + 安全密钥 → 构建并启动全部服务。
+
+#### 手动 Docker 部署
 
 ```bash
 git clone https://github.com/your-finance/allfi.git
 cd allfi
-make setup    # 自动生成 .env + 安装依赖
-make dev      # 同时启动前后端
+
+# 生成 .env（首次必须）
+cp .env.example .env
+# 编辑 .env，至少修改 ALLFI_MASTER_KEY（或用下一行自动生成）
+sed -i "s|CHANGE_ME_USE_openssl_rand_base64_32|$(openssl rand -base64 32)|" .env
+
+# 启动服务
+docker compose up -d --build
 ```
 
 访问 [http://localhost:3174](http://localhost:3174) 即可使用。首次访问需设置 PIN 码（4-8 位数字）。
 
-### 方式二：Docker 部署
+```bash
+# 常用 Docker 命令
+docker compose logs -f       # 查看日志
+docker compose down          # 停止服务
+docker compose restart       # 重启服务
+docker compose up -d --build # 重新构建并启动
+```
+
+### 方式二：本地开发
+
+适合需要修改代码的开发者。依赖：Go 1.24+, Node.js 20+, pnpm。
 
 ```bash
 git clone https://github.com/your-finance/allfi.git
 cd allfi
-make setup    # 自动生成 .env
-make docker   # Docker Compose 一键启动
+make setup    # 自动生成 .env + 安装前后端依赖
+make dev      # 同时启动前后端开发服务器
 ```
 
-访问 [http://localhost:5173](http://localhost:3174)。
+访问 [http://localhost:3174](http://localhost:3174) 即可使用。首次访问需设置 PIN 码（4-8 位数字）。
+
+> **注意**：`make setup` 会自动检测本地环境。如果缺少 Go 或 pnpm，会跳过对应的依赖安装步骤并给出提示。
 
 ### 方式三：Mock 体验（无需后端）
 
-只想快速看看 UI？不需要启动后端：
+只想快速看看 UI？不需要启动后端。依赖：Node.js 20+, pnpm。
 
 ```bash
 cd allfi
@@ -136,8 +171,8 @@ cd webapp && pnpm install && pnpm dev:mock
 
 ```bash
 make help           # 查看所有命令
-make dev            # 启动前后端
-make dev-mock       # 纯前端 Mock 模式
+make dev            # 启动前后端（需要 Go + pnpm）
+make dev-mock       # 纯前端 Mock 模式（需要 pnpm）
 make build          # 构建前后端
 make docker         # Docker 启动
 make health         # 健康检查

@@ -2,7 +2,7 @@
 # 用法: make help
 
 .PHONY: help setup dev dev-mock dev-backend dev-frontend build build-backend build-frontend \
-        docker docker-build docker-down docker-logs clean health swagger
+        docker docker-build docker-down docker-logs clean health swagger _ensure-env
 
 # 默认目标
 .DEFAULT_GOAL := help
@@ -48,13 +48,24 @@ setup: ## 一键初始化（生成 .env + 安装前后端依赖）
 		echo "$(YELLOW)  ⊘ .env 已存在，跳过$(RESET)"; \
 	fi
 	@# 安装后端依赖
-	@echo "$(CYAN)  → 安装 Go 依赖...$(RESET)"
-	@cd core && go mod download && go mod verify
-	@echo "$(GREEN)  ✓ Go 依赖安装完成$(RESET)"
+	@echo "$(CYAN)  → 检查 Go 环境...$(RESET)"
+	@if command -v go >/dev/null 2>&1; then \
+		echo "$(CYAN)  → 安装 Go 依赖...$(RESET)"; \
+		cd core && go mod download && go mod verify; \
+		echo "$(GREEN)  ✓ Go 依赖安装完成$(RESET)"; \
+	else \
+		echo "$(YELLOW)  ⚠ 未检测到 Go 环境，跳过后端依赖安装 (Docker 部署可忽略)$(RESET)"; \
+	fi
+
 	@# 安装前端依赖
-	@echo "$(CYAN)  → 安装前端依赖...$(RESET)"
-	@cd webapp && pnpm install
-	@echo "$(GREEN)  ✓ 前端依赖安装完成$(RESET)"
+	@echo "$(CYAN)  → 检查 Node.js 环境...$(RESET)"
+	@if command -v pnpm >/dev/null 2>&1; then \
+		echo "$(CYAN)  → 安装前端依赖...$(RESET)"; \
+		cd webapp && pnpm install; \
+		echo "$(GREEN)  ✓ 前端依赖安装完成$(RESET)"; \
+	else \
+		echo "$(YELLOW)  ⚠ 未检测到 pnpm，跳过前端依赖安装 (Docker 部署可忽略)$(RESET)"; \
+	fi
 	@echo ""
 	@echo "$(GREEN)>>> 初始化完成！$(RESET)"
 	@echo "  运行 $(CYAN)make dev$(RESET) 启动开发服务器"
@@ -110,23 +121,37 @@ build-frontend: ## 构建前端生产版本
 
 # ==================== Docker ====================
 
-docker: ## Docker Compose 启动（后台运行）
+# 内部目标：确保 .env 存在（Docker 部署时自动生成，不依赖 make setup）
+_ensure-env:
+	@if [ ! -f .env ]; then \
+		echo "$(CYAN)  → 首次运行，自动生成 .env...$(RESET)"; \
+		cp .env.example .env; \
+		MASTER_KEY=$$(openssl rand -base64 32); \
+		if [ "$$(uname)" = "Darwin" ]; then \
+			sed -i '' "s|CHANGE_ME_USE_openssl_rand_base64_32|$$MASTER_KEY|" .env; \
+		else \
+			sed -i "s|CHANGE_ME_USE_openssl_rand_base64_32|$$MASTER_KEY|" .env; \
+		fi; \
+		echo "$(GREEN)  ✓ 已生成 .env（MASTER_KEY 已自动填入）$(RESET)"; \
+	fi
+
+docker: _ensure-env ## Docker Compose 启动（后台运行，无需预装 Go/Node.js）
 	@echo "$(CYAN)>>> Docker Compose 启动...$(RESET)"
-	@docker-compose up -d
+	@docker compose up -d 2>/dev/null || docker-compose up -d
 	@echo "$(GREEN)  ✓ 服务已启动$(RESET)"
-	@echo "  前端: http://localhost:$${FRONTEND_PORT:-5173}"
+	@echo "  前端: http://localhost:$${FRONTEND_PORT:-3174}"
 	@echo "  后端: http://localhost:$${SERVER_PORT:-8080}"
 
-docker-build: ## Docker Compose 重新构建并启动
+docker-build: _ensure-env ## Docker Compose 重新构建并启动
 	@echo "$(CYAN)>>> Docker Compose 重新构建...$(RESET)"
-	@docker-compose up -d --build
+	@docker compose up -d --build 2>/dev/null || docker-compose up -d --build
 
 docker-down: ## Docker Compose 停止
-	@docker-compose down
+	@docker compose down 2>/dev/null || docker-compose down
 	@echo "$(GREEN)  ✓ 服务已停止$(RESET)"
 
 docker-logs: ## 查看 Docker 日志
-	@docker-compose logs -f
+	@docker compose logs -f 2>/dev/null || docker-compose logs -f
 
 # ==================== 工具 ====================
 

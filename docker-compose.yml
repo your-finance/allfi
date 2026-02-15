@@ -31,7 +31,7 @@ services:
       - /tmp
       - /app/logs
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/api/v1/health"]
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:8080/api/v1/health" ]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -41,7 +41,7 @@ services:
     container_name: allfi-frontend
     restart: unless-stopped
     ports:
-      - "${FRONTEND_PORT:-5173}:80"
+      - "${FRONTEND_PORT:-3174}:80"
     depends_on:
       backend:
         condition: service_healthy
