@@ -93,17 +93,46 @@ jobs:
         id: notes
         env:
           APP_VERSION: ${{ steps.version.outputs.version }}
+          REPO: ${{ github.repository }}
         run: |
-          # 提取当前版本的变更记录
-          if [ -f CHANGEHISTORY.md ]; then
-            NOTES=$(awk "/^## v${APP_VERSION}/,/^## v[0-9]/" CHANGEHISTORY.md | head -n -1)
-            if [ -z "$NOTES" ]; then
-              NOTES="Release v${APP_VERSION}"
+          # 生成 release notes：项目简介 + 当前版本变更记录 + 文档链接
+          {
+            echo "全栈加密资产管理平台 — 聚合 CEX、DeFi、NFT 与传统资产"
+            echo ""
+
+            # 从 CHANGEHISTORY.md 提取当前版本的变更记录
+            if [ -f CHANGEHISTORY.md ]; then
+              # 匹配版本标题行到下一个版本标题行之间的内容
+              SECTION=$(awk "/^## v${APP_VERSION}/{found=1; next} /^## v[0-9]/{found=0} found" CHANGEHISTORY.md)
+              if [ -n "$SECTION" ]; then
+                echo "$SECTION"
+              else
+                echo "Release v${APP_VERSION}"
+              fi
+            else
+              echo "Release v${APP_VERSION}"
             fi
-          else
-            NOTES="Release v${APP_VERSION}"
-          fi
-          echo "$NOTES" > release_notes.md
+
+            echo ""
+            echo "---"
+            echo ""
+            echo "📥 **安装**"
+            echo ""
+            echo "从 Assets 下载对应平台的压缩包，解压后运行 \`./allfi\` 即可启动。"
+            echo ""
+            echo "| 平台 | 文件 |"
+            echo "|------|------|"
+            echo "| Linux x86_64 | \`allfi-${APP_VERSION}-linux-amd64.tar.gz\` |"
+            echo "| Linux ARM64 | \`allfi-${APP_VERSION}-linux-arm64.tar.gz\` |"
+            echo "| macOS Intel | \`allfi-${APP_VERSION}-darwin-amd64.tar.gz\` |"
+            echo "| macOS Apple Silicon | \`allfi-${APP_VERSION}-darwin-arm64.tar.gz\` |"
+            echo "| 前端产物 | \`webapp-dist.tar.gz\` |"
+            echo ""
+            echo "📚 **文档**"
+            echo ""
+            echo "- [完整变更历史](https://github.com/${REPO}/blob/master/CHANGEHISTORY.md)"
+            echo "- [项目说明](https://github.com/${REPO}/blob/master/README.md)"
+          } > release_notes.md
 
       - name: 创建 GitHub Release
         uses: softprops/action-gh-release@v2
