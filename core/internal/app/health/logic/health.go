@@ -8,6 +8,7 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 
 	"your-finance/allfi/internal/app/health/service"
+	"your-finance/allfi/internal/version"
 )
 
 // sHealth 健康检查服务实现
@@ -32,9 +33,9 @@ func New() service.IHealth {
 //   - map[string]interface{}: 健康状态数据
 //   - error: 错误信息
 func (s *sHealth) GetHealthStatus(ctx context.Context) (map[string]interface{}, error) {
-	// 从配置读取版本信息
+	// 从配置读取应用信息，版本号从 version 包获取
 	appName := g.Cfg().MustGet(ctx, "app.name", "AllFi").String()
-	appVersion := g.Cfg().MustGet(ctx, "app.version", "0.1.0").String()
+	appVersion := version.Version
 	appEnv := g.Cfg().MustGet(ctx, "app.env", "development").String()
 
 	// 检查数据库连接

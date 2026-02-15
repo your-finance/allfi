@@ -1,0 +1,120 @@
+# 自动发布流水线
+# 当推送 v* 格式的 Tag 时，自动编译后端（多平台）+ 打包前端，发布到 GitHub Releases
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 提取版本号
+        id: version
+        run: |
+          # 从 tag 中提取版本号（去掉 v 前缀）
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: 安装 Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: core/go.sum
+
+      - name: 安装 Node.js + pnpm
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 安装 pnpm
+        run: corepack enable && corepack prepare pnpm@latest --activate
+
+      - name: 构建前端
+        working-directory: webapp
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: 打包前端产物
+        run: tar -czf webapp-dist.tar.gz -C webapp/dist .
+
+      - name: 构建后端（多平台）
+        working-directory: core
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
+          GIT_COMMIT: ${{ github.sha }}
+        run: |
+          BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          LDFLAGS="-s -w \
+            -X your-finance/allfi/internal/version.Version=${APP_VERSION} \
+            -X your-finance/allfi/internal/version.BuildTime=${BUILD_TIME} \
+            -X your-finance/allfi/internal/version.GitCommit=${GIT_COMMIT}"
+
+          # linux/amd64
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+            go build -ldflags="${LDFLAGS}" -o ../allfi-linux-amd64 cmd/server/main.go
+
+          # linux/arm64
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 \
+            go build -ldflags="${LDFLAGS}" -o ../allfi-linux-arm64 cmd/server/main.go
+
+          # darwin/amd64 (macOS Intel)
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 \
+            go build -ldflags="${LDFLAGS}" -o ../allfi-darwin-amd64 cmd/server/main.go
+
+          # darwin/arm64 (macOS Apple Silicon)
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 \
+            go build -ldflags="${LDFLAGS}" -o ../allfi-darwin-arm64 cmd/server/main.go
+
+      - name: 打包发布产物
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # 后端二进制 + 配置文件 + 前端产物
+          for platform in linux-amd64 linux-arm64 darwin-amd64 darwin-arm64; do
+            mkdir -p "allfi-${APP_VERSION}-${platform}"
+            cp "allfi-${platform}" "allfi-${APP_VERSION}-${platform}/allfi"
+            cp core/manifest/config/config.yaml "allfi-${APP_VERSION}-${platform}/"
+            cp -r webapp/dist "allfi-${APP_VERSION}-${platform}/webapp-dist"
+            tar -czf "allfi-${APP_VERSION}-${platform}.tar.gz" "allfi-${APP_VERSION}-${platform}"
+          done
+
+      - name: 读取 CHANGEHISTORY 生成 Release Notes
+        id: notes
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # 提取当前版本的变更记录
+          if [ -f CHANGEHISTORY.md ]; then
+            NOTES=$(awk "/^## v${APP_VERSION}/,/^## v[0-9]/" CHANGEHISTORY.md | head -n -1)
+            if [ -z "$NOTES" ]; then
+              NOTES="Release v${APP_VERSION}"
+            fi
+          else
+            NOTES="Release v${APP_VERSION}"
+          fi
+          echo "$NOTES" > release_notes.md
+
+      - name: 创建 GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: AllFi v${{ steps.version.outputs.version }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.version, 'alpha') || contains(steps.version.outputs.version, 'beta') || contains(steps.version.outputs.version, 'rc') }}
+          files: |
+            allfi-${{ steps.version.outputs.version }}-linux-amd64.tar.gz
+            allfi-${{ steps.version.outputs.version }}-linux-arm64.tar.gz
+            allfi-${{ steps.version.outputs.version }}-darwin-amd64.tar.gz
+            allfi-${{ steps.version.outputs.version }}-darwin-arm64.tar.gz
+            webapp-dist.tar.gz

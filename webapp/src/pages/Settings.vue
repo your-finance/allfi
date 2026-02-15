@@ -23,10 +23,14 @@ import {
   PhWarning,
   PhLock,
   PhTrophy,
-  PhClockClockwise
+  PhClockClockwise,
+  PhInfo,
+  PhArrowDown,
+  PhArrowCounterClockwise
 } from '@phosphor-icons/vue'
 import AchievementPanel from '../components/AchievementPanel.vue'
 import { useAchievementStore } from '../stores/achievementStore'
+import { useSystemStore } from '../stores/systemStore'
 import { useThemeStore } from '../stores/themeStore'
 import { useAuthStore } from '../stores/authStore'
 import { useNotificationStore } from '../stores/notificationStore'
@@ -46,6 +50,7 @@ const { showToast } = useToast()
 
 // 通知偏好保存状态
 const achStore = useAchievementStore()
+const systemStore = useSystemStore()
 const notifSaving = ref(false)
 
 // 成就面板
@@ -64,10 +69,14 @@ const updateNotifPreference = async (field, value) => {
   }
 }
 
-// 页面加载时获取通知偏好
+// 页面加载时获取通知偏好和系统信息
 onMounted(() => {
   notifStore.loadPreferences()
   achStore.fetchAchievements()
+  systemStore.loadVersion()
+  systemStore.checkForUpdate()
+  systemStore.loadUpdateHistory()
+  systemStore.startAutoCheck()
 })
 
 // 操作状态
@@ -304,6 +313,13 @@ const resetSettings = async () => {
   } finally {
     isResetting.value = false
   }
+}
+
+// 处理版本回滚
+const handleRollback = (version) => {
+  const msg = t('system.rollbackConfirm').replace('{version}', version)
+  if (!confirm(msg)) return
+  systemStore.rollback(version)
 }
 
 // ========== 交易同步设置 ==========
@@ -1046,6 +1062,139 @@ onMounted(() => {
         :visible="showAchievements"
         @close="showAchievements = false"
       />
+
+      <!-- 关于 AllFi -->
+      <section class="settings-section full-width">
+        <div class="section-header">
+          <PhInfo :size="20" weight="duotone" />
+          <h2 class="section-title">{{ t('system.aboutTitle') }}</h2>
+        </div>
+
+        <div class="glass-card settings-card">
+          <!-- 版本信息区 -->
+          <div class="about-version-block">
+            <div class="version-current">
+              <span class="version-label">{{ t('system.currentVersion') }}</span>
+              <span class="version-number font-mono">v{{ systemStore.versionInfo?.version || __APP_VERSION__ }}</span>
+            </div>
+
+            <!-- 新版本提示 -->
+            <div v-if="systemStore.hasUpdate" class="update-banner">
+              <div class="update-badge">
+                <PhArrowDown :size="18" />
+                <div>
+                  <span class="update-text">{{ t('system.newVersionAvailable') }}</span>
+                  <span class="update-version font-mono">v{{ systemStore.updateInfo?.latest_version }}</span>
+                </div>
+              </div>
+              <button
+                class="btn btn-primary"
+                :disabled="systemStore.isUpdating"
+                @click="systemStore.applyUpdate(systemStore.updateInfo.latest_version)"
+              >
+                <PhArrowsClockwise v-if="systemStore.isUpdating" :size="18" class="spin" />
+                <PhArrowDown v-else :size="18" />
+                <span>{{ systemStore.isUpdating ? t('system.updating') : t('system.updateNow') }}</span>
+              </button>
+            </div>
+
+            <!-- 已是最新版本 -->
+            <div v-else-if="systemStore.updateInfo && !systemStore.hasUpdate" class="up-to-date-badge">
+              <PhCheck :size="16" />
+              <span>{{ t('system.upToDate') }}</span>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="about-actions">
+              <button
+                class="btn btn-secondary btn-sm"
+                :disabled="systemStore.isChecking"
+                @click="systemStore.checkForUpdate()"
+              >
+                <PhArrowsClockwise v-if="systemStore.isChecking" :size="16" class="spin" />
+                <span>{{ systemStore.isChecking ? t('system.checking') : t('system.checkUpdate') }}</span>
+              </button>
+              <a
+                v-if="systemStore.updateInfo?.release_url"
+                :href="systemStore.updateInfo.release_url"
+                target="_blank"
+                rel="noopener"
+                class="changelog-link"
+              >
+                {{ t('system.viewChangelog') }} ↗
+              </a>
+            </div>
+          </div>
+
+          <!-- 更新进度（更新中时显示） -->
+          <template v-if="systemStore.isUpdating">
+            <div class="setting-divider" />
+            <div class="update-progress-block">
+              <span class="setting-label">{{ t('system.updateProgress') }}</span>
+              <div class="progress-bar-container">
+                <div
+                  class="progress-bar-fill"
+                  :style="{ width: (systemStore.updateStatus?.total > 0 ? (systemStore.updateStatus.step / systemStore.updateStatus.total * 100) : 0) + '%' }"
+                ></div>
+              </div>
+              <div class="progress-info">
+                <span>{{ systemStore.updateStatus?.step_name }}</span>
+                <span class="font-mono">{{ systemStore.updateStatus?.step }}/{{ systemStore.updateStatus?.total }}</span>
+              </div>
+            </div>
+          </template>
+
+          <!-- 版本回滚 -->
+          <template v-if="systemStore.rollbackTargets.length > 0">
+            <div class="setting-divider" />
+            <div class="rollback-block">
+              <span class="setting-label">{{ t('system.rollbackTitle') }}</span>
+              <div
+                v-for="record in systemStore.rollbackTargets"
+                :key="record.version"
+                class="rollback-item"
+              >
+                <div class="rollback-info">
+                  <span class="font-mono">v{{ record.version }}</span>
+                  <span class="rollback-date">{{ record.timestamp }}</span>
+                </div>
+                <button
+                  class="btn btn-secondary btn-sm"
+                  :disabled="systemStore.isUpdating"
+                  @click="handleRollback(record.version)"
+                >
+                  <PhArrowCounterClockwise :size="14" />
+                  <span>{{ t('system.rollbackTo') }}</span>
+                </button>
+              </div>
+            </div>
+          </template>
+
+          <div class="setting-divider" />
+
+          <!-- 系统信息 -->
+          <div class="system-info-block">
+            <div class="info-row">
+              <span class="info-label">{{ t('system.runMode') }}</span>
+              <span class="info-value">
+                {{ systemStore.versionInfo?.run_mode === 'docker' ? t('system.runModeDocker') : t('system.runModeHost') }}
+              </span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">{{ t('system.buildTime') }}</span>
+              <span class="info-value font-mono">{{ systemStore.versionInfo?.build_time || '-' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">{{ t('system.gitCommit') }}</span>
+              <span class="info-value font-mono">{{ systemStore.versionInfo?.git_commit || '-' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">{{ t('system.goVersion') }}</span>
+              <span class="info-value font-mono">{{ systemStore.versionInfo?.go_version || '-' }}</span>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <!-- 数据管理 -->
       <section class="settings-section full-width">
@@ -1968,5 +2117,175 @@ onMounted(() => {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* ================== 关于 AllFi ================== */
+.about-version-block {
+  padding: var(--gap-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-md);
+}
+
+.version-current {
+  text-align: center;
+}
+
+.version-label {
+  display: block;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-bottom: var(--gap-xs);
+}
+
+.version-number {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  letter-spacing: -0.02em;
+}
+
+.update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-md);
+  width: 100%;
+  padding: var(--gap-md);
+  background: color-mix(in srgb, var(--color-success) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-success) 25%, transparent);
+  border-radius: var(--radius-md);
+}
+
+.update-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  color: var(--color-success);
+}
+
+.update-text {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-success);
+}
+
+.update-version {
+  font-size: 12px;
+  color: var(--color-success);
+  opacity: 0.8;
+}
+
+.up-to-date-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-xs);
+  padding: var(--gap-xs) var(--gap-sm);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-success) 10%, transparent);
+  color: var(--color-success);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.about-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+}
+
+.changelog-link {
+  font-size: 12px;
+  color: var(--color-accent-primary);
+  text-decoration: none;
+  transition: opacity var(--transition-fast);
+}
+
+.changelog-link:hover {
+  opacity: 0.8;
+}
+
+/* 更新进度 */
+.update-progress-block {
+  padding: var(--gap-md) var(--gap-lg);
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 6px;
+  background: var(--color-bg-tertiary);
+  border-radius: 3px;
+  margin: var(--gap-sm) 0;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--color-accent-primary);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* 版本回滚 */
+.rollback-block {
+  padding: var(--gap-md) var(--gap-lg);
+}
+
+.rollback-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--gap-sm) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.rollback-item:last-child {
+  border-bottom: none;
+}
+
+.rollback-info {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+}
+
+.rollback-date {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+/* 系统信息 */
+.system-info-block {
+  padding: var(--gap-md) var(--gap-lg);
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--gap-xs) 0;
+}
+
+.info-row + .info-row {
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+}
+
+.info-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.info-value {
+  font-size: 12px;
+  color: var(--color-text-secondary);
 }
 </style>

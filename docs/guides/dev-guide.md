@@ -551,9 +551,8 @@ pnpm preview
 
 **每次功能变更后必须同步更新**：
 1. `README.md`（功能列表）
-2. `CLAUDE.md`（开发规范）
-3. `docs/` 下对应文档
-4. `i18n/index.js`（三语翻译）
+2. `docs/` 下对应文档
+3. `i18n/index.js`（三语翻译）
 
 ---
 

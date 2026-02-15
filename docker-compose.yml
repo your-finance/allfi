@@ -3,7 +3,12 @@
 
 services:
   backend:
-    build: ./core
+    build:
+      context: ./core
+      args:
+        APP_VERSION: ${ALLFI_VERSION:-0.3.0}
+        BUILD_TIME: ${BUILD_TIME:-unknown}
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
     container_name: allfi-backend
     restart: unless-stopped
     ports:
@@ -49,6 +54,16 @@ services:
       - /tmp
       - /var/cache/nginx
       - /var/run
+
+  updater:
+    build: ./updater
+    container_name: allfi-updater
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/app/project
+      - allfi-data:/app/data
+    working_dir: /app/project
 
 volumes:
   allfi-data:

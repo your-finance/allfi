@@ -93,5 +93,6 @@ CLAUDE.md
 docs/plans/
 .kiro
 .windsurf
-.github
 .agent
+updater/allfi-updater
+webapp/.github/prompts/ui-ux-pro-max.prompt.md

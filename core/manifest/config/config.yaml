@@ -21,10 +21,9 @@ server:
   openapiPath: "/api.json"
   swaggerPath: "/swagger"
 
-# 应用信息
+# 应用信息（版本号由 VERSION 文件统一管理，构建时通过 ldflags 注入）
 app:
   name: "AllFi"
-  version: "0.1.0"
   env: "development"
 
 # 数据库配置

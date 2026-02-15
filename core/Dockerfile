@@ -6,7 +6,12 @@ WORKDIR /build
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=1 go build -ldflags="-s -w" -o allfi cmd/server/main.go
+ARG APP_VERSION=dev
+ARG BUILD_TIME=unknown
+ARG GIT_COMMIT=unknown
+RUN CGO_ENABLED=1 go build \
+  -ldflags="-s -w -X your-finance/allfi/internal/version.Version=${APP_VERSION} -X your-finance/allfi/internal/version.BuildTime=${BUILD_TIME} -X your-finance/allfi/internal/version.GitCommit=${GIT_COMMIT}" \
+  -o allfi cmd/server/main.go
 
 # 运行阶段：最小化镜像
 FROM alpine:3.21

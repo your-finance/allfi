@@ -160,9 +160,8 @@ Full documentation index: [docs/README.md](./docs/README.md)
 
 1. Fork this repository
 2. Create a feature branch (`git checkout -b feature/xxx`)
-3. Follow coding conventions (see [CLAUDE.md](./CLAUDE.md))
-4. Write tests (target coverage >70%)
-5. Submit a Pull Request
+3. Write tests (target coverage >70%)
+4. Submit a Pull Request
 
 ---
 

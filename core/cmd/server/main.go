@@ -17,6 +17,9 @@ import (
 	// 导入定时任务管理器
 	"your-finance/allfi/internal/cron"
 
+	// 导入版本信息
+	"your-finance/allfi/internal/version"
+
 	// 导入所有模块的 logic 包，触发 init() 注册服务
 	_ "your-finance/allfi/internal/app/achievement/logic"
 	_ "your-finance/allfi/internal/app/asset/logic"
@@ -39,6 +42,7 @@ import (
 	_ "your-finance/allfi/internal/app/price_alert/logic"
 	_ "your-finance/allfi/internal/app/report/logic"
 	_ "your-finance/allfi/internal/app/strategy/logic"
+	_ "your-finance/allfi/internal/app/system/logic"
 	_ "your-finance/allfi/internal/app/transaction/logic"
 	_ "your-finance/allfi/internal/app/user/logic"
 	_ "your-finance/allfi/internal/app/wallet/logic"
@@ -66,6 +70,7 @@ import (
 	priceAlertCtrl "your-finance/allfi/internal/app/price_alert/controller"
 	reportCtrl "your-finance/allfi/internal/app/report/controller"
 	strategyCtrl "your-finance/allfi/internal/app/strategy/controller"
+	systemCtrl "your-finance/allfi/internal/app/system/controller"
 	transactionCtrl "your-finance/allfi/internal/app/transaction/controller"
 	userCtrl "your-finance/allfi/internal/app/user/controller"
 	walletCtrl "your-finance/allfi/internal/app/wallet/controller"
@@ -73,11 +78,6 @@ import (
 
 	// 导入数据库驱动
 	_ "github.com/gogf/gf/contrib/drivers/sqlite/v2"
-)
-
-const (
-	// Version 版本号
-	Version = "0.2.0"
 )
 
 func main() {
@@ -144,6 +144,9 @@ func main() {
 
 		// 成就系统
 		achievementCtrl.Register(group)
+
+		// 系统管理
+		systemCtrl.Register(group)
 	})
 
 	// 启动定时任务（快照/报告/通知/价格预警/策略检查/风险提醒）
@@ -151,7 +154,7 @@ func main() {
 	cronManager.Start()
 	defer cronManager.Stop()
 
-	g.Log().Infof(ctx, "AllFi v%s 启动成功", Version)
+	g.Log().Infof(ctx, "AllFi v%s 启动成功", version.Version)
 	s.Run()
 }
 
@@ -165,7 +168,7 @@ func enhanceOpenApi(s *ghttp.Server) {
 	openapi.Info = goai.Info{
 		Title:       "AllFi API",
 		Description: "AllFi 全资产聚合平台 API — 统一管理 CEX、区块链、DeFi、NFT、传统资产",
-		Version:     Version,
+		Version:     version.Version,
 	}
 
 	// 设置服务器地址
@@ -251,6 +254,6 @@ func printBanner() {
 AllFi - 全资产聚合平台 v%s
 GoFrame 模块化架构 | 自托管 | 完全掌控数据
 `
-	fmt.Printf(banner, Version)
+	fmt.Printf(banner, version.Version)
 	fmt.Println()
 }

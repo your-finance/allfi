@@ -7,6 +7,15 @@
 # 默认目标
 .DEFAULT_GOAL := help
 
+# 版本信息
+VERSION := $(shell cat VERSION 2>/dev/null || echo "dev")
+BUILD_TIME := $(shell date +%Y-%m-%dT%H:%M:%S)
+GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+LDFLAGS := -s -w \
+  -X your-finance/allfi/internal/version.Version=$(VERSION) \
+  -X your-finance/allfi/internal/version.BuildTime=$(BUILD_TIME) \
+  -X your-finance/allfi/internal/version.GitCommit=$(GIT_COMMIT)
+
 # 颜色定义
 CYAN  := \033[36m
 GREEN := \033[32m
@@ -61,7 +70,7 @@ dev: ## 同时启动前后端开发服务器
 	@echo "  按 Ctrl+C 停止所有服务"
 	@echo ""
 	@trap 'kill 0; exit 0' INT TERM; \
-		cd core && go run cmd/server/main.go & \
+		cd core && go run -ldflags="$(LDFLAGS)" cmd/server/main.go & \
 		cd webapp && pnpm dev; \
 		wait
 
@@ -77,7 +86,7 @@ dev-backend: ## 仅启动后端开发服务器
 	@echo "  API: http://localhost:8080"
 	@echo "  Swagger: http://localhost:8080/swagger/"
 	@echo ""
-	@cd core && go run cmd/server/main.go
+	@cd core && go run -ldflags="$(LDFLAGS)" cmd/server/main.go
 
 dev-frontend: ## 仅启动前端开发服务器
 	@echo "$(CYAN)>>> 启动前端...$(RESET)"
@@ -90,8 +99,8 @@ dev-frontend: ## 仅启动前端开发服务器
 build: build-backend build-frontend ## 构建前后端
 
 build-backend: ## 构建后端二进制文件
-	@echo "$(CYAN)>>> 构建后端...$(RESET)"
-	@cd core && CGO_ENABLED=1 go build -ldflags="-s -w" -o allfi cmd/server/main.go
+	@echo "$(CYAN)>>> 构建后端 v$(VERSION)...$(RESET)"
+	@cd core && CGO_ENABLED=1 go build -ldflags="$(LDFLAGS)" -o allfi cmd/server/main.go
 	@echo "$(GREEN)  ✓ 后端构建完成: core/allfi$(RESET)"
 
 build-frontend: ## 构建前端生产版本
