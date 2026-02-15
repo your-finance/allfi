@@ -4,6 +4,10 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Go Version](https://img.shields.io/badge/go-%3E%3D1.24-blue.svg)](https://golang.org/)
+[![GoFrame](https://img.shields.io/badge/GoFrame-v2.10-blue.svg)](https://goframe.org/)
+[![Vue](https://img.shields.io/badge/Vue-3.5-brightgreen.svg)](https://vuejs.org/)
+[![Vite](https://img.shields.io/badge/Vite-7.3-646CFF.svg)](https://vite.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4.svg)](https://tailwindcss.com/)
 
 [English](./README.en.md)
 
@@ -187,8 +191,8 @@ make swagger        # 打开 Swagger UI
 
 | 层级 | 技术 |
 |------|------|
-| 后端 | Go 1.24 + 标准库 `net/http` + GORM v2 + SQLite3/MySQL |
-| 前端 | Vue 3.5 + Vite 7.3 + Pinia 3 + Chart.js 4 + Phosphor Icons |
+| 后端 | Go 1.24 + GoFrame v2.10 + GoFrame ORM + SQLite3 |
+| 前端 | Vue 3.5 + Vite 7.3 + Tailwind CSS 4 + Pinia 3 + Chart.js 4 + Phosphor Icons + VueUse |
 | 认证 | PIN 码 bcrypt + JWT Bearer Token |
 | 加密 | AES-256-GCM（API Key 加密存储） |
 | 部署 | Docker Compose（只读容器 + 非特权 + healthcheck） |
@@ -197,15 +201,17 @@ make swagger        # 打开 Swagger UI
 ### 架构
 
 ```
-前端 (Vue 3 / Vite)
-    ↓ RESTful API (~75 条路由)
-后端 (Go / net/http)
-    ├── api/handlers/     HTTP 处理器（24 个）
-    ├── service/          业务逻辑层（16 个服务）
-    ├── repository/       数据访问层（18 个 repo）
+前端 (Vue 3.5 / Vite 7.3 / Tailwind CSS 4)
+    ↓ RESTful API
+后端 (Go 1.24 / GoFrame v2.10)
+    ├── api/              API 定义（RESTful 规范）
+    ├── app/              业务模块（26 个模块）
+    │   ├── controller/   控制器层
+    │   ├── logic/        业务逻辑层
+    │   └── service/      服务接口层
     └── integrations/     第三方集成（8 个模块）
     ↓
-数据层 (SQLite3 / MySQL, 18 个表)
+数据层 (GoFrame ORM + SQLite3, 26 个实体)
 ```
 
 ---
@@ -214,20 +220,23 @@ make swagger        # 打开 Swagger UI
 
 ```
 allfi/
-├── core/                       # 后端（Go）
+├── core/                       # 后端（Go + GoFrame v2.10）
 │   ├── cmd/server/main.go      # 服务入口
+│   ├── api/v1/                 # API 定义（RESTful 规范）
 │   ├── internal/
-│   │   ├── api/handlers/       # HTTP 处理器
-│   │   ├── service/            # 业务逻辑
-│   │   ├── repository/         # 数据访问
-│   │   ├── models/             # 数据模型
-│   │   └── integrations/       # 第三方集成
+│   │   ├── app/                # 业务模块（26 个）
+│   │   │   └── {module}/
+│   │   │       ├── controller/ # 控制器
+│   │   │       ├── logic/      # 业务逻辑
+│   │   │       └── service/    # 服务接口
+│   │   ├── model/entity/       # 数据模型（26 个实体）
+│   │   └── integrations/       # 第三方集成（8 个模块）
 │   └── manifest/config/        # 配置文件
-├── webapp/                     # 前端（Vue 3）
+├── webapp/                     # 前端（Vue 3.5 + Tailwind CSS 4）
 │   └── src/
 │       ├── pages/              # 9 个页面
 │       ├── components/         # 39 个组件
-│       ├── stores/             # 12 个 Pinia Store
+│       ├── stores/             # 13 个 Pinia Store
 │       └── composables/        # 8 个组合式函数
 └── docs/                       # 项目文档
     ├── product/                # 产品文档

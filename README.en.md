@@ -4,6 +4,10 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Go Version](https://img.shields.io/badge/go-%3E%3D1.24-blue.svg)](https://golang.org/)
+[![GoFrame](https://img.shields.io/badge/GoFrame-v2.10-blue.svg)](https://goframe.org/)
+[![Vue](https://img.shields.io/badge/Vue-3.5-brightgreen.svg)](https://vuejs.org/)
+[![Vite](https://img.shields.io/badge/Vite-7.3-646CFF.svg)](https://vite.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4.svg)](https://tailwindcss.com/)
 
 [中文文档](./README.md)
 
@@ -120,8 +124,8 @@ Visit http://localhost:3174 — all data is simulated.
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Go 1.24 + standard library `net/http` + GORM v2 + SQLite3/MySQL |
-| Frontend | Vue 3.5 + Vite 7.3 + Pinia 3 + Chart.js 4 + Phosphor Icons |
+| Backend | Go 1.24 + GoFrame v2.10 + GoFrame ORM + SQLite3 |
+| Frontend | Vue 3.5 + Vite 7.3 + Tailwind CSS 4 + Pinia 3 + Chart.js 4 + Phosphor Icons + VueUse |
 | Authentication | PIN code bcrypt + JWT Bearer Token |
 | Encryption | AES-256-GCM (API key storage) |
 | Deployment | Docker Compose (read-only containers + no-new-privileges + healthcheck) |
@@ -130,15 +134,17 @@ Visit http://localhost:3174 — all data is simulated.
 ### Architecture
 
 ```
-Frontend (Vue 3 / Vite)
-    ↓ RESTful API (~75 routes)
-Backend (Go / net/http)
-    ├── api/handlers/     HTTP handlers (24)
-    ├── service/          Business logic (16 services)
-    ├── repository/       Data access (18 repos)
+Frontend (Vue 3.5 / Vite 7.3 / Tailwind CSS 4)
+    ↓ RESTful API
+Backend (Go 1.24 / GoFrame v2.10)
+    ├── api/              API definitions (RESTful)
+    ├── app/              Business modules (26 modules)
+    │   ├── controller/   Controllers
+    │   ├── logic/        Business logic
+    │   └── service/      Service interfaces
     └── integrations/     Third-party integrations (8 modules)
     ↓
-Data Layer (SQLite3 / MySQL, 18 tables)
+Data Layer (GoFrame ORM + SQLite3, 26 entities)
 ```
 
 ---
@@ -147,20 +153,23 @@ Data Layer (SQLite3 / MySQL, 18 tables)
 
 ```
 allfi/
-├── core/                       # Backend (Go)
+├── core/                       # Backend (Go + GoFrame v2.10)
 │   ├── cmd/server/main.go      # Entry point
+│   ├── api/v1/                 # API definitions (RESTful)
 │   ├── internal/
-│   │   ├── api/handlers/       # HTTP handlers
-│   │   ├── service/            # Business logic
-│   │   ├── repository/         # Data access
-│   │   ├── models/             # Data models
-│   │   └── integrations/       # Third-party integrations
+│   │   ├── app/                # Business modules (26)
+│   │   │   └── {module}/
+│   │   │       ├── controller/ # Controllers
+│   │   │       ├── logic/      # Business logic
+│   │   │       └── service/    # Service interfaces
+│   │   ├── model/entity/       # Data models (26 entities)
+│   │   └── integrations/       # Third-party integrations (8 modules)
 │   └── manifest/config/        # Configuration
-├── webapp/                     # Frontend (Vue 3)
+├── webapp/                     # Frontend (Vue 3.5 + Tailwind CSS 4)
 │   └── src/
 │       ├── pages/              # 9 pages
 │       ├── components/         # 39 components
-│       ├── stores/             # 12 Pinia stores
+│       ├── stores/             # 13 Pinia stores
 │       └── composables/        # 8 composables
 └── docs/                       # Documentation
     ├── product/                # Product docs
