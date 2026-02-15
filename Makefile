@@ -111,7 +111,7 @@ build: build-backend build-frontend ## 构建前后端
 
 build-backend: ## 构建后端二进制文件
 	@echo "$(CYAN)>>> 构建后端 v$(VERSION)...$(RESET)"
-	@cd core && CGO_ENABLED=1 go build -ldflags="$(LDFLAGS)" -o allfi cmd/server/main.go
+	@cd core && CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o allfi cmd/server/main.go
 	@echo "$(GREEN)  ✓ 后端构建完成: core/allfi$(RESET)"
 
 build-frontend: ## 构建前端生产版本

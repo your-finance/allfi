@@ -6,6 +6,8 @@ WORKDIR /build
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
+ARG APP_VERSION=dev
+RUN echo "${APP_VERSION}" > /VERSION
 RUN pnpm build
 
 # 运行阶段：Nginx 静态托管

@@ -37,9 +37,8 @@
 | Node.js | 18+ | 前端构建 |
 | pnpm | 9+ | 前端包管理器 |
 | Nginx | 1.20+ | 前端静态文件托管（可选） |
-| GCC | - | SQLite CGO 编译需要 |
 
-> **注意**：后端使用 SQLite3 作为默认数据库，Go 通过 CGO 绑定访问。编译时必须确保系统有 GCC。
+> **注意**：后端使用 `modernc.org/sqlite`（纯 Go SQLite 驱动），无需 CGO 和 GCC。
 
 ### 外部 API 密钥（可选但推荐）
 
@@ -199,13 +198,13 @@ cd core
 # 安装 Go 依赖
 go mod download
 
-# 编译生产二进制文件
-CGO_ENABLED=1 go build -ldflags="-s -w" -o allfi cmd/server/main.go
+# 编译生产二进制文件（纯 Go，无需 CGO）
+CGO_ENABLED=0 go build -ldflags="-s -w" -o allfi cmd/server/main.go
 ```
 
 编译产物为 `core/allfi` 二进制文件，约 20-30 MB。
 
-> **注意**：SQLite 需要 CGO 支持，编译时必须设置 `CGO_ENABLED=1`，并确保系统安装了 GCC。
+> **提示**：项目使用 `modernc.org/sqlite`（纯 Go SQLite 驱动），编译时无需 CGO，也不需要安装 GCC。
 
 ### 步骤二：构建前端
 
@@ -621,24 +620,11 @@ sudo journalctl -u allfi -f
 
 ## 常见问题
 
-### 1. Docker 构建失败：CGO 相关错误
+### 1. Docker 构建失败
 
-**现象**：编译后端时出现 `cgo: C compiler "gcc" not found` 错误。
+**说明**：项目使用 `modernc.org/sqlite`（纯 Go SQLite 驱动），已不再需要 CGO。构建时设置 `CGO_ENABLED=0`，无需安装 GCC 或其他 C 编译工具。
 
-**原因**：SQLite 需要 CGO 支持。
-
-**解决**：Dockerfile 已包含 `gcc musl-dev sqlite-dev`，无需额外操作。如果自行构建，确保：
-
-```bash
-# Alpine Linux
-apk add gcc musl-dev sqlite-dev
-
-# Ubuntu/Debian
-apt install gcc libsqlite3-dev
-
-# macOS
-xcode-select --install
-```
+如果遇到构建问题，请确认 Dockerfile 中 `CGO_ENABLED=0` 已正确设置。
 
 ### 2. 前端无法连接后端 API
 
@@ -714,7 +700,7 @@ git pull origin master
 docker-compose up -d --build
 
 # 手动部署：重新编译
-cd core && CGO_ENABLED=1 go build -ldflags="-s -w" -o allfi cmd/server/main.go
+cd core && CGO_ENABLED=0 go build -ldflags="-s -w" -o allfi cmd/server/main.go
 cd ../webapp && pnpm build
 # 重启服务
 ```

@@ -37,7 +37,10 @@ services:
       retries: 3
 
   frontend:
-    build: ./webapp
+    build:
+      context: ./webapp
+      args:
+        APP_VERSION: ${ALLFI_VERSION:-0.3.0}
     container_name: allfi-frontend
     restart: unless-stopped
     ports:
