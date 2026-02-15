@@ -1,7 +1,7 @@
 <script setup>
 /**
- * Dashboard 页面 - 资产总览
- * 一屏平铺式布局：摘要栏 → 图表区 → 持仓表格
+ * Dashboard 页面 - 资产总览 (Bento Grid 布局重构)
+ * 参考设计：现代金融仪表盘，Grid 布局，模块化卡片
  */
 import { ref, computed, onMounted, watch, useTemplateRef } from 'vue'
 import {
@@ -15,7 +15,11 @@ import {
   PhShareNetwork,
   PhGear,
   PhListBullets,
-  PhSquaresFour
+  PhSquaresFour,
+  PhWallet,
+  PhTrendUp,
+  PhChartPieSlice,
+  PhTarget
 } from '@phosphor-icons/vue'
 import { Line, Doughnut } from 'vue-chartjs'
 import {
@@ -472,11 +476,11 @@ const lineChartData = computed(() => {
     data: assetData,
     borderColor: themeStore.currentTheme.colors.accentPrimary,
     backgroundColor: themeStore.currentTheme.colors.chartGradientStart,
-    borderWidth: 1.5,
+    borderWidth: 2,
     fill: true,
     tension: 0.4,
     pointRadius: 0,
-    pointHoverRadius: 3,
+    pointHoverRadius: 4,
     yAxisID: 'y'
   }]
 
@@ -486,12 +490,12 @@ const lineChartData = computed(() => {
       data: rateData,
       borderColor: themeStore.currentTheme.colors.accentSecondary,
       backgroundColor: 'transparent',
-      borderWidth: 1,
+      borderWidth: 1.5,
       borderDash: [4, 4],
       fill: false,
       tension: 0.4,
       pointRadius: 0,
-      pointHoverRadius: 3,
+      pointHoverRadius: 4,
       yAxisID: 'y1'
     })
   }
@@ -517,12 +521,12 @@ const lineChartData = computed(() => {
       data: benchmarkData,
       borderColor: selectedBenchmark.value === 'BTC' ? '#F7931A' : '#627EEA',
       backgroundColor: 'transparent',
-      borderWidth: 1.5,
+      borderWidth: 2,
       borderDash: [6, 3],
       fill: false,
       tension: 0.4,
       pointRadius: 0,
-      pointHoverRadius: 3,
+      pointHoverRadius: 4,
       yAxisID: 'y'
     })
   }
@@ -555,9 +559,9 @@ const lineChartOptions = computed(() => {
         bodyColor: colors.textSecondary,
         borderColor: colors.border,
         borderWidth: 1,
-        padding: 8,
-        titleFont: { size: 11 },
-        bodyFont: { size: 11 },
+        padding: 10,
+        titleFont: { size: 12 },
+        bodyFont: { size: 12 },
         callbacks: {
           label: (context) => {
             const label = context.dataset.label || ''
@@ -587,7 +591,8 @@ const lineChartOptions = computed(() => {
         position: 'left',
         grid: {
           color: colors.border,
-          lineWidth: 0.5
+          lineWidth: 0.5,
+          borderDash: [4, 4]
         },
         ticks: {
           color: colors.textSecondary,
@@ -645,136 +650,107 @@ watch(selectedTimeRange, async (newRange) => {
 </script>
 
 <template>
-  <div ref="dashboardRef" class="dashboard">
+  <div ref="dashboardRef" class="dashboard-container">
     <!-- 下拉刷新指示器 -->
     <PullToRefresh :pull-distance="pullDistance" :is-refreshing="pullRefreshing" />
 
-    <!-- 顶部：标题 + 配置齿轮 -->
-    <div class="dashboard-header">
-      <h2 class="page-title">{{ t('dashboard.title') }}</h2>
-      <button class="gear-btn" @click="showCustomizer = true" :title="t('widgets.customize')">
-        <PhGear :size="16" weight="bold" />
-      </button>
-    </div>
+    <!-- 顶部导航栏 -->
+    <header class="dashboard-navbar">
+      <div class="navbar-left">
+        <h2 class="page-title">{{ t('dashboard.title') }}</h2>
+      </div>
+      <div class="navbar-right">
+        <button class="icon-btn" @click="showCustomizer = true" :title="t('widgets.customize')">
+          <PhGear :size="18" weight="bold" />
+        </button>
+      </div>
+    </header>
 
-    <!-- 全部隐藏时的引导 -->
-    <div v-if="dashboardStore.enabledCount === 0" class="empty-dashboard">
+    <!-- 空状态引导 -->
+    <div v-if="dashboardStore.enabledCount === 0" class="empty-dashboard-state">
+      <PhWallet :size="48" weight="duotone" class="empty-icon" />
       <p>{{ t('widgets.emptyHint') }}</p>
       <button class="btn btn-primary" @click="showCustomizer = true">{{ t('widgets.customize') }}</button>
     </div>
 
-    <!-- 摘要栏：总资产 + 今日盈亏 + 分类分布 -->
-    <section v-if="dashboardStore.widgetConfig.assetSummary" class="summary-bar">
-      <div class="summary-left">
-        <span class="stat-label">{{ t('dashboard.totalAssets') }}</span>
-        <div class="total-row">
-          <h2 class="stat-value-hero font-mono">
-            {{ currencySymbol }}{{ formatNumber(totalAssets) }}
-          </h2>
-          <span
-            class="change-badge"
-            :class="totalChange24h >= 0 ? 'change-positive' : 'change-negative'"
-          >
-            <PhCaretUp v-if="totalChange24h >= 0" :size="12" weight="bold" />
-            <PhCaretDown v-else :size="12" weight="bold" />
-            {{ formatPercent(totalChange24h) }}
-            <span class="change-abs">({{ currencySymbol }}{{ formatNumber(totalChangeValue) }})</span>
-          </span>
-          <span class="change-period">24h</span>
-        </div>
-      </div>
-      <!-- 今日盈亏卡片 -->
-      <div class="pnl-card" :class="assetStore.todayPnL.isPositive ? 'pnl-positive' : 'pnl-negative'">
-        <span class="pnl-label">{{ t('dashboard.todayPnL') }}</span>
-        <div class="pnl-value font-mono">
-          <span>{{ assetStore.todayPnL.isPositive ? '+' : '' }}{{ currencySymbol }}{{ formatNumber(assetStore.todayPnL.value) }}</span>
-        </div>
-        <span class="pnl-percent font-mono" :class="assetStore.todayPnL.isPositive ? 'change-positive' : 'change-negative'">
-          <PhCaretUp v-if="assetStore.todayPnL.isPositive" :size="10" weight="bold" />
-          <PhCaretDown v-else :size="10" weight="bold" />
-          {{ formatPercent(assetStore.todayPnL.percent) }}
-        </span>
-      </div>
-      <div class="summary-right">
-        <button class="alert-btn" @click="showShareCard = true" :title="t('share.title')">
-          <PhShareNetwork :size="16" weight="bold" />
-        </button>
-        <button class="alert-btn" @click="showPriceAlert = true" :title="t('priceAlert.title')">
-          <PhBell :size="16" weight="bold" />
-        </button>
-        <div
-          v-for="cat in assetCategories"
-          :key="cat.id"
-          class="category-chip"
-        >
-          <span
-            class="chip-dot"
-            :style="{ background: cat.fixedColor || themeStore.currentTheme.colors[cat.colorKey] }"
-          />
-          <span class="chip-label">{{ t(cat.labelKey) }}</span>
-          <span class="chip-value font-mono">{{ currencySymbol }}{{ formatNumber(cat.totalValue, 0) }}</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- 图表区：趋势图（60%） + 饼图（40%） -->
-    <section v-if="dashboardStore.widgetConfig.trend || dashboardStore.widgetConfig.distribution" class="charts-row">
-      <!-- 趋势图 -->
-      <div v-if="dashboardStore.widgetConfig.trend" class="glass-card trend-panel">
-        <div class="panel-header">
-          <h3>{{ t('dashboard.assetTrend') }}</h3>
-          <div class="panel-controls">
-            <!-- 计价货币选择 -->
-            <div class="selector-group">
-              <button
-                v-for="curr in currencies"
-                :key="curr.code"
-                class="selector-btn"
-                :class="{ active: selectedPricingCurrency === curr.code }"
-                @click="setPricingCurrency(curr.code)"
-              >
-                {{ curr.symbol }} {{ curr.code }}
-              </button>
+    <!-- 核心 Grid 布局 -->
+    <div v-else class="bento-grid">
+      
+      <!-- 1. 资产总览卡片 (Hero Card) -->
+      <div v-if="dashboardStore.widgetConfig.assetSummary" class="grid-item hero-card">
+        <div class="hero-content">
+          <div class="hero-main">
+            <span class="label-text">{{ t('dashboard.totalAssets') }}</span>
+            <div class="balance-row">
+              <h1 class="total-balance font-mono">
+                {{ currencySymbol }}{{ formatNumber(totalAssets) }}
+              </h1>
+              <div class="pnl-badge" :class="totalChange24h >= 0 ? 'positive' : 'negative'">
+                <PhCaretUp v-if="totalChange24h >= 0" :size="14" weight="bold" />
+                <PhCaretDown v-else :size="14" weight="bold" />
+                <span class="font-mono">{{ formatPercent(totalChange24h) }}</span>
+                <span class="pnl-value font-mono">({{ currencySymbol }}{{ formatNumber(totalChangeValue) }})</span>
+              </div>
             </div>
-            <!-- 基准对比选择 -->
-            <div class="selector-group">
-              <button
-                class="selector-btn"
-                :class="{ active: selectedBenchmark === 'none' }"
-                @click="selectedBenchmark = 'none'"
-              >
-                {{ t('dashboard.benchmarkNone') }}
+            <div class="hero-actions">
+              <button class="action-btn" @click="showShareCard = true" :title="t('share.title')">
+                <PhShareNetwork :size="16" weight="bold" />
+                <span>{{ t('share.title') }}</span>
               </button>
-              <button
-                class="selector-btn"
-                :class="{ active: selectedBenchmark === 'BTC' }"
-                @click="selectedBenchmark = 'BTC'"
-              >
-                vs BTC
-              </button>
-              <button
-                class="selector-btn"
-                :class="{ active: selectedBenchmark === 'ETH' }"
-                @click="selectedBenchmark = 'ETH'"
-              >
-                vs ETH
-              </button>
-            </div>
-            <!-- 时间范围选择 -->
-            <div class="selector-group">
-              <button
-                v-for="range in timeRanges"
-                :key="range"
-                class="selector-btn"
-                :class="{ active: selectedTimeRange === range }"
-                @click="selectedTimeRange = range"
-              >
-                {{ range }}
+              <button class="action-btn" @click="showPriceAlert = true" :title="t('priceAlert.title')">
+                <PhBell :size="16" weight="bold" />
+                <span>{{ t('priceAlert.title') }}</span>
               </button>
             </div>
           </div>
+          
+          <div class="hero-stats">
+            <div class="stat-item" v-for="cat in assetCategories" :key="cat.id">
+              <div class="stat-icon" :style="{ backgroundColor: cat.fixedColor || themeStore.currentTheme.colors[cat.colorKey] }"></div>
+              <div class="stat-info">
+                <span class="stat-label">{{ t(cat.labelKey) }}</span>
+                <span class="stat-num font-mono">{{ currencySymbol }}{{ formatNumber(cat.totalValue, 0) }}</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="chart-container">
+      </div>
+
+      <!-- 2. 趋势图表 (占大版面) -->
+      <div v-if="dashboardStore.widgetConfig.trend" class="grid-item trend-card">
+        <div class="card-header">
+          <div class="header-title">
+            <PhTrendUp :size="18" weight="duotone" class="header-icon" />
+            <h3>{{ t('dashboard.assetTrend') }}</h3>
+          </div>
+          <div class="header-controls">
+            <!-- 计价货币切换 -->
+            <div class="toggle-group">
+               <button 
+                 v-for="curr in currencies" 
+                 :key="curr.code"
+                 class="toggle-item"
+                 :class="{ active: selectedPricingCurrency === curr.code }"
+                 @click="setPricingCurrency(curr.code)"
+               >
+                 {{ curr.code }}
+               </button>
+            </div>
+            <!-- 时间范围切换 -->
+            <div class="toggle-group">
+               <button 
+                 v-for="range in timeRanges" 
+                 :key="range"
+                 class="toggle-item"
+                 :class="{ active: selectedTimeRange === range }"
+                 @click="selectedTimeRange = range"
+               >
+                 {{ range }}
+               </button>
+            </div>
+          </div>
+        </div>
+        <div class="chart-wrapper">
           <Line
             :data="lineChartData"
             :options="lineChartOptions"
@@ -783,1200 +759,632 @@ watch(selectedTimeRange, async (newRange) => {
         </div>
       </div>
 
-      <!-- 资产分布饼图 -->
-      <div v-if="dashboardStore.widgetConfig.distribution" class="glass-card dist-panel">
-        <div class="panel-header">
-          <h3>{{ t('dashboard.assetDistribution') }}</h3>
+      <!-- 3. 资产分布 (Doughnut) -->
+      <div v-if="dashboardStore.widgetConfig.distribution" class="grid-item dist-card">
+        <div class="card-header">
+          <div class="header-title">
+            <PhChartPieSlice :size="18" weight="duotone" class="header-icon" />
+            <h3>{{ t('dashboard.assetDistribution') }}</h3>
+          </div>
         </div>
-        <div class="doughnut-wrapper">
-          <div class="doughnut-chart">
+        <div class="dist-content">
+          <div class="doughnut-box">
             <Doughnut :data="doughnutChartData" :options="doughnutChartOptions" />
           </div>
-          <div class="dist-legend">
-            <div
-              v-for="cat in assetCategories"
-              :key="cat.id"
-              class="legend-row"
-            >
-              <span
-                class="legend-dot"
-                :style="{ background: cat.fixedColor || themeStore.currentTheme.colors[cat.colorKey] }"
-              />
-              <span class="legend-name">{{ t(cat.labelKey) }}</span>
-              <span class="legend-pct font-mono">
-                {{ totalAssets ? ((cat.totalValue / totalAssets) * 100).toFixed(1) : 0 }}%
-              </span>
-              <span class="legend-val font-mono">
-                {{ currencySymbol }}{{ formatNumber(cat.totalValue, 0) }}
-              </span>
+          <div class="dist-list">
+            <div v-for="cat in assetCategories" :key="cat.id" class="dist-item">
+              <span class="dot" :style="{ background: cat.fixedColor || themeStore.currentTheme.colors[cat.colorKey] }"></span>
+              <span class="name">{{ t(cat.labelKey) }}</span>
+              <span class="pct font-mono">{{ totalAssets ? ((cat.totalValue / totalAssets) * 100).toFixed(1) : 0 }}%</span>
             </div>
           </div>
         </div>
       </div>
-    </section>
 
-    <!-- 健康评分 + 目标追踪 -->
-    <section v-if="dashboardStore.widgetConfig.healthScore || dashboardStore.widgetConfig.goals" class="insight-row">
-      <HealthScoreCard v-if="dashboardStore.widgetConfig.healthScore" />
-      <div v-if="dashboardStore.widgetConfig.goals" class="goals-panel">
-        <div class="goals-header">
-          <h3>{{ t('goals.title') }}</h3>
-          <button class="btn btn-ghost btn-sm" @click="showAddGoal = true">
-            {{ t('goals.addGoal') }}
+      <!-- 4. 健康评分 & 目标 (Insight Group) -->
+      <div v-if="dashboardStore.widgetConfig.healthScore" class="grid-item health-card">
+        <HealthScoreCard />
+      </div>
+
+      <div v-if="dashboardStore.widgetConfig.goals" class="grid-item goals-card">
+        <div class="card-header">
+          <div class="header-title">
+            <PhTarget :size="18" weight="duotone" class="header-icon" />
+            <h3>{{ t('goals.title') }}</h3>
+          </div>
+          <button class="icon-btn-sm" @click="showAddGoal = true">
+            <span class="plus-icon">+</span>
           </button>
         </div>
-        <div v-if="displayedGoals.length > 0" class="goals-list">
-          <GoalCard
-            v-for="goal in displayedGoals"
-            :key="goal.id"
-            :goal="goal"
-            @delete="goalStore.removeGoal($event)"
-          />
-        </div>
-        <div v-else class="goals-empty">
-          {{ t('goals.empty') }}
-        </div>
-      </div>
-    </section>
-
-    <!-- DeFi 仓位概览 -->
-    <DeFiOverview v-if="dashboardStore.widgetConfig.defiOverview" />
-
-    <!-- NFT 资产概览 -->
-    <NFTOverview v-if="dashboardStore.widgetConfig.nftOverview" />
-
-    <!-- 费用分析 -->
-    <FeeAnalytics v-if="dashboardStore.widgetConfig.feeAnalytics" />
-
-    <!-- 策略面板 -->
-    <StrategyPanel v-if="dashboardStore.widgetConfig.strategyPanel" />
-
-    <!-- 添加目标对话框 -->
-    <AddGoalDialog :visible="showAddGoal" @close="showAddGoal = false" />
-
-    <!-- 持仓明细表格 -->
-    <section v-if="dashboardStore.widgetConfig.holdings" class="glass-card holdings-panel">
-      <div class="panel-header">
-        <h3>{{ t('dashboard.holdingsDetail') || '持仓明细' }}</h3>
-        <div class="panel-controls">
-          <!-- 视图切换：平铺 / 分组 -->
-          <div class="selector-group">
-            <button
-              class="selector-btn"
-              :class="{ active: holdingsViewMode === 'flat' }"
-              @click="holdingsViewMode = 'flat'"
-              :title="t('dashboard.viewFlat')"
-            >
-              <PhListBullets :size="14" />
-            </button>
-            <button
-              class="selector-btn"
-              :class="{ active: holdingsViewMode === 'grouped' }"
-              @click="holdingsViewMode = 'grouped'"
-              :title="t('dashboard.viewGrouped')"
-            >
-              <PhSquaresFour :size="14" />
-            </button>
-          </div>
-          <div class="search-box">
-            <PhMagnifyingGlass :size="14" />
-            <input
-              type="text"
-              v-model="searchQuery"
-              :placeholder="t('common.search') || '搜索...'"
+        <div class="goals-content">
+          <div v-if="displayedGoals.length > 0" class="goals-stack">
+            <GoalCard
+              v-for="goal in displayedGoals"
+              :key="goal.id"
+              :goal="goal"
+              @delete="goalStore.removeGoal($event)"
             />
           </div>
-        </div>
-      </div>
-
-      <table class="table holdings-table">
-        <thead>
-          <tr>
-            <th class="col-expand"></th>
-            <th class="col-asset">{{ t('dashboard.asset') }}</th>
-            <th class="col-source">{{ t('dashboard.sources') }}</th>
-            <th class="col-sortable" @click="toggleSort('price')">
-              {{ t('dashboard.price') }}
-              <PhSortAscending v-if="sortField === 'price' && sortOrder === 'asc'" :size="12" />
-              <PhSortDescending v-else-if="sortField === 'price' && sortOrder === 'desc'" :size="12" />
-            </th>
-            <th class="col-sortable" @click="toggleSort('change24h')">
-              {{ t('dashboard.change') }}
-              <PhSortAscending v-if="sortField === 'change24h' && sortOrder === 'asc'" :size="12" />
-              <PhSortDescending v-else-if="sortField === 'change24h' && sortOrder === 'desc'" :size="12" />
-            </th>
-            <th class="col-sortable" @click="toggleSort('balance')">
-              {{ t('dashboard.balance') }}
-              <PhSortAscending v-if="sortField === 'balance' && sortOrder === 'asc'" :size="12" />
-              <PhSortDescending v-else-if="sortField === 'balance' && sortOrder === 'desc'" :size="12" />
-            </th>
-            <th class="col-sortable" @click="toggleSort('value')">
-              {{ t('dashboard.value') }}
-              <PhSortAscending v-if="sortField === 'value' && sortOrder === 'asc'" :size="12" />
-              <PhSortDescending v-else-if="sortField === 'value' && sortOrder === 'desc'" :size="12" />
-            </th>
-            <th class="col-pct">{{ t('dashboard.percentage') }}</th>
-          </tr>
-        </thead>
-        <!-- 平铺视图 -->
-        <tbody v-if="holdingsViewMode === 'flat'">
-          <template v-for="holding in paginatedHoldings" :key="holding.symbol">
-            <tr class="holding-row" @click="holding.sources.length > 1 && toggleAssetExpand(holding.symbol)">
-              <td class="col-expand">
-                <button
-                  v-if="holding.sources.length > 1"
-                  class="expand-btn"
-                  @click.stop="toggleAssetExpand(holding.symbol)"
-                >
-                  <PhCaretRight
-                    :size="14"
-                    :class="{ 'rotated-down': expandedAssets.has(holding.symbol) }"
-                  />
-                </button>
-              </td>
-              <td class="col-asset">
-                <div class="asset-cell">
-                  <div class="asset-icon">
-                    <img v-if="holding.icon" :src="holding.icon" :alt="holding.symbol" />
-                    <span v-else class="icon-fallback">{{ holding.symbol.slice(0, 2) }}</span>
-                  </div>
-                  <div class="asset-meta">
-                    <span class="asset-name">{{ holding.name }}</span>
-                    <span class="asset-symbol">{{ holding.symbol }}</span>
-                  </div>
-                </div>
-              </td>
-              <td class="col-source">
-                <span v-if="holding.sources.length === 1" class="source-tag">
-                  {{ holding.sources[0].source }}
-                </span>
-                <span v-else class="sources-count">
-                  {{ t('dashboard.mergedAssets', { count: holding.sources.length }) }}
-                </span>
-              </td>
-              <td class="font-mono">{{ currencySymbol }}{{ formatNumber(holding.price) }}</td>
-              <td
-                class="font-mono"
-                :class="holding.change24h >= 0 ? 'change-positive' : 'change-negative'"
-              >
-                {{ holding.change24h >= 0 ? '+' : '' }}{{ holding.change24h }}%
-              </td>
-              <td class="font-mono">{{ formatNumber(holding.balance, 4) }}</td>
-              <td class="font-mono">{{ currencySymbol }}{{ formatNumber(holding.value) }}</td>
-              <td class="font-mono col-pct-val">{{ holdingPercent(holding.value) }}%</td>
-            </tr>
-
-            <template v-if="expandedAssets.has(holding.symbol) && holding.sources.length > 1">
-              <tr
-                v-for="(source, idx) in holding.sources"
-                :key="`${holding.symbol}-${idx}`"
-                class="source-detail-row"
-              >
-                <td class="col-expand"></td>
-                <td class="col-asset">
-                  <div class="source-detail-indent">
-                    <span class="source-detail-label">└ {{ source.source }}</span>
-                  </div>
-                </td>
-                <td class="col-source">
-                  <span class="source-type-tag">{{ source.sourceType }}</span>
-                </td>
-                <td class="font-mono">-</td>
-                <td class="font-mono">-</td>
-                <td class="font-mono">{{ formatNumber(source.balance, 4) }}</td>
-                <td class="font-mono">{{ currencySymbol }}{{ formatNumber(source.value) }}</td>
-                <td class="font-mono col-pct-val">{{ holdingPercent(source.value) }}%</td>
-              </tr>
-            </template>
-          </template>
-
-          <tr v-if="paginatedHoldings.length === 0">
-            <td colspan="8" class="empty-row">
-              {{ searchQuery ? t('common.noResults') : t('common.noData') }}
-            </td>
-          </tr>
-        </tbody>
-
-        <!-- 智能分组视图 -->
-        <tbody v-else>
-          <template v-for="group in groupedHoldings" :key="group.id">
-            <!-- 分组头 -->
-            <tr class="group-header-row" @click="toggleGroup(group.id)">
-              <td class="col-expand">
-                <button class="expand-btn" @click.stop="toggleGroup(group.id)">
-                  <PhCaretRight
-                    :size="14"
-                    :class="{ 'rotated-down': expandedGroups.has(group.id) }"
-                  />
-                </button>
-              </td>
-              <td colspan="5">
-                <div class="group-header-cell">
-                  <span class="group-name">{{ t(group.labelKey) }}</span>
-                  <span class="group-count">{{ group.items.length }}</span>
-                </div>
-              </td>
-              <td class="font-mono group-total">{{ currencySymbol }}{{ formatNumber(group.totalValue) }}</td>
-              <td class="font-mono col-pct-val group-total">{{ group.percentage }}%</td>
-            </tr>
-
-            <!-- 分组内的资产 -->
-            <template v-if="expandedGroups.has(group.id)">
-              <tr
-                v-for="holding in group.items"
-                :key="`${group.id}-${holding.symbol}`"
-                class="holding-row grouped-item-row"
-              >
-                <td class="col-expand"></td>
-                <td class="col-asset">
-                  <div class="asset-cell">
-                    <div class="asset-icon">
-                      <img v-if="holding.icon" :src="holding.icon" :alt="holding.symbol" />
-                      <span v-else class="icon-fallback">{{ holding.symbol.slice(0, 2) }}</span>
-                    </div>
-                    <div class="asset-meta">
-                      <span class="asset-name">{{ holding.name }}</span>
-                      <span class="asset-symbol">{{ holding.symbol }}</span>
-                    </div>
-                  </div>
-                </td>
-                <td class="col-source">
-                  <span v-if="holding.sources.length === 1" class="source-tag">
-                    {{ holding.sources[0].source }}
-                  </span>
-                  <span v-else class="sources-count">
-                    {{ t('dashboard.mergedAssets', { count: holding.sources.length }) }}
-                  </span>
-                </td>
-                <td class="font-mono">{{ currencySymbol }}{{ formatNumber(holding.price) }}</td>
-                <td
-                  class="font-mono"
-                  :class="holding.change24h >= 0 ? 'change-positive' : 'change-negative'"
-                >
-                  {{ holding.change24h >= 0 ? '+' : '' }}{{ holding.change24h }}%
-                </td>
-                <td class="font-mono">{{ formatNumber(holding.balance, 4) }}</td>
-                <td class="font-mono">{{ currencySymbol }}{{ formatNumber(holding.value) }}</td>
-                <td class="font-mono col-pct-val">{{ holdingPercent(holding.value) }}%</td>
-              </tr>
-            </template>
-          </template>
-
-          <tr v-if="groupedHoldings.length === 0">
-            <td colspan="8" class="empty-row">
-              {{ searchQuery ? t('common.noResults') : t('common.noData') }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
-      <!-- 分页控件 -->
-      <div v-if="filteredHoldings.length > 0" class="pagination">
-        <div class="pagination-info">
-          {{ t('common.showingItems', paginationInfo) }}
-        </div>
-
-        <div class="pagination-controls">
-          <button
-            class="page-btn"
-            :disabled="currentPage === 1"
-            @click="goToPage(currentPage - 1)"
-          >
-            {{ t('common.prevPage') }}
-          </button>
-
-          <div class="page-numbers">
-            <button
-              v-for="page in totalPages"
-              :key="page"
-              v-show="Math.abs(page - currentPage) <= 2 || page === 1 || page === totalPages"
-              class="page-num"
-              :class="{ active: page === currentPage }"
-              @click="goToPage(page)"
-            >
-              {{ page }}
-            </button>
+          <div v-else class="empty-state-sm">
+            {{ t('goals.empty') }}
           </div>
-
-          <button
-            class="page-btn"
-            :disabled="currentPage === totalPages"
-            @click="goToPage(currentPage + 1)"
-          >
-            {{ t('common.nextPage') }}
-          </button>
-        </div>
-
-        <div class="page-size-selector">
-          <span>{{ t('common.itemsPerPage') }}:</span>
-          <select v-model="itemsPerPage" @change="changePageSize($event.target.value)">
-            <option v-for="size in availablePageSizes" :key="size" :value="size">
-              {{ size }}
-            </option>
-          </select>
         </div>
       </div>
-    </section>
 
-    <!-- 资产详情抽屉 -->
-    <AssetDetailDrawer
-      :visible="showAssetDrawer"
-      :asset="selectedAsset"
-      @close="closeAssetDrawer"
-    />
+      <!-- 5. 其他组件概览 -->
+      <div v-if="dashboardStore.widgetConfig.defiOverview" class="grid-item defi-card">
+        <DeFiOverview />
+      </div>
+      <div v-if="dashboardStore.widgetConfig.nftOverview" class="grid-item nft-card">
+        <NFTOverview />
+      </div>
 
-    <!-- 价格预警对话框 -->
-    <PriceAlertDialog
-      :visible="showPriceAlert"
-      @close="showPriceAlert = false"
-    />
+      <!-- 6. 持仓明细 (Full Width) -->
+      <div v-if="dashboardStore.widgetConfig.holdings" class="grid-item holdings-card">
+        <div class="card-header">
+          <div class="header-title">
+            <PhListBullets :size="18" weight="duotone" class="header-icon" />
+            <h3>{{ t('dashboard.holdingsDetail') || '持仓明细' }}</h3>
+          </div>
+          <div class="header-actions">
+            <!-- 视图切换 -->
+            <div class="view-toggles">
+              <button 
+                class="view-btn" 
+                :class="{ active: holdingsViewMode === 'flat' }"
+                @click="holdingsViewMode = 'flat'"
+              >
+                <PhListBullets :size="14" />
+              </button>
+              <button 
+                class="view-btn" 
+                :class="{ active: holdingsViewMode === 'grouped' }"
+                @click="holdingsViewMode = 'grouped'"
+              >
+                <PhSquaresFour :size="14" />
+              </button>
+            </div>
+            <!-- 搜索 -->
+            <div class="search-input">
+              <PhMagnifyingGlass :size="14" class="search-icon" />
+              <input 
+                type="text" 
+                v-model="searchQuery" 
+                :placeholder="t('common.search')" 
+              />
+            </div>
+          </div>
+        </div>
 
-    <!-- 分享卡片 -->
-    <ShareCard
-      :visible="showShareCard"
-      @close="showShareCard = false"
-    />
+        <div class="table-container">
+          <table class="modern-table">
+            <thead>
+              <tr>
+                <th class="th-expand"></th>
+                <th class="th-asset">{{ t('dashboard.asset') }}</th>
+                <th class="th-source">{{ t('dashboard.sources') }}</th>
+                <th class="th-sortable" @click="toggleSort('price')">
+                  {{ t('dashboard.price') }}
+                  <span class="sort-indicator" v-if="sortField === 'price'">
+                    {{ sortOrder === 'asc' ? '↑' : '↓' }}
+                  </span>
+                </th>
+                <th class="th-sortable" @click="toggleSort('change24h')">
+                  {{ t('dashboard.change') }}
+                  <span class="sort-indicator" v-if="sortField === 'change24h'">
+                    {{ sortOrder === 'asc' ? '↑' : '↓' }}
+                  </span>
+                </th>
+                <th class="th-right">{{ t('dashboard.balance') }}</th>
+                <th class="th-right th-sortable" @click="toggleSort('value')">
+                  {{ t('dashboard.value') }}
+                  <span class="sort-indicator" v-if="sortField === 'value'">
+                    {{ sortOrder === 'asc' ? '↑' : '↓' }}
+                  </span>
+                </th>
+                <th class="th-right">{{ t('dashboard.percentage') }}</th>
+              </tr>
+            </thead>
+            
+            <tbody v-if="holdingsViewMode === 'flat'">
+              <template v-for="holding in paginatedHoldings" :key="holding.symbol">
+                <tr class="tr-hover" @click="holding.sources.length > 1 && toggleAssetExpand(holding.symbol)">
+                  <td class="td-expand">
+                    <button v-if="holding.sources.length > 1" class="expand-toggle">
+                      <PhCaretRight :size="12" :class="{ 'rotate-90': expandedAssets.has(holding.symbol) }" />
+                    </button>
+                  </td>
+                  <td>
+                    <div class="asset-info">
+                      <div class="asset-logo">
+                        <img v-if="holding.icon" :src="holding.icon" />
+                        <span v-else>{{ holding.symbol.slice(0, 1) }}</span>
+                      </div>
+                      <div class="asset-text">
+                        <div class="symbol">{{ holding.symbol }}</div>
+                        <div class="name">{{ holding.name }}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span v-if="holding.sources.length === 1" class="tag">{{ holding.sources[0].source }}</span>
+                    <span v-else class="tag multi">{{ holding.sources.length }} sources</span>
+                  </td>
+                  <td class="font-mono">{{ currencySymbol }}{{ formatNumber(holding.price) }}</td>
+                  <td class="font-mono" :class="holding.change24h >= 0 ? 'text-green' : 'text-red'">
+                    {{ holding.change24h >= 0 ? '+' : '' }}{{ holding.change24h }}%
+                  </td>
+                  <td class="font-mono text-right">{{ formatNumber(holding.balance, 4) }}</td>
+                  <td class="font-mono text-right bold">{{ currencySymbol }}{{ formatNumber(holding.value) }}</td>
+                  <td class="font-mono text-right text-muted">{{ holdingPercent(holding.value) }}%</td>
+                </tr>
+                <!-- 展开详情 -->
+                <template v-if="expandedAssets.has(holding.symbol) && holding.sources.length > 1">
+                  <tr v-for="(source, idx) in holding.sources" :key="idx" class="tr-detail">
+                    <td></td>
+                    <td class="td-indent">└ {{ source.source }}</td>
+                    <td><span class="tag-xs">{{ source.sourceType }}</span></td>
+                    <td></td>
+                    <td></td>
+                    <td class="font-mono text-right">{{ formatNumber(source.balance, 4) }}</td>
+                    <td class="font-mono text-right">{{ currencySymbol }}{{ formatNumber(source.value) }}</td>
+                    <td></td>
+                  </tr>
+                </template>
+              </template>
+            </tbody>
+            
+            <!-- 分组视图 (简化版逻辑复用) -->
+            <tbody v-else>
+              <template v-for="group in groupedHoldings" :key="group.id">
+                <tr class="tr-group" @click="toggleGroup(group.id)">
+                  <td class="td-expand">
+                    <PhCaretRight :size="12" :class="{ 'rotate-90': expandedGroups.has(group.id) }" />
+                  </td>
+                  <td colspan="5" class="group-title">
+                    {{ t(group.labelKey) }} <span class="badge-count">{{ group.items.length }}</span>
+                  </td>
+                  <td class="font-mono text-right bold">{{ currencySymbol }}{{ formatNumber(group.totalValue) }}</td>
+                  <td class="font-mono text-right">{{ group.percentage }}%</td>
+                </tr>
+                <template v-if="expandedGroups.has(group.id)">
+                  <tr v-for="holding in group.items" :key="holding.symbol" class="tr-hover">
+                     <!-- 与平铺视图相同的行结构，略 -->
+                     <td></td>
+                     <td>
+                        <div class="asset-info">
+                          <div class="asset-logo sm">
+                            <img v-if="holding.icon" :src="holding.icon" />
+                            <span v-else>{{ holding.symbol.slice(0, 1) }}</span>
+                          </div>
+                          <span class="symbol">{{ holding.symbol }}</span>
+                        </div>
+                     </td>
+                     <td>
+                       <span v-if="holding.sources.length === 1" class="tag">{{ holding.sources[0].source }}</span>
+                       <span v-else class="tag multi">{{ holding.sources.length }}</span>
+                     </td>
+                     <td class="font-mono">{{ currencySymbol }}{{ formatNumber(holding.price) }}</td>
+                     <td class="font-mono" :class="holding.change24h >= 0 ? 'text-green' : 'text-red'">
+                       {{ holding.change24h }}%
+                     </td>
+                     <td class="font-mono text-right">{{ formatNumber(holding.balance, 4) }}</td>
+                     <td class="font-mono text-right">{{ currencySymbol }}{{ formatNumber(holding.value) }}</td>
+                     <td class="font-mono text-right text-muted">{{ holdingPercent(holding.value) }}%</td>
+                  </tr>
+                </template>
+              </template>
+            </tbody>
+          </table>
+        </div>
 
-    <!-- Widget 配置面板 -->
-    <DashboardCustomizer
-      :visible="showCustomizer"
-      @close="showCustomizer = false"
-    />
+        <!-- 分页 -->
+        <div class="pagination-bar">
+          <span class="page-info">{{ t('common.showingItems', paginationInfo) }}</span>
+          <div class="page-ctrl">
+            <button :disabled="currentPage === 1" @click="goToPage(currentPage - 1)">{{ t('common.prevPage') }}</button>
+            <button :disabled="currentPage === totalPages" @click="goToPage(currentPage + 1)">{{ t('common.nextPage') }}</button>
+          </div>
+        </div>
+      </div>
 
-    <!-- 首次使用引导 -->
+    </div>
+
+    <!-- 弹窗组件 -->
+    <AssetDetailDrawer :visible="showAssetDrawer" :asset="selectedAsset" @close="closeAssetDrawer" />
+    <PriceAlertDialog :visible="showPriceAlert" @close="showPriceAlert = false" />
+    <ShareCard :visible="showShareCard" @close="showShareCard = false" />
+    <DashboardCustomizer :visible="showCustomizer" @close="showCustomizer = false" />
+    <AddGoalDialog :visible="showAddGoal" @close="showAddGoal = false" />
     <OnboardingWizard v-if="showOnboarding" @complete="() => {}" />
   </div>
 </template>
 
 <style scoped>
-.dashboard {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap-lg);
-  max-width: 1400px;
+.dashboard-container {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding-bottom: var(--gap-2xl);
 }
 
-/* ========== 顶部标题 ========== */
-.dashboard-header {
+/* 顶部导航 */
+.dashboard-navbar {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--gap-lg);
 }
-
 .page-title {
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 1.25rem;
+  font-weight: 700;
   color: var(--color-text-primary);
 }
-
-.gear-btn {
+.icon-btn {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: var(--color-bg-tertiary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast);
+  transition: all 0.2s;
 }
-
-.gear-btn:hover {
-  background: var(--color-bg-elevated);
+.icon-btn:hover {
+  background: var(--color-bg-tertiary);
   color: var(--color-accent-primary);
 }
 
-/* 空仪表盘引导 */
-.empty-dashboard {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--gap-md);
-  padding: var(--gap-2xl);
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  text-align: center;
+/* Bento Grid */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--gap-lg);
+  grid-auto-flow: dense;
 }
 
-.empty-dashboard p {
+.grid-item {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 1. Hero Card */
+.hero-card {
+  grid-column: span 8;
+  padding: var(--gap-xl);
+  background: linear-gradient(135deg, var(--color-bg-secondary) 0%, var(--color-bg-elevated) 100%);
+}
+
+@media (min-width: 1600px) {
+  .hero-card { grid-column: span 12; display: flex; flex-direction: row; justify-content: space-between; align-items: center; }
+  .hero-content { display: flex; width: 100%; justify-content: space-between; align-items: center; }
+  .hero-main { min-width: 400px; }
+  .hero-stats { margin-top: 0 !important; }
+}
+
+.label-text {
   font-size: 0.875rem;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
-
-/* ========== 摘要栏 ========== */
-.summary-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--gap-xl);
-  padding: var(--gap-lg);
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-
-.summary-left {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap-xs);
-}
-
-.total-row {
+.balance-row {
   display: flex;
   align-items: baseline;
-  gap: var(--gap-sm);
-}
-
-.total-row .stat-value-hero {
-  font-size: 1.5rem;
-}
-
-.change-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  font-size: 0.8125rem;
-  font-weight: 500;
-}
-
-.change-abs {
-  color: var(--color-text-secondary);
-  font-weight: 400;
-}
-
-.change-period {
-  font-size: 0.6875rem;
-  color: var(--color-text-muted);
-  margin-left: 2px;
-}
-
-/* 今日盈亏卡片 */
-.pnl-card {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--gap-sm) var(--gap-md);
-  background: var(--color-bg-tertiary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  min-width: 120px;
-}
-
-.pnl-card.pnl-positive {
-  border-color: color-mix(in srgb, var(--color-success) 30%, transparent);
-}
-
-.pnl-card.pnl-negative {
-  border-color: color-mix(in srgb, var(--color-error) 30%, transparent);
-}
-
-.pnl-label {
-  font-size: 0.6875rem;
-  color: var(--color-text-muted);
-}
-
-.pnl-value {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.pnl-positive .pnl-value {
-  color: var(--color-success);
-}
-
-.pnl-negative .pnl-value {
-  color: var(--color-error);
-}
-
-.pnl-percent {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  font-size: 0.6875rem;
-  font-weight: 500;
-}
-
-.summary-right {
-  display: flex;
-  align-items: center;
-  gap: var(--gap-lg);
-}
-
-.alert-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: var(--color-bg-tertiary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
-}
-
-.alert-btn:hover {
-  background: var(--color-bg-elevated);
-  color: var(--color-accent-primary);
-  border-color: var(--color-accent-primary);
-}
-
-.category-chip {
-  display: flex;
-  align-items: center;
-  gap: var(--gap-xs);
-  padding: var(--gap-xs) var(--gap-sm);
-  background: var(--color-bg-tertiary);
-  border-radius: var(--radius-xs);
-}
-
-.chip-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.chip-label {
-  font-size: 0.6875rem;
-  color: var(--color-text-secondary);
-}
-
-.chip-value {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--color-text-primary);
-}
-
-/* ========== 健康评分 + 目标追踪 ========== */
-.insight-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--gap-lg);
-}
-
-.goals-panel {
-  padding: var(--gap-lg);
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  display: flex;
-  flex-direction: column;
-}
-
-.goals-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--gap-md);
-}
-
-.goals-header h3 {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.btn-sm {
-  padding: 4px 10px;
-  font-size: 0.6875rem;
-}
-
-.goals-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap-sm);
-  flex: 1;
-}
-
-.goals-empty {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-}
-
-/* ========== 图表区 ========== */
-.charts-row {
-  display: grid;
-  grid-template-columns: 3fr 2fr;
-  gap: var(--gap-lg);
-}
-
-.panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   gap: var(--gap-md);
-  margin-bottom: var(--gap-md);
-  flex-wrap: wrap;
+  margin: var(--gap-sm) 0 var(--gap-lg);
 }
-
-.panel-header h3 {
-  font-size: 0.8125rem;
-  font-weight: 600;
+.total-balance {
+  font-size: 2.5rem;
+  line-height: 1;
+  color: var(--color-text-primary);
 }
+.pnl-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: rgba(0,0,0,0.2);
+  font-size: 0.875rem;
+}
+.pnl-badge.positive { color: var(--color-success); background: rgba(46, 189, 133, 0.1); }
+.pnl-badge.negative { color: var(--color-error); background: rgba(226, 92, 92, 0.1); }
+.pnl-value { opacity: 0.8; font-size: 0.8em; margin-left: 4px; }
 
-.panel-controls {
+.hero-actions {
+  display: flex;
+  gap: var(--gap-md);
+}
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.action-btn:hover { border-color: var(--color-accent-primary); }
+
+.hero-stats {
+  margin-top: var(--gap-xl);
+  display: flex;
+  gap: var(--gap-xl);
+}
+.stat-item {
   display: flex;
   align-items: center;
   gap: var(--gap-sm);
 }
+.stat-icon {
+  width: 4px;
+  height: 24px;
+  border-radius: 2px;
+}
+.stat-info {
+  display: flex;
+  flex-direction: column;
+}
+.stat-label { font-size: 0.75rem; color: var(--color-text-muted); }
+.stat-num { font-size: 0.9em; font-weight: 500; }
 
-.trend-panel {
+/* 2. Trend Card */
+.trend-card {
+  grid-column: span 8;
+  min-height: 320px;
   padding: var(--gap-lg);
 }
-
-.chart-container {
-  height: 220px;
-}
-
-/* 选择器按钮组 */
-.selector-group {
+.card-header {
   display: flex;
-  gap: 2px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--gap-lg);
+}
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+}
+.header-icon { color: var(--color-accent-primary); }
+.header-title h3 { font-size: 1rem; font-weight: 600; }
+
+.toggle-group {
+  display: flex;
   background: var(--color-bg-tertiary);
   padding: 2px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
 }
-
-.selector-btn {
-  padding: 4px 8px;
-  font-size: 0.6875rem;
-  font-weight: 500;
-  color: var(--color-text-secondary);
+.toggle-item {
+  padding: 4px 12px;
+  font-size: 0.75rem;
   background: transparent;
   border: none;
-  border-radius: var(--radius-xs);
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast);
-  white-space: nowrap;
 }
-
-.selector-btn:hover {
-  color: var(--color-text-primary);
+.toggle-item.active {
   background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-sm);
+}
+.chart-wrapper {
+  flex: 1;
+  position: relative;
+  width: 100%;
 }
 
-.selector-btn.active {
-  background: var(--color-accent-primary);
-  color: #fff;
-}
-
-/* 饼图面板 */
-.dist-panel {
+/* 3. Distribution Card */
+.dist-card {
+  grid-column: span 4;
   padding: var(--gap-lg);
 }
-
-.doughnut-wrapper {
+.dist-content {
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: var(--gap-lg);
-  height: 220px;
 }
-
-.doughnut-chart {
-  width: 140px;
-  height: 140px;
-  flex-shrink: 0;
+.doughnut-box {
+  width: 160px;
+  height: 160px;
 }
-
-.dist-legend {
-  flex: 1;
+.dist-list {
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: var(--gap-sm);
 }
-
-.legend-row {
+.dist-item {
   display: flex;
   align-items: center;
-  gap: var(--gap-sm);
+  justify-content: space-between;
+  font-size: 0.8125rem;
 }
+.dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
+.name { flex: 1; color: var(--color-text-secondary); }
+.pct { font-weight: 500; }
 
-.legend-dot {
-  width: 8px;
-  height: 8px;
+/* 4. Insight Cards */
+.health-card { grid-column: span 4; padding: 0; border: none; background: transparent; }
+.goals-card { grid-column: span 4; padding: var(--gap-lg); }
+.defi-card, .nft-card { grid-column: span 6; }
+
+.icon-btn-sm {
+  width: 24px; height: 24px;
   border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.legend-name {
-  font-size: 0.75rem;
+  border: 1px solid var(--color-border);
+  background: transparent;
   color: var(--color-text-secondary);
-  flex: 1;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
 }
+.icon-btn-sm:hover { border-color: var(--color-accent-primary); color: var(--color-accent-primary); }
 
-.legend-pct {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-  min-width: 40px;
-  text-align: right;
-}
+.goals-stack { display: flex; flex-direction: column; gap: var(--gap-sm); }
+.empty-state-sm { text-align: center; padding: var(--gap-lg); color: var(--color-text-muted); font-size: 0.875rem; }
 
-.legend-val {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--color-text-primary);
-  min-width: 80px;
-  text-align: right;
-}
-
-/* ========== 持仓表格 ========== */
-.holdings-panel {
+/* 5. Holdings Card */
+.holdings-card {
+  grid-column: span 12;
   padding: var(--gap-lg);
 }
-
-.search-box {
+.header-actions {
   display: flex;
+  gap: var(--gap-md);
   align-items: center;
-  gap: var(--gap-xs);
-  padding: 4px 8px;
+}
+.view-toggles {
+  display: flex;
   background: var(--color-bg-tertiary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  color: var(--color-text-muted);
+  border-radius: var(--radius-md);
+  padding: 2px;
 }
-
-.search-box:focus-within {
-  border-color: var(--color-accent-primary);
-}
-
-.search-box input {
-  background: none;
-  border: none;
-  outline: none;
-  color: var(--color-text-primary);
-  font-size: 0.75rem;
-  width: 140px;
-}
-
-.search-box input::placeholder {
-  color: var(--color-text-muted);
-}
-
-.holdings-table {
-  margin-top: var(--gap-sm);
-}
-
-.holdings-table th {
-  white-space: nowrap;
-}
-
-.holdings-table tbody tr {
-  cursor: pointer;
-  height: 40px;
-}
-
-.col-sortable {
-  cursor: pointer;
-  user-select: none;
-}
-
-.col-sortable:hover {
-  color: var(--color-text-primary);
-}
-
-/* 资产列 */
-.asset-cell {
-  display: flex;
-  align-items: center;
-  gap: var(--gap-sm);
-}
-
-.asset-icon {
+.view-btn {
   width: 28px;
   height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-bg-elevated);
-  border-radius: 50%;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.asset-icon img {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-}
-
-.icon-fallback {
-  font-size: 0.625rem;
-  font-weight: 600;
-  color: var(--color-text-muted);
-}
-
-.asset-meta {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.3;
-}
-
-.asset-name {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--color-text-primary);
-}
-
-.asset-symbol {
-  font-size: 0.6875rem;
-  color: var(--color-text-muted);
-}
-
-/* 来源标签 */
-.source-tag {
-  font-size: 0.6875rem;
-  color: var(--color-text-secondary);
-  padding: 1px 6px;
-  background: var(--color-bg-tertiary);
-  border-radius: var(--radius-xs);
-}
-
-.col-pct {
-  text-align: right;
-}
-
-.col-pct-val {
-  text-align: right;
-  color: var(--color-text-secondary);
-}
-
-.empty-row {
-  text-align: center;
-  color: var(--color-text-muted);
-  padding: var(--gap-xl) !important;
-}
-
-/* 展开按钮列 */
-.col-expand {
-  width: 32px;
-  text-align: center;
-  padding: 0 !important;
-}
-
-.expand-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
   background: transparent;
   border: none;
+  border-radius: var(--radius-sm);
   color: var(--color-text-muted);
   cursor: pointer;
-  border-radius: var(--radius-xs);
-  transition: background var(--transition-fast), color var(--transition-fast);
 }
-
-.expand-btn:hover {
-  background: var(--color-bg-tertiary);
+.view-btn.active {
+  background: var(--color-bg-elevated);
   color: var(--color-text-primary);
 }
-
-.expand-btn svg {
-  transition: transform var(--transition-fast);
-}
-
-.rotated-down {
-  transform: rotate(90deg);
-}
-
-.holding-row {
-  cursor: pointer;
-}
-
-/* 来源数量标签 */
-.sources-count {
-  font-size: 0.6875rem;
-  color: var(--color-accent-primary);
-  padding: 2px 6px;
-  background: rgba(75, 131, 240, 0.1);
-  border-radius: var(--radius-xs);
-  font-weight: 500;
-}
-
-/* 来源明细行 */
-.source-detail-row {
+.search-input {
+  display: flex;
+  align-items: center;
   background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0 8px;
+  width: 200px;
+}
+.search-input input {
+  background: transparent;
+  border: none;
+  padding: 6px;
+  font-size: 0.8125rem;
+  color: var(--color-text-primary);
+  width: 100%;
+}
+.search-input:focus-within { border-color: var(--color-accent-primary); }
+.search-icon { color: var(--color-text-muted); }
+
+/* Table Styling */
+.table-container { overflow-x: auto; margin-top: var(--gap-md); }
+.modern-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+.modern-table th {
+  text-align: left;
+  padding: 12px;
   font-size: 0.75rem;
-}
-
-.source-detail-row td {
-  padding-top: 4px !important;
-  padding-bottom: 4px !important;
-}
-
-.source-detail-indent {
-  padding-left: var(--gap-md);
-  color: var(--color-text-secondary);
-}
-
-.source-detail-label {
-  font-size: 0.75rem;
-}
-
-.source-type-tag {
-  font-size: 0.6875rem;
   color: var(--color-text-muted);
-  padding: 1px 4px;
-  background: var(--color-bg-elevated);
-  border-radius: var(--radius-xs);
-  text-transform: uppercase;
-}
-
-/* ========== 智能分组视图 ========== */
-.group-header-row {
-  background: var(--color-bg-tertiary);
-  cursor: pointer;
+  font-weight: 500;
   border-bottom: 1px solid var(--color-border);
 }
+.modern-table td {
+  padding: 12px;
+  font-size: 0.875rem;
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border);
+}
+.th-right, .text-right { text-align: right; }
+.th-sortable { cursor: pointer; user-select: none; }
+.th-sortable:hover { color: var(--color-text-primary); }
 
-.group-header-row:hover {
+.tr-hover:hover { background: var(--color-bg-tertiary); cursor: pointer; }
+
+/* Asset Cell */
+.asset-info { display: flex; align-items: center; gap: 10px; }
+.asset-logo {
+  width: 32px; height: 32px;
   background: var(--color-bg-elevated);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
 }
+.asset-logo img { width: 20px; height: 20px; }
+.asset-logo span { font-size: 0.75rem; font-weight: 600; color: var(--color-text-secondary); }
+.asset-logo.sm { width: 24px; height: 24px; }
+.asset-text { display: flex; flex-direction: column; }
+.asset-text .symbol { font-weight: 500; }
+.asset-text .name { font-size: 0.75rem; color: var(--color-text-muted); }
 
-.group-header-row td {
-  padding: var(--gap-sm) var(--gap-md) !important;
+.tag {
+  font-size: 0.75rem; padding: 2px 6px;
+  background: var(--color-bg-tertiary);
+  border-radius: 4px; color: var(--color-text-secondary);
 }
+.tag.multi { background: rgba(75, 131, 240, 0.1); color: var(--color-accent-primary); }
+.text-green { color: var(--color-success); }
+.text-red { color: var(--color-error); }
+.text-muted { color: var(--color-text-muted); }
+.bold { font-weight: 600; }
 
-.group-header-cell {
-  display: flex;
-  align-items: center;
-  gap: var(--gap-sm);
+.expand-toggle {
+  background: transparent; border: none; color: var(--color-text-muted);
+  cursor: pointer; padding: 4px;
 }
+.rotate-90 { transform: rotate(90deg); transition: transform 0.2s; }
 
-.group-name {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
+/* Detail Row */
+.tr-detail { background: var(--color-bg-tertiary); font-size: 0.8125rem; }
+.td-indent { padding-left: 24px !important; color: var(--color-text-secondary); }
 
-.group-count {
-  font-size: 0.6875rem;
-  color: var(--color-text-muted);
-  padding: 1px 6px;
-  background: var(--color-bg-secondary);
-  border-radius: var(--radius-xs);
-}
+/* Group Row */
+.tr-group { background: var(--color-bg-tertiary); cursor: pointer; font-weight: 600; }
+.badge-count { font-size: 0.75rem; background: var(--color-bg-secondary); padding: 1px 6px; border-radius: 4px; margin-left: 6px; font-weight: normal; color: var(--color-text-muted); }
 
-.group-total {
-  font-weight: 600;
-  color: var(--color-text-primary) !important;
-}
-
-.grouped-item-row td:first-child {
-  border-left: 2px solid var(--color-accent-primary);
-}
-
-/* ========== 分页 ========== */
-.pagination {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--gap-lg);
+/* Pagination */
+.pagination-bar {
+  display: flex; justify-content: space-between; align-items: center;
   margin-top: var(--gap-lg);
-  padding-top: var(--gap-md);
-  border-top: 1px solid var(--color-border);
-  flex-wrap: wrap;
 }
-
-.pagination-info {
-  font-size: 0.75rem;
-  color: var(--color-text-secondary);
-}
-
-.pagination-controls {
-  display: flex;
-  align-items: center;
-  gap: var(--gap-xs);
-}
-
-.page-btn {
-  padding: 4px 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast);
-}
-
-.page-btn:hover:not(:disabled) {
-  background: var(--color-bg-tertiary);
-  color: var(--color-text-primary);
-  border-color: var(--color-border-hover);
-}
-
-.page-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.page-numbers {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.page-num {
-  min-width: 28px;
-  height: 28px;
-  padding: 0 6px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-xs);
-  cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast);
-}
-
-.page-num:hover {
-  background: var(--color-bg-tertiary);
-  color: var(--color-text-primary);
-}
-
-.page-num.active {
-  background: var(--color-accent-primary);
-  color: #fff;
-  border-color: var(--color-accent-primary);
-}
-
-.page-size-selector {
-  display: flex;
-  align-items: center;
-  gap: var(--gap-xs);
-  font-size: 0.75rem;
-  color: var(--color-text-secondary);
-}
-
-.page-size-selector select {
-  padding: 4px 8px;
-  font-size: 0.75rem;
-  color: var(--color-text-primary);
+.page-info { font-size: 0.8125rem; color: var(--color-text-secondary); }
+.page-ctrl button {
+  padding: 6px 12px;
   background: var(--color-bg-tertiary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
   cursor: pointer;
-  transition: border-color var(--transition-fast);
+  margin-left: 8px;
+}
+.page-ctrl button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .hero-card { grid-column: span 12; }
+  .trend-card { grid-column: span 12; }
+  .dist-card { grid-column: span 12; display: flex; flex-direction: row; justify-content: space-around; }
+  .doughnut-box { margin: 0; }
+  .health-card, .goals-card { grid-column: span 6; }
 }
 
-.page-size-selector select:hover {
-  border-color: var(--color-border-hover);
-}
-
-.page-size-selector select:focus {
-  outline: none;
-  border-color: var(--color-accent-primary);
-}
-
-/* ========== 响应式 ========== */
 @media (max-width: 768px) {
-  .summary-bar {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: var(--gap-md);
-  }
-
-  .total-row {
-    flex-wrap: wrap;
-  }
-
-  .total-row .stat-value-hero {
-    font-size: 1.25rem;
-  }
-
-  .summary-right {
-    flex-wrap: wrap;
-    gap: var(--gap-sm);
-    width: 100%;
-  }
-
-  .category-chip {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .pnl-card {
-    width: 100%;
-  }
-
-  .insight-row {
-    grid-template-columns: 1fr;
-  }
-
-  .charts-row {
-    grid-template-columns: 1fr;
-  }
-
-  .doughnut-wrapper {
-    flex-direction: column;
-    height: auto;
-  }
-
-  .panel-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .panel-controls {
-    flex-wrap: wrap;
-    width: 100%;
-  }
-
-  .selector-btn {
-    min-height: 36px;
-    padding: 6px 10px;
-  }
-
-  /* 移动端按钮触摸区域 */
-  .gear-btn,
-  .alert-btn,
-  .btn-sm {
-    min-width: 44px;
-    min-height: 44px;
-  }
-
-  .sort-btn {
-    min-width: 44px;
-    min-height: 44px;
-  }
-
-  /* 移动端隐藏部分列 */
-  .col-source,
-  .holdings-table th:nth-child(2),
-  .holdings-table td:nth-child(3),
-  .holdings-table th:nth-child(3) {
-    display: none;
-  }
-
-  /* 持仓行更紧凑 */
-  .holdings-table td,
-  .holdings-table th {
-    padding: var(--gap-sm);
-    font-size: 0.75rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .change-abs {
-    display: none;
-  }
-
-  .change-period {
-    display: none;
-  }
+  .bento-grid { display: flex; flex-direction: column; }
+  .dashboard-navbar { flex-direction: column; align-items: flex-start; gap: var(--gap-md); }
+  .navbar-right { position: absolute; top: var(--gap-lg); right: var(--gap-lg); }
+  .hero-card { padding: var(--gap-lg); }
+  .total-balance { font-size: 2rem; }
+  .hero-stats { flex-direction: column; gap: var(--gap-md); }
+  .chart-wrapper { height: 250px; }
+  .dist-card { flex-direction: column; }
 }
 </style>
