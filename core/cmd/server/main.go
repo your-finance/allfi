@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
@@ -19,6 +20,11 @@ import (
 
 	// 导入版本信息
 	"your-finance/allfi/internal/version"
+
+	// 导入静态资源
+	"net/http"
+	"strings"
+	"your-finance/allfi/internal/statics"
 
 	// 导入所有模块的 logic 包，触发 init() 注册服务
 	_ "your-finance/allfi/internal/app/achievement/logic"
@@ -147,6 +153,58 @@ func main() {
 
 		// 系统管理
 		systemCtrl.Register(group)
+	})
+
+	// 静态文件服务（SPA 前端托管）
+	// 任何未匹配 API 的请求都将尝试查找静态文件，如果没找到则返回 index.html
+	s.BindHandler("/*", func(r *ghttp.Request) {
+		// 仅允许 GET/HEAD
+		if r.Method != "GET" && r.Method != "HEAD" {
+			r.Response.WriteStatus(http.StatusMethodNotAllowed)
+			return
+		}
+
+		staticFS := statics.GetFS()
+		path := strings.TrimPrefix(r.URL.Path, "/")
+		if path == "" {
+			path = "index.html"
+		}
+
+		// 尝试打开文件
+		f, err := staticFS.Open(path)
+		if err == nil {
+			// 确保不是目录
+			stat, _ := f.Stat()
+			if !stat.IsDir() {
+				defer f.Close()
+				// 使用 http.FileServer 处理 Range Requests, Content-Type 等
+				http.FileServer(staticFS).ServeHTTP(r.Response.Writer, r.Request)
+				return
+			}
+			f.Close()
+		}
+
+		// 文件不存在，返回 index.html (SPA History Fallback)
+		// 注意：不要对API路径(/api)做fallback，避免混淆
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			r.Response.WriteStatus(http.StatusNotFound)
+			return
+		}
+
+		f, err = staticFS.Open("index.html")
+		if err == nil {
+			defer f.Close()
+			stat, _ := f.Stat()
+			http.ServeContent(r.Response.Writer, r.Request, "index.html", stat.ModTime(), f.(interface {
+				Stat() (os.FileInfo, error)
+				Read([]byte) (int, error)
+				Seek(int64, int) (int64, error)
+				Close() error
+			}))
+		} else {
+			r.Response.WriteStatus(http.StatusNotFound)
+			r.Response.Write("404 Not Found (Start Server in Docker/Release mode to see Frontend)")
+		}
 	})
 
 	// 启动定时任务（快照/报告/通知/价格预警/策略检查/风险提醒）

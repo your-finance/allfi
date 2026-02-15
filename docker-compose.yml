@@ -4,7 +4,8 @@
 services:
   backend:
     build:
-      context: ./core
+      context: .
+      dockerfile: core/Dockerfile
       args:
         APP_VERSION: ${ALLFI_VERSION:-0.3.0}
         BUILD_TIME: ${BUILD_TIME:-unknown}
@@ -12,6 +13,9 @@ services:
     container_name: allfi-backend
     restart: unless-stopped
     ports:
+      # Unified port: Serve both Frontend (static) and Backend (API)
+      - "${FRONTEND_PORT:-3174}:8080"
+      # Optional: Keep 8080 for backward compatibility or direct API access
       - "${SERVER_PORT:-8080}:8080"
     volumes:
       - allfi-data:/app/data
@@ -35,28 +39,6 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-
-  frontend:
-    build:
-      context: ./webapp
-      args:
-        APP_VERSION: ${ALLFI_VERSION:-0.3.0}
-    container_name: allfi-frontend
-    restart: unless-stopped
-    ports:
-      - "${FRONTEND_PORT:-3174}:80"
-    depends_on:
-      backend:
-        condition: service_healthy
-    security_opt:
-      - no-new-privileges:true
-    volumes:
-      - ./certs:/etc/nginx/certs:ro
-    read_only: true
-    tmpfs:
-      - /tmp
-      - /var/cache/nginx
-      - /var/run
 
   updater:
     build: ./updater

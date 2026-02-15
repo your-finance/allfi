@@ -72,9 +72,9 @@ func doUpdate(targetVersion string) {
 
 	// 步骤 2：构建镜像
 	setState("updating", 2, 3, "构建镜像", "执行 docker-compose build...")
-	if err := runCmd(projectDir, "docker-compose", "build", "backend", "frontend"); err != nil {
+	if err := runCmd(projectDir, "docker-compose", "build", "backend"); err != nil {
 		// 也尝试 docker compose（新版命令）
-		if err2 := runCmd(projectDir, "docker", "compose", "build", "backend", "frontend"); err2 != nil {
+		if err2 := runCmd(projectDir, "docker", "compose", "build", "backend"); err2 != nil {
 			setState("failed", 2, 3, "构建镜像", fmt.Sprintf("docker-compose build 失败: %v", err2))
 			log.Printf("docker-compose build 失败: %v", err2)
 			return
@@ -83,8 +83,8 @@ func doUpdate(targetVersion string) {
 
 	// 步骤 3：重启服务（注意：不重启 updater 自身）
 	setState("updating", 3, 3, "重启服务", "执行 docker-compose up -d...")
-	if err := runCmd(projectDir, "docker-compose", "up", "-d", "backend", "frontend"); err != nil {
-		if err2 := runCmd(projectDir, "docker", "compose", "up", "-d", "backend", "frontend"); err2 != nil {
+	if err := runCmd(projectDir, "docker-compose", "up", "-d", "backend"); err != nil {
+		if err2 := runCmd(projectDir, "docker", "compose", "up", "-d", "backend"); err2 != nil {
 			setState("failed", 3, 3, "重启服务", fmt.Sprintf("重启失败: %v", err2))
 			log.Printf("重启服务失败: %v", err2)
 			return
@@ -110,8 +110,8 @@ func doRollback(targetVersion string) {
 
 	// 步骤 2：重建镜像
 	setState("updating", 2, 3, "构建镜像", "重新构建...")
-	if err := runCmd(projectDir, "docker-compose", "build", "backend", "frontend"); err != nil {
-		if err2 := runCmd(projectDir, "docker", "compose", "build", "backend", "frontend"); err2 != nil {
+	if err := runCmd(projectDir, "docker-compose", "build", "backend"); err != nil {
+		if err2 := runCmd(projectDir, "docker", "compose", "build", "backend"); err2 != nil {
 			setState("failed", 2, 3, "构建镜像", fmt.Sprintf("构建失败: %v", err2))
 			return
 		}
@@ -119,8 +119,8 @@ func doRollback(targetVersion string) {
 
 	// 步骤 3：重启服务
 	setState("updating", 3, 3, "重启服务", "重启中...")
-	if err := runCmd(projectDir, "docker-compose", "up", "-d", "backend", "frontend"); err != nil {
-		if err2 := runCmd(projectDir, "docker", "compose", "up", "-d", "backend", "frontend"); err2 != nil {
+	if err := runCmd(projectDir, "docker-compose", "up", "-d", "backend"); err != nil {
+		if err2 := runCmd(projectDir, "docker", "compose", "up", "-d", "backend"); err2 != nil {
 			setState("failed", 3, 3, "重启服务", fmt.Sprintf("重启失败: %v", err2))
 			return
 		}

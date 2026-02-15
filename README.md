@@ -135,7 +135,24 @@ sed -i "s|CHANGE_ME_USE_openssl_rand_base64_32|$(openssl rand -base64 32)|" .env
 docker compose up -d --build
 ```
 
+#### 默认端口映射
+
+| 服务 | 容器端口 | 主机端口 | 访问地址 |
+|------|---------|---------|---------|
+| 前端（Nginx） | 80 | **3174** | http://localhost:3174 |
+| 后端（Go API） | 8080 | **8080** | http://localhost:8080 |
+
 访问 [http://localhost:3174](http://localhost:3174) 即可使用。首次访问需设置 PIN 码（4-8 位数字）。
+
+> **自定义端口**：编辑 `.env` 文件修改端口映射，然后重启服务：
+> ```bash
+> # .env
+> FRONTEND_PORT=3000    # 前端改为 3000 端口
+> SERVER_PORT=9090      # 后端改为 9090 端口
+> ```
+> ```bash
+> docker compose up -d --build   # 修改后重启生效
+> ```
 
 ```bash
 # 常用 Docker 命令

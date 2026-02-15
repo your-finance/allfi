@@ -80,7 +80,24 @@ sed -i "s|CHANGE_ME_USE_openssl_rand_base64_32|$(openssl rand -base64 32)|" .env
 docker compose up -d --build
 ```
 
+#### Default Port Mapping
+
+| Service | Container Port | Host Port | URL |
+|---------|---------------|-----------|-----|
+| Frontend (Nginx) | 80 | **3174** | http://localhost:3174 |
+| Backend (Go API) | 8080 | **8080** | http://localhost:8080 |
+
 Visit http://localhost:3174 to get started. First-time access requires setting a PIN code (4–8 digits).
+
+> **Custom Ports**: Edit the `.env` file to change port mappings, then restart:
+> ```bash
+> # .env
+> FRONTEND_PORT=3000    # Change frontend to port 3000
+> SERVER_PORT=9090      # Change backend to port 9090
+> ```
+> ```bash
+> docker compose up -d --build   # Restart to apply changes
+> ```
 
 ```bash
 # Common Docker commands
