@@ -38,6 +38,8 @@ import NotificationPanel from './components/NotificationPanel.vue'
 import CommandPalette from './components/CommandPalette.vue'
 import ToastContainer from './components/ToastContainer.vue'
 import BottomNav from './components/BottomNav.vue'
+import VersionBadge from './components/VersionBadge.vue'
+import { useSystemStore } from './stores/systemStore'
 import { marketService } from './api/marketService.js'
 
 const route = useRoute()
@@ -47,6 +49,7 @@ const authStore = useAuthStore()
 const assetStore = useAssetStore()
 const notifStore = useNotificationStore()
 const cmdStore = useCommandStore()
+const systemStore = useSystemStore()
 const { t } = useI18n()
 const { formatCurrency, pricingCurrency, setPricingCurrency, availablePricingCurrencies } = useFormatters()
 
@@ -151,6 +154,11 @@ onMounted(async () => {
   // 加载 Gas 价格并定时刷新（每 30 秒）
   loadGasPrice()
   gasRefreshTimer = setInterval(loadGasPrice, 30000)
+
+  // 加载版本信息并自动检查更新
+  systemStore.loadVersion()
+  systemStore.checkForUpdate()
+  systemStore.startAutoCheck()
 })
 
 onUnmounted(() => {
@@ -158,6 +166,7 @@ onUnmounted(() => {
   document.removeEventListener('keydown', handleGlobalKeydown)
   window.removeEventListener('resize', handleResize)
   if (gasRefreshTimer) clearInterval(gasRefreshTimer)
+  systemStore.stopAutoCheck()
 })
 
 // 点击外部关闭下拉菜单
@@ -234,24 +243,28 @@ watch(() => route.path, updateDocumentTitle, { immediate: true })
     >
       <!-- Logo -->
       <div class="sidebar-header">
-        <div class="logo" @click="navigateTo('/dashboard')">
-          <div class="logo-icon">
-            <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="1" y="1" width="26" height="26" rx="5" stroke="var(--color-accent-primary)" stroke-width="1.5" fill="none"/>
-              <path d="M8 14 L14 8 L20 14 L14 20 Z" fill="var(--color-accent-primary)" opacity="0.8"/>
-            </svg>
+        <div class="sidebar-header-top">
+          <div class="logo" @click="navigateTo('/dashboard')">
+            <div class="logo-icon">
+              <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="1" y="1" width="26" height="26" rx="5" stroke="var(--color-accent-primary)" stroke-width="1.5" fill="none"/>
+                <path d="M8 14 L14 8 L20 14 L14 20 Z" fill="var(--color-accent-primary)" opacity="0.8"/>
+              </svg>
+            </div>
+            <span v-if="!isSidebarCollapsed" class="logo-text">AllFi</span>
           </div>
-          <span v-if="!isSidebarCollapsed" class="logo-text">AllFi</span>
+
+          <button class="collapse-btn desktop-only" @click="toggleSidebar">
+            <PhCaretLeft v-if="!isSidebarCollapsed" :size="14" />
+            <PhCaretRight v-else :size="14" />
+          </button>
+
+          <button class="close-btn mobile-only" @click="toggleMobileSidebar">
+            <PhX :size="16" />
+          </button>
         </div>
 
-        <button class="collapse-btn desktop-only" @click="toggleSidebar">
-          <PhCaretLeft v-if="!isSidebarCollapsed" :size="14" />
-          <PhCaretRight v-else :size="14" />
-        </button>
-
-        <button class="close-btn mobile-only" @click="toggleMobileSidebar">
-          <PhX :size="16" />
-        </button>
+        <VersionBadge :collapsed="isSidebarCollapsed" />
       </div>
 
       <!-- 导航 -->
@@ -292,11 +305,6 @@ watch(() => route.path, updateDocumentTitle, { immediate: true })
         >
           <PhPaintBrush :size="16" />
         </button>
-
-        <!-- 版本号 -->
-        <div v-if="!isSidebarCollapsed" class="sidebar-version">
-          <span class="version-text">v0.1.0-alpha</span>
-        </div>
       </div>
     </aside>
 
@@ -485,11 +493,16 @@ watch(() => route.path, updateDocumentTitle, { immediate: true })
 /* 侧边栏头部 */
 .sidebar-header {
   display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--gap-sm) var(--gap-lg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sidebar-header-top {
+  display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--gap-md) var(--gap-lg);
-  height: 48px;
-  border-bottom: 1px solid var(--color-border);
 }
 
 .logo {
@@ -538,7 +551,11 @@ watch(() => route.path, updateDocumentTitle, { immediate: true })
 
 /* 折叠状态 */
 .sidebar-collapsed .sidebar-header {
-  padding: var(--gap-md) var(--gap-sm);
+  padding: var(--gap-sm);
+  align-items: center;
+}
+
+.sidebar-collapsed .sidebar-header-top {
   justify-content: center;
 }
 
@@ -671,18 +688,6 @@ watch(() => route.path, updateDocumentTitle, { immediate: true })
 .theme-switch-btn-icon:hover {
   border-color: var(--color-border-hover);
   color: var(--color-text-primary);
-}
-
-/* 侧边栏版本号 */
-.sidebar-version {
-  padding-top: var(--gap-xs);
-  text-align: center;
-}
-
-.version-text {
-  font-size: 10px;
-  color: var(--color-text-muted);
-  font-family: var(--font-mono);
 }
 
 /* ================== 主内容区 ================== */
