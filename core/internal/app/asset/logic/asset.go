@@ -371,7 +371,7 @@ func (s *sAsset) createAssetSnapshot(ctx context.Context, userID int) error {
 		SnapshotTime:       gtime.Now().Time,
 	}
 
-	_, err = dao.AssetSnapshots.Ctx(ctx).Insert(snapshot)
+	_, err = dao.AssetSnapshots.Ctx(ctx).OmitEmpty().Insert(snapshot)
 	if err != nil {
 		return gerror.Wrap(err, "保存资产快照失败")
 	}

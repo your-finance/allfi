@@ -215,7 +215,7 @@ func main() {
 	cronManager.Start()
 	defer cronManager.Stop()
 
-	g.Log().Infof(ctx, "AllFi v%s 启动成功", version.Version)
+	g.Log().Infof(ctx, "AllFi v%s 启动成功", strings.TrimPrefix(version.Version, "v"))
 	s.Run()
 }
 
@@ -315,6 +315,8 @@ func printBanner() {
 AllFi - 全资产聚合平台 v%s
 GoFrame 模块化架构 | 自托管 | 完全掌控数据
 `
-	fmt.Printf(banner, version.Version)
+	// 去掉可能存在的 v 前缀，避免 banner 中出现 "vv0.1.2"
+	ver := strings.TrimPrefix(version.Version, "v")
+	fmt.Printf(banner, ver)
 	fmt.Println()
 }

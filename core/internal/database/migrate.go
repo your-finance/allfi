@@ -76,7 +76,7 @@ var tables = []string{
 		blockchain TEXT NOT NULL,
 		address    TEXT NOT NULL,
 		label      TEXT DEFAULT '',
-		is_active  REAL NOT NULL DEFAULT 1
+		is_active  INTEGER NOT NULL DEFAULT 1
 	)`,
 
 	// 手动资产表

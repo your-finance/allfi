@@ -18,5 +18,5 @@ type WalletAddresses struct {
 	Blockchain string    `json:"blockchain" orm:"blockchain" description:""` //
 	Address    string    `json:"address"    orm:"address"    description:""` //
 	Label      string    `json:"label"      orm:"label"      description:""` //
-	IsActive   float64   `json:"is_active"  orm:"is_active"  description:""` //
+	IsActive   int       `json:"is_active"  orm:"is_active"  description:""` //
 }
