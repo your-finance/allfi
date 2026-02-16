@@ -19,7 +19,12 @@ services:
       - "${SERVER_PORT:-8080}:8080"
     volumes:
       - allfi-data:/app/data
+      # 时区配置：挂载宿主机时区文件，确保容器时区与宿主机一致
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     environment:
+      # 时区配置（可在 .env 中自定义，默认使用宿主机时区）
+      - TZ=${TZ:-Asia/Shanghai}
       - ALLFI_MASTER_KEY=${ALLFI_MASTER_KEY}
       - ETHERSCAN_API_KEY=${ETHERSCAN_API_KEY}
       - BSCSCAN_API_KEY=${BSCSCAN_API_KEY}
@@ -48,6 +53,12 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - .:/app/project
       - allfi-data:/app/data
+      # 时区配置：挂载宿主机时区文件
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    environment:
+      # 时区配置（与 backend 保持一致）
+      - TZ=${TZ:-Asia/Shanghai}
     working_dir: /app/project
 
 volumes:
