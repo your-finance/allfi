@@ -1,5 +1,7 @@
 # 自动发布流水线
-# 当推送 v* 格式的 Tag 时，自动编译后端（多平台）+ 打包前端，发布到 GitHub Releases
+# 当推送 v* 格式的 Tag 时：
+# 1. 自动从 git log 生成变更记录，更新 CHANGEHISTORY.md 并推送到 master
+# 2. 编译后端（多平台）+ 打包前端，发布到 GitHub Releases
 name: Release
 
 on:
@@ -16,6 +18,9 @@ jobs:
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整历史用于 git log
+          ref: master      # 检出 master 分支以便后续推送
 
       - name: 提取版本号
         id: version
@@ -25,6 +30,162 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
 
+          # 获取上一个 tag（按版本排序）
+          PREV_TAG=$(git tag -l 'v*' --sort=-v:refname | grep -v "^${GITHUB_REF_NAME}$" | head -n1)
+          echo "prev_tag=${PREV_TAG}" >> "$GITHUB_OUTPUT"
+
+          echo "📌 当前版本: ${GITHUB_REF_NAME} (${VERSION})"
+          echo "📌 上一版本: ${PREV_TAG:-无}"
+
+      # ============================================================
+      # 阶段 1：自动更新 CHANGEHISTORY.md
+      # ============================================================
+      - name: 生成变更记录
+        id: changelog
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          PREV_TAG: ${{ steps.version.outputs.prev_tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # 获取 tag 的日期
+          TAG_DATE=$(git log -1 --format=%ai "${TAG}" | cut -d' ' -f1)
+
+          # 获取 git log
+          if [ -n "${PREV_TAG}" ]; then
+            echo "📝 获取 ${PREV_TAG}..${TAG} 之间的提交记录"
+            COMMITS=$(git log "${PREV_TAG}..${TAG}" --pretty=format:"%s" --no-merges)
+          else
+            echo "📝 获取所有提交记录（首次发版）"
+            COMMITS=$(git log "${TAG}" --pretty=format:"%s" --no-merges)
+          fi
+
+          # 创建变更记录临时文件
+          CHANGELOG_FILE=$(mktemp)
+
+          {
+            echo ""
+            echo "## ${TAG}（${TAG_DATE}）"
+            echo ""
+
+            # 分类整理提交记录
+            FEAT=""
+            FIX=""
+            REFACTOR=""
+            DOCS=""
+            BUILD=""
+            OTHER=""
+
+            while IFS= read -r line; do
+              [ -z "$line" ] && continue
+              case "$line" in
+                feat:*|feat\(*|添加*|新增*|实现*|支持*)
+                  FEAT="${FEAT}\n- ${line}"
+                  ;;
+                fix:*|fix\(*|fix\ *|修复*|修正*)
+                  FIX="${FIX}\n- ${line}"
+                  ;;
+                refactor:*|refactor\(*|重构*)
+                  REFACTOR="${REFACTOR}\n- ${line}"
+                  ;;
+                docs:*|docs\(*|文档*|update\ README*|update\ CLAUDE*)
+                  DOCS="${DOCS}\n- ${line}"
+                  ;;
+                build:*|build\(*|ci:*|ci\(*|构建*|部署*)
+                  BUILD="${BUILD}\n- ${line}"
+                  ;;
+                *)
+                  OTHER="${OTHER}\n- ${line}"
+                  ;;
+              esac
+            done <<< "$COMMITS"
+
+            # 输出分类后的变更记录
+            if [ -n "$FEAT" ]; then
+              echo "### 功能新增"
+              echo -e "$FEAT"
+              echo ""
+            fi
+
+            if [ -n "$FIX" ]; then
+              echo "### 问题修复"
+              echo -e "$FIX"
+              echo ""
+            fi
+
+            if [ -n "$REFACTOR" ]; then
+              echo "### 重构优化"
+              echo -e "$REFACTOR"
+              echo ""
+            fi
+
+            if [ -n "$DOCS" ]; then
+              echo "### 文档更新"
+              echo -e "$DOCS"
+              echo ""
+            fi
+
+            if [ -n "$BUILD" ]; then
+              echo "### 构建与部署"
+              echo -e "$BUILD"
+              echo ""
+            fi
+
+            if [ -n "$OTHER" ]; then
+              echo "### 其他变更"
+              echo -e "$OTHER"
+              echo ""
+            fi
+
+          } > "$CHANGELOG_FILE"
+
+          echo "changelog_file=${CHANGELOG_FILE}" >> "$GITHUB_OUTPUT"
+
+          echo "--- 生成的变更记录 ---"
+          cat "$CHANGELOG_FILE"
+
+      - name: 更新 CHANGEHISTORY.md
+        env:
+          CHANGELOG_FILE: ${{ steps.changelog.outputs.changelog_file }}
+        run: |
+          if [ ! -f CHANGEHISTORY.md ]; then
+            echo "# AllFi 版本历史" > CHANGEHISTORY.md
+            echo "" >> CHANGEHISTORY.md
+            echo "> 详细记录每个版本的变更内容。版本号与根目录 \`VERSION\` 文件和 Git Tag 保持一致。" >> CHANGEHISTORY.md
+            echo "" >> CHANGEHISTORY.md
+            echo "---" >> CHANGEHISTORY.md
+          fi
+
+          # 在第一个 "## v" 之前插入新版本的变更记录
+          if grep -q "^## v" CHANGEHISTORY.md; then
+            FIRST_VERSION_LINE=$(grep -n "^## v" CHANGEHISTORY.md | head -1 | cut -d: -f1)
+            head -n $((FIRST_VERSION_LINE - 1)) CHANGEHISTORY.md > CHANGEHISTORY_new.md
+            cat "$CHANGELOG_FILE" >> CHANGEHISTORY_new.md
+            tail -n +${FIRST_VERSION_LINE} CHANGEHISTORY.md >> CHANGEHISTORY_new.md
+            mv CHANGEHISTORY_new.md CHANGEHISTORY.md
+          else
+            cat "$CHANGELOG_FILE" >> CHANGEHISTORY.md
+          fi
+
+          echo "--- 更新后的 CHANGEHISTORY.md（前 50 行）---"
+          head -50 CHANGEHISTORY.md
+
+      - name: 提交 CHANGEHISTORY.md 到 master
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add CHANGEHISTORY.md
+          if git diff --cached --quiet; then
+            echo "ℹ️ CHANGEHISTORY.md 无变更，跳过提交"
+          else
+            git commit -m "docs: 自动更新 CHANGEHISTORY.md — ${GITHUB_REF_NAME}"
+            git push origin master
+            echo "✅ CHANGEHISTORY.md 已更新并推送到 master"
+          fi
+
+      # ============================================================
+      # 阶段 2：构建与发布
+      # ============================================================
       - name: 安装 Go
         uses: actions/setup-go@v5
         with:
@@ -103,9 +264,8 @@ jobs:
             echo "全栈加密资产管理平台 — 聚合 CEX、DeFi、NFT 与传统资产"
             echo ""
 
-            # 从 CHANGEHISTORY.md 提取当前版本的变更记录
+            # 从更新后的 CHANGEHISTORY.md 提取当前版本的变更记录
             if [ -f CHANGEHISTORY.md ]; then
-              # 匹配版本标题行到下一个版本标题行之间的内容
               SECTION=$(awk "/^## v${APP_VERSION}/{found=1; next} /^## v[0-9]/{found=0} found" CHANGEHISTORY.md)
               if [ -n "$SECTION" ]; then
                 echo "$SECTION"
