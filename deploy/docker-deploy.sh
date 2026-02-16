@@ -109,6 +109,21 @@ echo -e "${CYAN}>>> 启动 Docker 服务...${RESET}"
 echo -e "  ${YELLOW}首次启动需要构建镜像，可能需要几分钟...${RESET}"
 echo ""
 
+# 获取动态版本号
+if git describe --tags >/dev/null 2>&1; then
+    export ALLFI_VERSION=$(git describe --tags)
+elif [ -f VERSION ]; then
+    export ALLFI_VERSION=$(cat VERSION)
+else
+    export ALLFI_VERSION="dev-$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
+fi
+export GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')
+export BUILD_TIME=$(date +%Y-%m-%dT%H:%M:%S)
+
+echo -e "  版本: ${GREEN}${ALLFI_VERSION}${RESET}"
+echo -e "  提交: ${GREEN}${GIT_COMMIT}${RESET}"
+echo ""
+
 $COMPOSE_CMD up -d --build
 
 echo ""

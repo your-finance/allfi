@@ -1,5 +1,6 @@
-# AllFi Docker Compose 编排
-# 用法: cp .env.example .env && docker-compose up -d
+# AllFi Docker Compose — 本地目录版
+# 数据存储在本地 ./data 目录，便于备份和迁移
+# 用法: mkdir -p data && docker compose -f docker-compose.local.yml up -d
 
 services:
   backend:
@@ -18,7 +19,8 @@ services:
       # Optional: Keep 8080 for backward compatibility or direct API access
       - "${SERVER_PORT:-8080}:8080"
     volumes:
-      - allfi-data:/app/data
+      # 本地目录挂载（替代命名卷，便于备份迁移）
+      - ./data:/app/data
     environment:
       - ALLFI_MASTER_KEY=${ALLFI_MASTER_KEY}
       - ETHERSCAN_API_KEY=${ETHERSCAN_API_KEY}
@@ -47,9 +49,5 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - .:/app/project
-      - allfi-data:/app/data
+      - ./data:/app/data
     working_dir: /app/project
-
-volumes:
-  allfi-data:
-    driver: local

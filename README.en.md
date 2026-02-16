@@ -77,15 +77,31 @@ cp .env.example .env
 sed -i "s|CHANGE_ME_USE_openssl_rand_base64_32|$(openssl rand -base64 32)|" .env
 
 # Start services
+# Option A: Local directory (recommended — data in ./data, easy backup & migration)
+mkdir -p data
+docker compose -f docker-compose.local.yml up -d --build
+
+# Option B: Named volumes (simple setup)
 docker compose up -d --build
 ```
+
+#### Deployment Version Comparison
+
+| Version | Data Storage | Migration | Use Case |
+|---------|-------------|-----------|----------|
+| **docker-compose.local.yml** | Local `./data` directory | ✅ Easy (tar the directory) | Production, frequent backups |
+| **docker-compose.yml** | Docker named volumes | ⚠️ Requires docker commands | Quick start, simple setup |
+
+> **Recommended**: Use `docker-compose.local.yml` (local directory version) — data files are directly visible, easy to backup and migrate.
 
 #### Default Port Mapping
 
 | Service | Container Port | Host Port | URL |
 |---------|---------------|-----------|-----|
-| Frontend (Nginx) | 80 | **3174** | http://localhost:3174 |
-| Backend (Go API) | 8080 | **8080** | http://localhost:8080 |
+| AllFi (Frontend + API) | 8080 | **3174** | http://localhost:3174 |
+| AllFi (Direct API) | 8080 | **8080** | http://localhost:8080 |
+
+> AllFi uses Go embed — frontend static files are embedded into the backend binary, serving both frontend pages and API from a single port.
 
 Visit http://localhost:3174 to get started. First-time access requires setting a PIN code (4–8 digits).
 
@@ -96,15 +112,110 @@ Visit http://localhost:3174 to get started. First-time access requires setting a
 > SERVER_PORT=9090      # Change backend to port 9090
 > ```
 > ```bash
-> docker compose up -d --build   # Restart to apply changes
+> docker compose -f docker-compose.local.yml up -d --build   # Restart to apply changes
 > ```
 
+#### Data Backup & Migration (Local Directory Version)
+
+When using `docker-compose.local.yml`, data is stored in the `./data` directory for easy backup and migration:
+
 ```bash
-# Common Docker commands
-docker compose logs -f       # View logs
-docker compose down          # Stop services
-docker compose restart       # Restart services
-docker compose up -d --build # Rebuild and restart
+# Backup data
+tar czf allfi-backup-$(date +%Y%m%d).tar.gz data/
+
+# Migrate to a new server
+# 1. Stop and archive on the source server
+docker compose -f docker-compose.local.yml down
+cd ..
+tar czf allfi-complete.tar.gz allfi/
+
+# 2. Transfer to the new server
+scp allfi-complete.tar.gz user@new-server:/path/
+
+# 3. Extract and start on the new server
+tar xzf allfi-complete.tar.gz
+cd allfi/
+docker compose -f docker-compose.local.yml up -d --build
+```
+
+#### Common Docker Commands
+
+```bash
+# Commands below use local directory version; remove -f docker-compose.local.yml for named volumes
+docker compose -f docker-compose.local.yml logs -f       # View logs
+docker compose -f docker-compose.local.yml down          # Stop services
+docker compose -f docker-compose.local.yml restart       # Restart services
+docker compose -f docker-compose.local.yml up -d --build # Rebuild and restart
+docker compose -f docker-compose.local.yml ps            # View status
+```
+
+#### Reverse Proxy Configuration (Recommended for Production)
+
+To access AllFi with a custom domain + HTTPS in production, configure Caddy or Nginx as a reverse proxy.
+
+**Caddy** (Recommended — automatic HTTPS)
+
+```bash
+# Install Caddy: https://caddyserver.com/docs/install
+# Create /etc/caddy/Caddyfile
+
+allfi.example.com {
+    reverse_proxy localhost:3174
+}
+```
+
+```bash
+# Start Caddy (auto-obtains Let's Encrypt certificate)
+sudo systemctl restart caddy
+```
+
+> Caddy provides zero-config automatic HTTPS, ideal for personal servers. Just replace `allfi.example.com` with your domain.
+
+**Nginx**
+
+```nginx
+# /etc/nginx/sites-available/allfi
+server {
+    listen 80;
+    server_name allfi.example.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name allfi.example.com;
+
+    # SSL certificate (use certbot for auto-renewal)
+    ssl_certificate     /etc/letsencrypt/live/allfi.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/allfi.example.com/privkey.pem;
+
+    # Security headers
+    add_header X-Frame-Options DENY;
+    add_header X-Content-Type-Options nosniff;
+    add_header X-XSS-Protection "1; mode=block";
+
+    location / {
+        proxy_pass http://127.0.0.1:3174;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket support (if using real-time push)
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+```
+
+```bash
+# Obtain SSL certificate
+sudo certbot --nginx -d allfi.example.com
+
+# Enable site and restart
+sudo ln -s /etc/nginx/sites-available/allfi /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl restart nginx
 ```
 
 ### Option 2: Local Development

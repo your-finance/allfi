@@ -132,15 +132,31 @@ cp .env.example .env
 sed -i "s|CHANGE_ME_USE_openssl_rand_base64_32|$(openssl rand -base64 32)|" .env
 
 # 启动服务
+# 选项 A：本地目录版（推荐 - 数据在 ./data，易于备份迁移）
+mkdir -p data
+docker compose -f docker-compose.local.yml up -d --build
+
+# 选项 B：命名卷版（简单设置）
 docker compose up -d --build
 ```
+
+#### 部署版本对比
+
+| 版本 | 数据存储 | 迁移便利性 | 适用场景 |
+|------|---------|-----------|---------|
+| **docker-compose.local.yml** | 本地 `./data` 目录 | ✅ 简单（打包整个目录） | 生产环境、需要备份 |
+| **docker-compose.yml** | Docker 命名卷 | ⚠️ 需要 docker 命令导出 | 快速体验、简单设置 |
+
+> **推荐**使用 `docker-compose.local.yml`（本地目录版），数据文件直接可见，便于备份和迁移。
 
 #### 默认端口映射
 
 | 服务 | 容器端口 | 主机端口 | 访问地址 |
-|------|---------|---------|---------|
-| 前端（Nginx） | 80 | **3174** | http://localhost:3174 |
-| 后端（Go API） | 8080 | **8080** | http://localhost:8080 |
+|------|---------|---------|---------| 
+| AllFi（前端 + API） | 8080 | **3174** | http://localhost:3174 |
+| AllFi（直接 API） | 8080 | **8080** | http://localhost:8080 |
+
+> AllFi 采用 Go embed 方案，前端静态文件内嵌到后端二进制中，单个端口同时提供前端页面和 API 服务。
 
 访问 [http://localhost:3174](http://localhost:3174) 即可使用。首次访问需设置 PIN 码（4-8 位数字）。
 
@@ -151,15 +167,110 @@ docker compose up -d --build
 > SERVER_PORT=9090      # 后端改为 9090 端口
 > ```
 > ```bash
-> docker compose up -d --build   # 修改后重启生效
+> docker compose -f docker-compose.local.yml up -d --build   # 修改后重启生效
 > ```
 
+#### 数据备份与迁移（本地目录版）
+
+使用 `docker-compose.local.yml` 时，数据存储在 `./data` 目录，可以轻松备份和迁移：
+
 ```bash
-# 常用 Docker 命令
-docker compose logs -f       # 查看日志
-docker compose down          # 停止服务
-docker compose restart       # 重启服务
-docker compose up -d --build # 重新构建并启动
+# 备份数据
+tar czf allfi-backup-$(date +%Y%m%d).tar.gz data/
+
+# 迁移到新服务器
+# 1. 在源服务器停止并打包
+docker compose -f docker-compose.local.yml down
+cd ..
+tar czf allfi-complete.tar.gz allfi/
+
+# 2. 传输到新服务器
+scp allfi-complete.tar.gz user@new-server:/path/
+
+# 3. 在新服务器解压并启动
+tar xzf allfi-complete.tar.gz
+cd allfi/
+docker compose -f docker-compose.local.yml up -d --build
+```
+
+#### 常用 Docker 命令
+
+```bash
+# 以下命令适用于本地目录版，命名卷版去掉 -f docker-compose.local.yml 即可
+docker compose -f docker-compose.local.yml logs -f       # 查看日志
+docker compose -f docker-compose.local.yml down          # 停止服务
+docker compose -f docker-compose.local.yml restart       # 重启服务
+docker compose -f docker-compose.local.yml up -d --build # 重新构建并启动
+docker compose -f docker-compose.local.yml ps            # 查看状态
+```
+
+#### 反向代理配置（生产环境推荐）
+
+如需在生产服务器上使用域名 + HTTPS 访问 AllFi，可配置 Caddy 或 Nginx 反向代理。
+
+**Caddy**（推荐，自动 HTTPS）
+
+```bash
+# 安装 Caddy: https://caddyserver.com/docs/install
+# 创建 /etc/caddy/Caddyfile
+
+allfi.example.com {
+    reverse_proxy localhost:3174
+}
+```
+
+```bash
+# 启动 Caddy（自动申请 Let's Encrypt 证书）
+sudo systemctl restart caddy
+```
+
+> Caddy 零配置自动 HTTPS，推荐用于个人服务器。仅需将 `allfi.example.com` 替换为你的域名。
+
+**Nginx**
+
+```nginx
+# /etc/nginx/sites-available/allfi
+server {
+    listen 80;
+    server_name allfi.example.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name allfi.example.com;
+
+    # SSL 证书（可使用 certbot 自动申请）
+    ssl_certificate     /etc/letsencrypt/live/allfi.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/allfi.example.com/privkey.pem;
+
+    # 安全头
+    add_header X-Frame-Options DENY;
+    add_header X-Content-Type-Options nosniff;
+    add_header X-XSS-Protection "1; mode=block";
+
+    location / {
+        proxy_pass http://127.0.0.1:3174;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket 支持（如有实时推送）
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+```
+
+```bash
+# 申请 SSL 证书
+sudo certbot --nginx -d allfi.example.com
+
+# 启用站点并重启
+sudo ln -s /etc/nginx/sites-available/allfi /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl restart nginx
 ```
 
 ### 方式二：本地开发
