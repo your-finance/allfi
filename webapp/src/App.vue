@@ -129,7 +129,7 @@ const navItems = computed(() => [
   { path: '/settings', labelKey: 'nav.settings', icon: PhGear }
 ])
 
-// Cmd+K / Ctrl+K 全局快捷键，Ctrl+H 隐私模式切换
+// 全局快捷键：Cmd/Ctrl+K 命令面板，Cmd/Ctrl+H 隐私模式，Cmd/Ctrl+B 侧边栏切换
 const handleGlobalKeydown = (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
     e.preventDefault()
@@ -138,6 +138,10 @@ const handleGlobalKeydown = (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'h') {
     e.preventDefault()
     themeStore.togglePrivacyMode()
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
+    e.preventDefault()
+    toggleSidebar()
   }
 }
 
@@ -251,10 +255,13 @@ watch(() => route.path, updateDocumentTitle, { immediate: true })
                 <path d="M8 14 L14 8 L20 14 L14 20 Z" fill="var(--color-accent-primary)" opacity="0.8"/>
               </svg>
             </div>
-            <span v-if="!isSidebarCollapsed" class="logo-text">AllFi</span>
+            <div v-if="!isSidebarCollapsed" class="logo-info">
+              <span class="logo-text">AllFi</span>
+              <VersionBadge :collapsed="false" />
+            </div>
           </div>
 
-          <button class="collapse-btn desktop-only" @click="toggleSidebar">
+          <button class="collapse-btn desktop-only" @click.stop="toggleSidebar" :title="isSidebarCollapsed ? t('nav.expandSidebar') + ' (⌘B)' : t('nav.collapseSidebar') + ' (⌘B)'">
             <PhCaretLeft v-if="!isSidebarCollapsed" :size="14" />
             <PhCaretRight v-else :size="14" />
           </button>
@@ -264,7 +271,7 @@ watch(() => route.path, updateDocumentTitle, { immediate: true })
           </button>
         </div>
 
-        <VersionBadge :collapsed="isSidebarCollapsed" />
+        <VersionBadge v-if="isSidebarCollapsed" :collapsed="true" />
       </div>
 
       <!-- 导航 -->
@@ -513,14 +520,21 @@ watch(() => route.path, updateDocumentTitle, { immediate: true })
 }
 
 .logo-icon {
-  width: 24px;
-  height: 24px;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
 }
 
 .logo-icon svg {
   width: 100%;
   height: 100%;
+}
+
+.logo-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
 }
 
 .logo-text {
@@ -563,6 +577,11 @@ watch(() => route.path, updateDocumentTitle, { immediate: true })
 
 .sidebar-collapsed .logo {
   justify-content: center;
+}
+
+.sidebar-collapsed .logo-icon {
+  width: 28px;
+  height: 28px;
 }
 
 .sidebar-collapsed .collapse-btn {

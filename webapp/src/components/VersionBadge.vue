@@ -4,7 +4,7 @@
  * 显示在侧边栏 logo 下方，点击弹出 Popover 显示版本信息和检查更新
  */
 import { ref, onMounted, onUnmounted } from 'vue'
-import { PhArrowsClockwise, PhArrowSquareOut, PhInfo } from '@phosphor-icons/vue'
+import { PhArrowsClockwise, PhArrowSquareOut, PhInfo, PhDownloadSimple } from '@phosphor-icons/vue'
 import { useSystemStore } from '../stores/systemStore'
 import { useI18n } from '../composables/useI18n'
 
@@ -28,6 +28,13 @@ const togglePopover = () => {
 // 手动检查更新
 const handleCheck = async () => {
   await systemStore.checkForUpdate()
+}
+
+// 执行更新
+const handleUpdate = async () => {
+  if (systemStore.updateInfo?.latest_version) {
+    await systemStore.applyUpdate(systemStore.updateInfo.latest_version)
+  }
 }
 
 // 点击外部关闭 Popover
@@ -105,6 +112,17 @@ const releasesUrl = 'https://github.com/your-finance/allfi/releases'
 
         <!-- 操作按钮 -->
         <div class="popover-actions">
+          <!-- 立即更新按钮（有新版本时显示） -->
+          <button
+            v-if="systemStore.hasUpdate"
+            class="update-now-btn"
+            :disabled="systemStore.isUpdating"
+            @click="handleUpdate"
+          >
+            <PhDownloadSimple :size="13" />
+            <span>{{ systemStore.isUpdating ? t('system.updating') : t('system.updateNow') }}</span>
+          </button>
+
           <button
             class="check-btn"
             :disabled="systemStore.isChecking"
@@ -261,6 +279,32 @@ const releasesUrl = 'https://github.com/your-finance/allfi/releases'
   padding-top: 6px;
   border-top: 1px solid var(--color-border);
   margin-top: 4px;
+}
+
+/* 立即更新按钮（醒目样式） */
+.update-now-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition-fast), opacity var(--transition-fast);
+  background: var(--color-accent-primary);
+  color: #fff;
+  border: none;
+}
+
+.update-now-btn:hover {
+  opacity: 0.9;
+}
+
+.update-now-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .check-btn,
