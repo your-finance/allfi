@@ -45,6 +45,9 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
 })
 
+// 当前版本号（从 Vite define 注入的全局常量取值）
+const appVersion = __APP_VERSION__
+
 // GitHub Releases 地址
 const releasesUrl = 'https://github.com/your-finance/allfi/releases'
 </script>
@@ -55,7 +58,7 @@ const releasesUrl = 'https://github.com/your-finance/allfi/releases'
     <button
       v-if="collapsed"
       class="version-badge-icon"
-      :title="`v${__APP_VERSION__}`"
+      :title="`v${appVersion}`"
       @click="togglePopover"
     >
       <PhInfo :size="14" />
@@ -68,7 +71,7 @@ const releasesUrl = 'https://github.com/your-finance/allfi/releases'
       class="version-badge"
       @click="togglePopover"
     >
-      <span class="version-badge-text">v{{ __APP_VERSION__ }}</span>
+      <span class="version-badge-text">v{{ appVersion }}</span>
       <span v-if="systemStore.hasUpdate" class="update-dot" />
     </button>
 
@@ -78,7 +81,7 @@ const releasesUrl = 'https://github.com/your-finance/allfi/releases'
         <!-- 当前版本 -->
         <div class="popover-row">
           <span class="popover-label">{{ t('system.currentVersion') }}</span>
-          <span class="popover-value">v{{ __APP_VERSION__ }}</span>
+          <span class="popover-value">v{{ appVersion }}</span>
         </div>
 
         <!-- 最新版本（检查后显示） -->

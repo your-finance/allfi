@@ -556,7 +556,9 @@ watch(() => route.path, updateDocumentTitle, { immediate: true })
 }
 
 .sidebar-collapsed .sidebar-header-top {
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
 .sidebar-collapsed .logo {
@@ -564,7 +566,8 @@ watch(() => route.path, updateDocumentTitle, { immediate: true })
 }
 
 .sidebar-collapsed .collapse-btn {
-  display: none;
+  width: 100%;
+  justify-content: center;
 }
 
 .sidebar-collapsed .sidebar-nav {
