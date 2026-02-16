@@ -5,6 +5,24 @@
 ---
 
 
+
+## v0.1.3（2026-02-17）
+
+### 功能新增
+
+- feat: 侧边栏集成版本检查徽章，删除底部版本号
+- feat: 创建 VersionBadge 版本徽章组件
+
+### 文档更新
+
+- docs: 自动更新 VERSION 和 CHANGEHISTORY.md — v0.1.2
+
+### 其他变更
+
+- i18n: 添加 viewReleases 翻译键
+- 版本号检查
+- 版本号双 v，asset_snapshots 插入失败
+
 ## v0.1.2（2026-02-16）
 
 ### 功能新增
