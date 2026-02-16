@@ -143,6 +143,13 @@ jobs:
           echo "--- 生成的变更记录 ---"
           cat "$CHANGELOG_FILE"
 
+      - name: 更新 VERSION 文件
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          echo "${VERSION}" > VERSION
+          echo "✅ VERSION 文件已更新为: ${VERSION}"
+
       - name: 更新 CHANGEHISTORY.md
         env:
           CHANGELOG_FILE: ${{ steps.changelog.outputs.changelog_file }}
@@ -169,18 +176,18 @@ jobs:
           echo "--- 更新后的 CHANGEHISTORY.md（前 50 行）---"
           head -50 CHANGEHISTORY.md
 
-      - name: 提交 CHANGEHISTORY.md 到 master
+      - name: 提交 VERSION 和 CHANGEHISTORY.md 到 master
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add CHANGEHISTORY.md
+          git add VERSION CHANGEHISTORY.md
           if git diff --cached --quiet; then
-            echo "ℹ️ CHANGEHISTORY.md 无变更，跳过提交"
+            echo "ℹ️ 无变更，跳过提交"
           else
-            git commit -m "docs: 自动更新 CHANGEHISTORY.md — ${GITHUB_REF_NAME}"
+            git commit -m "docs: 自动更新 VERSION 和 CHANGEHISTORY.md — ${GITHUB_REF_NAME}"
             git push origin master
-            echo "✅ CHANGEHISTORY.md 已更新并推送到 master"
+            echo "✅ VERSION 和 CHANGEHISTORY.md 已更新并推送到 master"
           fi
 
       # ============================================================
