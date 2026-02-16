@@ -34,8 +34,8 @@ services:
       - no-new-privileges:true
     read_only: true
     tmpfs:
-      - /tmp
-      - /app/logs
+      - /tmp:uid=100,gid=101
+      - /app/logs:uid=100,gid=101
     healthcheck:
       test: [ "CMD", "wget", "-q", "--spider", "http://localhost:8080/api/v1/health" ]
       interval: 30s

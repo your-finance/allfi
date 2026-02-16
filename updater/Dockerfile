@@ -5,11 +5,11 @@ WORKDIR /build
 COPY go.mod go.sum* ./
 RUN go mod download 2>/dev/null; true
 COPY . .
-RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o updater .
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o allfi-updater .
 
 FROM alpine:3.21
 RUN apk add --no-cache ca-certificates git docker-cli docker-cli-compose
 WORKDIR /app
-COPY --from=builder /build/updater .
+COPY --from=builder /build/allfi-updater .
 EXPOSE 8081
-ENTRYPOINT ["./updater"]
+ENTRYPOINT ["/app/allfi-updater"]

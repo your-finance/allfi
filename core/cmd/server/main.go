@@ -26,6 +26,9 @@ import (
 	"strings"
 	"your-finance/allfi/internal/statics"
 
+	// 数据库初始化（必须在所有 logic 包之前导入，确保表已创建）
+	_ "your-finance/allfi/internal/database"
+
 	// 导入所有模块的 logic 包，触发 init() 注册服务
 	_ "your-finance/allfi/internal/app/achievement/logic"
 	_ "your-finance/allfi/internal/app/asset/logic"
