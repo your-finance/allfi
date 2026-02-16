@@ -48,6 +48,9 @@ jobs:
       - name: 打包前端产物
         run: tar -czf webapp-dist.tar.gz -C webapp/dist .
 
+      - name: 复制前端产物到后端嵌入目录
+        run: cp -r webapp/dist core/internal/statics/dist
+
       - name: 构建后端（多平台）
         working-directory: core
         env:
