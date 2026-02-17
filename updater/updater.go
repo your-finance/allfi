@@ -82,7 +82,12 @@ func doUpdate(targetVersion string) {
 	}
 
 	// 步骤 3：重启服务（注意：不重启 updater 自身）
-	setState("updating", 3, 3, "重启服务", "执行 docker-compose up -d...")
+	// 先停止并移除旧容器，避免容器名称冲突
+	setState("updating", 3, 3, "重启服务", "停止旧容器...")
+	_ = runCmd(projectDir, "docker-compose", "rm", "-f", "-s", "backend")
+	_ = runCmd(projectDir, "docker", "compose", "rm", "-f", "-s", "backend")
+
+	setState("updating", 3, 3, "重启服务", "启动新容器...")
 	if err := runCmd(projectDir, "docker-compose", "up", "-d", "backend"); err != nil {
 		if err2 := runCmd(projectDir, "docker", "compose", "up", "-d", "backend"); err2 != nil {
 			setState("failed", 3, 3, "重启服务", fmt.Sprintf("重启失败: %v", err2))
@@ -118,7 +123,12 @@ func doRollback(targetVersion string) {
 	}
 
 	// 步骤 3：重启服务
-	setState("updating", 3, 3, "重启服务", "重启中...")
+	// 先停止并移除旧容器，避免容器名称冲突
+	setState("updating", 3, 3, "重启服务", "停止旧容器...")
+	_ = runCmd(projectDir, "docker-compose", "rm", "-f", "-s", "backend")
+	_ = runCmd(projectDir, "docker", "compose", "rm", "-f", "-s", "backend")
+
+	setState("updating", 3, 3, "重启服务", "启动新容器...")
 	if err := runCmd(projectDir, "docker-compose", "up", "-d", "backend"); err != nil {
 		if err2 := runCmd(projectDir, "docker", "compose", "up", "-d", "backend"); err2 != nil {
 			setState("failed", 3, 3, "重启服务", fmt.Sprintf("重启失败: %v", err2))
