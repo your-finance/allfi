@@ -15,6 +15,8 @@ const Settings = () => import('../pages/Settings.vue')
 const History = () => import('../pages/History.vue')
 const Analytics = () => import('../pages/Analytics.vue')
 const Reports = () => import('../pages/Reports.vue')
+const DeFi = () => import('../pages/DeFi.vue')
+const NFT = () => import('../pages/NFT.vue')
 
 // 路由配置
 const routes = [
@@ -107,7 +109,25 @@ const routes = [
       titleKey: 'nav.settings'
     }
   },
-  
+  {
+    path: '/defi',
+    name: 'DeFi',
+    component: DeFi,
+    meta: {
+      requiresAuth: true,
+      titleKey: 'nav.defi'
+    }
+  },
+  {
+    path: '/nft',
+    name: 'NFT',
+    component: NFT,
+    meta: {
+      requiresAuth: true,
+      titleKey: 'nav.nft'
+    }
+  },
+
   // 404 重定向
   {
     path: '/:pathMatch(.*)*',

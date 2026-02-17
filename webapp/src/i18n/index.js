@@ -36,6 +36,7 @@ export const translations = {
       itemsPerPage: '每页显示',
       showingItems: '显示 {start}-{end}，共 {total} 项',
       offlineMode: '离线模式 — 数据可能不是最新',
+      all: '全部',
     },
     
     // 认证
@@ -163,6 +164,10 @@ export const translations = {
       topHoldings: 'TOP 持仓',
       accounts: '个账户',
       footerText: '全资产聚合平台 · allfi.finance',
+      displayMode: '显示方式',
+      percent: '比例',
+      value: '数值',
+      cardStyle: '卡片样式',
     },
 
     // 数据导出
@@ -860,6 +865,10 @@ export const translations = {
       inRange: '区间内',
       outOfRange: '区间外',
       healthFactor: '健康因子',
+      pageDesc: '管理您的 DeFi 仓位和收益',
+      positions: '仓位数',
+      protocols: '协议数',
+      activeProtocols: '活跃协议',
     },
 
     // 引导向导
@@ -944,6 +953,10 @@ export const translations = {
       viewAll: '查看全部',
       items: '件',
       searchPlaceholder: '搜索 NFT 名称或收藏集...',
+      pageDesc: '浏览和管理您的 NFT 收藏',
+      name: '名称',
+      value: '价值',
+      collections: '收藏集',
     },
     // 系统管理
     system: {
@@ -1008,6 +1021,7 @@ export const translations = {
       itemsPerPage: '每頁顯示',
       showingItems: '顯示 {start}-{end}，共 {total} 項',
       offlineMode: '離線模式 — 資料可能不是最新',
+      all: '全部',
     },
     
     // 認證
@@ -1133,6 +1147,10 @@ export const translations = {
       topHoldings: 'TOP 持倉',
       accounts: '個帳戶',
       footerText: '全資產聚合平台 · allfi.finance',
+      displayMode: '顯示方式',
+      percent: '比例',
+      value: '數值',
+      cardStyle: '卡片樣式',
     },
 
     // 資料匯出
@@ -1815,6 +1833,10 @@ export const translations = {
       inRange: '區間內',
       outOfRange: '區間外',
       healthFactor: '健康因子',
+      pageDesc: '管理您的 DeFi 倉位和收益',
+      positions: '倉位數',
+      protocols: '協議數',
+      activeProtocols: '活躍協議',
     },
 
     // 引導嚮導
@@ -1899,6 +1921,10 @@ export const translations = {
       viewAll: '查看全部',
       items: '件',
       searchPlaceholder: '搜尋 NFT 名稱或收藏集...',
+      pageDesc: '瀏覽和管理您的 NFT 收藏',
+      name: '名稱',
+      value: '價值',
+      collections: '收藏集',
     },
     // 系統管理
     system: {
@@ -1963,8 +1989,9 @@ export const translations = {
       itemsPerPage: 'Items per page',
       showingItems: 'Showing {start}-{end} of {total}',
       offlineMode: 'Offline Mode — Data may not be up to date',
+      all: 'All',
     },
-    
+
     // Authentication
     auth: {
       // Login
@@ -2088,6 +2115,10 @@ export const translations = {
       topHoldings: 'Top Holdings',
       accounts: 'accounts',
       footerText: 'Unified Asset Platform · allfi.finance',
+      displayMode: 'Display Mode',
+      percent: 'Percent',
+      value: 'Value',
+      cardStyle: 'Card Style',
     },
 
     // Data Export
@@ -2770,6 +2801,10 @@ export const translations = {
       inRange: 'In Range',
       outOfRange: 'Out of Range',
       healthFactor: 'Health Factor',
+      pageDesc: 'Manage your DeFi positions and yields',
+      positions: 'Positions',
+      protocols: 'Protocols',
+      activeProtocols: 'Active Protocols',
     },
 
     // Onboarding
@@ -2854,6 +2889,10 @@ export const translations = {
       viewAll: 'View All',
       items: 'items',
       searchPlaceholder: 'Search NFT name or collection...',
+      pageDesc: 'Browse and manage your NFT collection',
+      name: 'Name',
+      value: 'Value',
+      collections: 'Collections',
     },
     // System Management
     system: {
