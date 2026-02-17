@@ -107,6 +107,7 @@ func main() {
 		// ===== 免认证路由 =====
 		healthCtrl.Register(group)
 		authCtrl.Register(group)
+		systemCtrl.Register(group) // 版本信息、更新检查等系统管理 API 无需认证
 
 		// ===== 需认证路由 =====
 		group.Middleware(middleware.Auth)
@@ -153,9 +154,6 @@ func main() {
 
 		// 成就系统
 		achievementCtrl.Register(group)
-
-		// 系统管理
-		systemCtrl.Register(group)
 	})
 
 	// 静态文件服务（SPA 前端托管）
