@@ -17,7 +17,7 @@ import {
   Legend,
   Filler
 } from 'chart.js'
-import { PhCaretUp, PhCaretDown, PhLightbulb } from '@phosphor-icons/vue'
+import { PhCaretUp, PhCaretDown, PhLightbulb, PhCheckCircle, PhArrowRight, PhInfo, PhArrowUUpRight, PhGlobe, PhTimer, PhWallet } from '@phosphor-icons/vue'
 import { feeService } from '../api/feeService.js'
 import { useFormatters } from '../composables/useFormatters'
 import { useThemeStore } from '../stores/themeStore'
@@ -154,6 +154,52 @@ const breakdownPercentages = computed(() => {
     { label: t('fee.withdrawFee'), value: breakdown.withdrawFee, pct: (breakdown.withdrawFee / total * 100).toFixed(1), color: colors.value.accentTertiary || '#F59E0B' },
   ]
 })
+
+// 建议状态管理
+const dismissedSuggestions = ref(new Set())
+
+const dismissSuggestion = (id) => {
+  dismissedSuggestions.value.add(id)
+}
+
+// 建议优先级颜色
+const getPriorityColor = (priority) => {
+  switch (priority) {
+    case 'high': return 'rgba(239, 68, 68, 0.15)'
+    case 'medium': return 'rgba(245, 158, 11, 0.15)'
+    case 'low': return 'rgba(59, 130, 246, 0.15)'
+    default: return 'rgba(107, 114, 128, 0.15)'
+  }
+}
+
+const getPriorityBorderColor = (priority) => {
+  switch (priority) {
+    case 'high': return 'rgba(239, 68, 68, 0.5)'
+    case 'medium': return 'rgba(245, 158, 11, 0.5)'
+    case 'low': return 'rgba(59, 130, 246, 0.5)'
+    default: return 'rgba(107, 114, 128, 0.3)'
+  }
+}
+
+const getPriorityLabel = (priority) => {
+  switch (priority) {
+    case 'high': return '高优先级'
+    case 'medium': return '中优先级'
+    case 'low': return '低优先级'
+    default: return ''
+  }
+}
+
+// 根据建议类型获取对应图标
+const getIconForSuggestion = (type) => {
+  const iconMap = {
+    'gas': PhGlobe,
+    'timing': PhTimer,
+    'consolidate': PhWallet,
+    'exchange': PhArrowUUpRight
+  }
+  return iconMap[type] || PhLightbulb
+}
 </script>
 
 <template>
@@ -217,25 +263,82 @@ const breakdownPercentages = computed(() => {
       </div>
 
       <!-- 智能建议 -->
-      <div v-if="feeData.suggestions && feeData.suggestions.length > 0" class="suggestions">
-        <h4 class="suggestions-title">
-          <PhLightbulb :size="14" weight="fill" />
-          {{ t('fee.suggestions') }}
-        </h4>
-        <div class="suggestion-list">
-          <div
-            v-for="s in feeData.suggestions"
-            :key="s.id"
-            class="suggestion-item"
-          >
-            <div class="suggestion-content">
-              <span class="suggestion-title">{{ t(s.titleKey) }}</span>
-              <span class="suggestion-desc">{{ t(s.descKey) }}</span>
+      <div v-if="feeData.suggestions && feeData.suggestions.filter(s => !dismissedSuggestions.has(s.id)).length > 0" class="suggestions-section">
+        <div class="suggestions-header">
+          <div class="suggestions-title-row">
+            <div class="suggestions-icon">
+              <PhLightbulb :size="18" weight="fill" />
             </div>
-            <span v-if="s.savingEstimate" class="saving-badge font-mono positive">
-              ~${{ s.savingEstimate }}/{{ t('fee.month') }}
-            </span>
+            <div class="suggestions-header-text">
+              <h4 class="suggestions-title">{{ t('fee.suggestions') }}</h4>
+              <span class="suggestions-subtitle">基于您的交易模式分析</span>
+            </div>
           </div>
+          <div class="suggestions-stats">
+            <div class="stat-box">
+              <span class="stat-value">${{ formatNumber(feeData.suggestions.reduce((sum, s) => sum + (s.savingEstimate || 0), 0), 2) }}</span>
+              <span class="stat-label">预估月节省</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="suggestions-grid">
+          <div
+            v-for="s in feeData.suggestions.filter(s => !dismissedSuggestions.has(s.id))"
+            :key="s.id"
+            class="suggestion-card"
+            :style="{
+              background: getPriorityColor(s.priority),
+              borderColor: getPriorityBorderColor(s.priority)
+            }"
+          >
+            <!-- 卡片头部：优先级和关闭按钮 -->
+            <div class="suggestion-card-header">
+              <span class="priority-badge" :class="`priority-${s.priority}`">
+                {{ getPriorityLabel(s.priority) }}
+              </span>
+              <button class="dismiss-btn" @click="dismissSuggestion(s.id)" title="忽略此建议">
+                <PhInfo :size="14" />
+              </button>
+            </div>
+
+            <!-- 卡片内容：图标 + 文字 -->
+            <div class="suggestion-card-body">
+              <div class="suggestion-icon-box">
+                <component :is="getIconForSuggestion(s.type)" :size="24" weight="duotone" />
+              </div>
+              <div class="suggestion-text">
+                <h5 class="suggestion-card-title">{{ t(s.titleKey) }}</h5>
+                <p class="suggestion-card-desc">{{ t(s.descKey) }}</p>
+              </div>
+            </div>
+
+            <!-- 卡片底部：节省金额 + 操作按钮 -->
+            <div class="suggestion-card-footer">
+              <div class="saving-highlight">
+                <span class="saving-label">可节省</span>
+                <span class="saving-value font-mono">~${{ s.savingEstimate }}</span>
+                <span class="saving-period">/月</span>
+              </div>
+              <button class="action-btn">
+                <span>查看详情</span>
+                <PhArrowRight :size="14" weight="bold" />
+              </button>
+            </div>
+
+            <!-- 进度条装饰 -->
+            <div class="suggestion-progress-bar">
+              <div class="suggestion-progress-fill" :style="{ width: `${s.impactScore}%` }"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 已忽略建议提示 -->
+        <div v-if="dismissedSuggestions.size > 0" class="dismissed-hint">
+          <button class="restore-hint" @click="dismissedSuggestions.clear()">
+            <PhCheckCircle :size="14" />
+            <span>已忽略 {{ dismissedSuggestions.size }} 条建议，点击恢复</span>
+          </button>
         </div>
       </div>
     </template>
@@ -408,64 +511,308 @@ const breakdownPercentages = computed(() => {
   text-align: right;
 }
 
-/* 智能建议 */
-.suggestions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap-sm);
-  padding-top: var(--gap-md);
+/* 智能建议 - 重新设计 */
+.suggestions-section {
+  margin-top: var(--gap-xl);
+  padding-top: var(--gap-lg);
   border-top: 1px solid var(--color-border);
 }
 
-.suggestions-title {
+/* 建议头部 */
+.suggestions-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: var(--gap-xs);
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--color-warning);
+  margin-bottom: var(--gap-md);
+  flex-wrap: wrap;
+  gap: var(--gap-md);
 }
 
-.suggestion-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap-sm);
-}
-
-.suggestion-item {
+.suggestions-title-row {
   display: flex;
   align-items: center;
   gap: var(--gap-md);
-  padding: var(--gap-sm) var(--gap-md);
-  background: var(--color-bg-tertiary);
-  border-radius: var(--radius-sm);
 }
 
-.suggestion-content {
-  flex: 1;
+.suggestions-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, var(--color-accent-primary) 0%, color-mix(in srgb, var(--color-accent-primary) 80%, var(--color-accent-secondary) 100%) 100%);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-accent-primary) 30%, transparent);
+}
+
+.suggestions-header-text {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.suggestion-title {
-  font-size: 0.75rem;
+.suggestions-title {
+  font-size: 0.9375rem;
   font-weight: 600;
   color: var(--color-text-primary);
+  margin: 0;
 }
 
-.suggestion-desc {
+.suggestions-subtitle {
   font-size: 0.6875rem;
   color: var(--color-text-muted);
 }
 
-.saving-badge {
-  font-size: 0.6875rem;
+.suggestions-stats {
+  display: flex;
+  gap: var(--gap-md);
+}
+
+.stat-box {
+  text-align: center;
+  padding: var(--gap-sm) var(--gap-lg);
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+
+.stat-value {
+  display: block;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-success);
+  font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.625rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+
+/* 建议卡片网格 */
+.suggestions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--gap-md);
+}
+
+.suggestion-card {
+  position: relative;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--gap-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-md);
+  overflow: hidden;
+  transition: all 0.25s ease;
+}
+
+.suggestion-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-accent-primary), var(--color-accent-secondary));
+}
+
+.suggestion-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* 卡片头部 */
+.suggestion-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.priority-badge {
+  font-size: 0.625rem;
   font-weight: 600;
-  padding: 2px 8px;
-  background: rgba(16, 185, 129, 0.1);
+  padding: 3px 8px;
   border-radius: var(--radius-xs);
-  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.priority-badge.priority-high {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.priority-badge.priority-medium {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.priority-badge.priority-low {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.dismiss-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-xs);
+  transition: all 0.15s ease;
+}
+
+.dismiss-btn:hover {
+  color: var(--color-text-primary);
+  background: var(--color-bg-tertiary);
+}
+
+/* 卡片主体 */
+.suggestion-card-body {
+  display: flex;
+  gap: var(--gap-md);
+  align-items: flex-start;
+}
+
+.suggestion-icon-box {
+  width: 48px;
+  height: 48px;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--color-accent-primary);
+  border: 1px solid var(--color-border);
+}
+
+.suggestion-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.suggestion-card-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.suggestion-card-desc {
+  font-size: 0.6875rem;
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* 卡片底部 */
+.suggestion-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: var(--gap-sm);
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+}
+
+.saving-highlight {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.saving-label {
+  font-size: 0.625rem;
+  color: var(--color-text-muted);
+}
+
+.saving-value {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-success);
+}
+
+.saving-period {
+  font-size: 0.625rem;
+  color: var(--color-text-muted);
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--color-accent-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: white;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.action-btn:hover {
+  background: color-mix(in srgb, var(--color-accent-primary) 85%, black);
+  transform: translateX(2px);
+}
+
+/* 进度条装饰 */
+.suggestion-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-bg-tertiary);
+}
+
+.suggestion-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-success), var(--color-accent-primary));
+  border-radius: 1px;
+  transition: width 0.5s ease;
+}
+
+/* 已忽略提示 */
+.dismissed-hint {
+  margin-top: var(--gap-md);
+  display: flex;
+  justify-content: center;
+}
+
+.restore-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--color-bg-tertiary);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  font-size: 0.6875rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.restore-hint:hover {
+  background: var(--color-accent-primary);
+  border-color: var(--color-accent-primary);
+  color: white;
 }
 
 /* 加载 */
@@ -479,6 +826,32 @@ const breakdownPercentages = computed(() => {
 @media (max-width: 768px) {
   .charts-row {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .charts-row {
+    grid-template-columns: 1fr;
+  }
+  .suggestions-grid {
+    grid-template-columns: 1fr;
+  }
+  .suggestions-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .suggestions-stats {
+    width: 100%;
+    justify-content: center;
+  }
+  .suggestion-card-footer {
+    flex-direction: column;
+    gap: var(--gap-sm);
+    align-items: stretch;
+  }
+  .action-btn {
+    width: 100%;
+    justify-content: center;
   }
 }
 </style>
