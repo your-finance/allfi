@@ -4,8 +4,10 @@ package logic
 
 import (
 	"context"
+	"strings"
 	"time"
 
+	ccxt "github.com/ccxt/ccxt/go/v4"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
@@ -28,6 +30,191 @@ type sExchange struct{}
 // New 创建交易所服务实例
 func New() service.IExchange {
 	return &sExchange{}
+}
+
+// ListSupportedExchanges 获取支持的交易所列表
+// 返回所有 ccxt 支持的交易所，并按类别分类
+func (s *sExchange) ListSupportedExchanges(ctx context.Context) ([]exchangeApi.ExchangeInfo, error) {
+	// 交易所分类映射
+	// 注意：一个交易所可能同时支持多种类型，这里按主要类型分类
+	categories := map[string]string{
+		// 现货交易
+		"binance":       "spot",
+		"binanceus":     "spot",
+		"okx":           "spot",
+		"coinbase":      "spot",
+		"coinbaseexchange": "spot",
+		"kraken":        "spot",
+		"kucoin":        "spot",
+		"gate":          "spot",
+		"gateio":        "spot",
+		"huobi":         "spot",
+		"htx":           "spot",
+		"bitget":        "spot",
+		"bybit":         "spot",
+		"mexc":          "spot",
+		"bingx":         "spot",
+		"bitfinex":      "spot",
+		"bitstamp":      "spot",
+		"coinex":        "spot",
+		// 合约交易
+		"binanceusdm":   "futures",
+		"binancecoinm":  "futures",
+		"bitmex":        "futures",
+		"deribit":       "futures",
+		"kucoinfutures": "futures",
+		"krakenfutures": "futures",
+		// 衍生品
+		"dydx":          "derivatives",
+		"hyperliquid":   "derivatives",
+		"paradex":       "derivatives",
+		"defx":          "derivatives",
+		"derive":        "derivatives",
+	}
+
+	exchanges := make([]exchangeApi.ExchangeInfo, 0, len(ccxt.Exchanges))
+	for _, exID := range ccxt.Exchanges {
+		// 过滤掉一些测试或不常用的交易所
+		if shouldSkipExchange(exID) {
+			continue
+		}
+
+		info := exchangeApi.ExchangeInfo{
+			ID:   exID,
+			Name: formatExchangeName(exID),
+		}
+
+		// 获取分类
+		if cat, ok := categories[strings.ToLower(exID)]; ok {
+			info.Category = cat
+		} else {
+			info.Category = "other"
+		}
+
+		exchanges = append(exchanges, info)
+	}
+
+	g.Log().Info(ctx, "获取支持的交易所列表成功",
+		"count", len(exchanges),
+	)
+
+	return exchanges, nil
+}
+
+// shouldSkipExchange 判断是否跳过某个交易所
+// 跳过测试用或不常用的交易所
+func shouldSkipExchange(exID string) bool {
+	skipList := map[string]bool{
+		"test":      true,
+		"testnet":   true,
+		"demo":      true,
+		"ascendex":  false, // 可选
+		"aster":     false,
+		"backpack":  false,
+		"bit2c":     false,
+		"bitteam":   false,
+	}
+	return skipList[strings.ToLower(exID)]
+}
+
+// formatExchangeName 格式化交易所名称
+// 将 binanceusdm 格式化为 "Binance USD-M Futures"
+func formatExchangeName(exID string) string {
+	id := strings.ToLower(exID)
+
+	nameMap := map[string]string{
+		"binance":       "Binance",
+		"binanceus":     "Binance US",
+		"binanceusdm":   "Binance USD-M Futures",
+		"binancecoinm":  "Binance COIN-M Futures",
+		"okx":           "OKX",
+		"okxus":         "OKX US",
+		"myokx":         "MyOKX",
+		"coinbase":      "Coinbase",
+		"coinbaseadvanced": "Coinbase Advanced",
+		"coinbaseexchange": "Coinbase Exchange",
+		"coinbaseinternational": "Coinbase International",
+		"kraken":        "Kraken",
+		"krakenfutures": "Kraken Futures",
+		"kucoin":        "KuCoin",
+		"kucoinfutures": "KuCoin Futures",
+		"gate":          "Gate.io",
+		"gateio":        "Gate.io",
+		"huobi":         "Huobi",
+		"htx":           "HTX",
+		"bitget":        "Bitget",
+		"bybit":         "Bybit",
+		"bydfi":         "ByDFi",
+		"mexc":          "MEXC",
+		"modetrade":     "Mode Trade",
+		"bingx":         "BingX",
+		"bitfinex":      "Bitfinex",
+		"bitflyer":      "bitFlyer",
+		"bitmart":       "BitMart",
+		"bitmex":        "BitMEX",
+		"bitopro":       "BitoPro",
+		"bitrue":        "Bitrue",
+		"bitso":         "Bitso",
+		"bitstamp":      "Bitstamp",
+		"bitvavo":       "Bitvavo",
+		"blockchaincom": "Blockchain.com",
+		"blofin":        "BloFin",
+		"btcbox":        "BtcBox",
+		"btcmarkets":    "BTC Markets",
+		"btcturk":       "BtcTurk",
+		"bullish":       "Bullish",
+		"cex":           "CEX.IO",
+		"coincatch":     "CoinCatch",
+		"coincheck":     "Coincheck",
+		"coinex":        "CoinEx",
+		"coinmate":      "CoinMate",
+		"coinmetro":     "Coinmetro",
+		"coinone":       "Coinone",
+		"coinsph":       "Coins.ph",
+		"coinspot":      "CoinSpot",
+		"cryptocom":     "Crypto.com",
+		"cryptomus":     "Cryptomus",
+		"deepcoin":      "DeepCoin",
+		"delta":         "Delta",
+		"deribit":       "Deribit",
+		"digifinex":     "DigiFinex",
+		"dydx":          "dYdX",
+		"exmo":          "EXMO",
+		"fmfwio":        "FMFW.io",
+		"foxbit":        "Foxbit",
+		"gemini":        "Gemini",
+		"hashkey":       "HashKey",
+		"hitbtc":        "HitBTC",
+		"hollaex":       "HollaEx",
+		"independentreserve": "Independent Reserve",
+		"indodax":       "Indodax",
+		"latoken":       "Latoken",
+		"lbank":         "LBank",
+		"luno":          "Luno",
+		"mercado":       "Mercado Bitcoin",
+		"ndax":          "NDAX",
+		"novadax":       "Novadax",
+		"onetrading":    "One Trading",
+		"oxfun":         "OX.fun",
+		"p2b":           "P2B",
+		"paradex":       "Paradex",
+		"paymium":       "Paymium",
+		"phemex":        "Phemex",
+		"poloniex":      "Poloniex",
+		"probit":        "ProBit",
+		"timex":         "TimeX",
+		"tokocrypto":    "Tokocrypto",
+	}
+
+	if name, ok := nameMap[id]; ok {
+		return name
+	}
+
+	// 默认首字母大写
+	if len(exID) == 0 {
+		return exID
+	}
+	return strings.ToUpper(string(exID[0])) + exID[1:]
 }
 
 // ListAccounts 获取用户的交易所账户列表

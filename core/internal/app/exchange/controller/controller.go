@@ -20,6 +20,18 @@ func Register(group *ghttp.RouterGroup) {
 	group.Bind(&Controller{})
 }
 
+// ListSupportedExchanges 获取支持的交易所列表
+func (c *Controller) ListSupportedExchanges(ctx context.Context, req *exchangeApi.ListSupportedExchangesReq) (res *exchangeApi.ListSupportedExchangesRes, err error) {
+	exchanges, err := service.Exchange().ListSupportedExchanges(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &exchangeApi.ListSupportedExchangesRes{
+		Exchanges: exchanges,
+	}, nil
+}
+
 // ListAccounts 获取交易所账户列表
 func (c *Controller) ListAccounts(ctx context.Context, req *exchangeApi.ListAccountsReq) (res *exchangeApi.ListAccountsRes, err error) {
 	userID := consts.GetUserID(ctx)

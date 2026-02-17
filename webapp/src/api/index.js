@@ -250,6 +250,39 @@ export const assetService = {
 
 export const cexService = {
   /**
+   * 获取支持的交易所列表
+   * @returns {Promise<Array<{id: string, name: string, category: string}>>}
+   */
+  async getSupportedExchanges() {
+    if (USE_MOCK) {
+      await simulateDelay(200)
+      // Mock 数据，返回常用交易所
+      return [
+        { id: 'binance', name: 'Binance', category: 'spot' },
+        { id: 'okx', name: 'OKX', category: 'spot' },
+        { id: 'coinbase', name: 'Coinbase', category: 'spot' },
+        { id: 'kraken', name: 'Kraken', category: 'spot' },
+        { id: 'kucoin', name: 'KuCoin', category: 'spot' },
+        { id: 'gate', name: 'Gate.io', category: 'spot' },
+        { id: 'bitget', name: 'Bitget', category: 'spot' },
+        { id: 'bybit', name: 'Bybit', category: 'spot' },
+        { id: 'mexc', name: 'MEXC', category: 'spot' },
+        { id: 'huobi', name: 'Huobi', category: 'spot' },
+        { id: 'bingx', name: 'BingX', category: 'spot' },
+        { id: 'bitfinex', name: 'Bitfinex', category: 'spot' },
+        { id: 'coinex', name: 'CoinEx', category: 'spot' },
+        { id: 'binanceusdm', name: 'Binance USD-M Futures', category: 'futures' },
+        { id: 'binancecoinm', name: 'Binance COIN-M Futures', category: 'futures' },
+        { id: 'bitmex', name: 'BitMEX', category: 'futures' },
+        { id: 'dydx', name: 'dYdX', category: 'derivatives' },
+        { id: 'hyperliquid', name: 'Hyperliquid', category: 'derivatives' },
+      ]
+    }
+    const result = await get('/exchanges/supported')
+    return result.exchanges || []
+  },
+
+  /**
    * 获取所有 CEX 账户
    * @returns {Promise<object[]>}
    */

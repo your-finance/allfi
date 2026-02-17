@@ -10,6 +10,10 @@ import (
 
 // IExchange 交易所服务接口
 type IExchange interface {
+	// ListSupportedExchanges 获取支持的交易所列表
+	// 返回所有 ccxt 支持的交易所
+	ListSupportedExchanges(ctx context.Context) ([]exchangeApi.ExchangeInfo, error)
+
 	// ListAccounts 获取用户的交易所账户列表
 	// 返回账户列表（已过滤敏感字段）
 	ListAccounts(ctx context.Context, userID int) ([]exchangeApi.AccountItem, error)

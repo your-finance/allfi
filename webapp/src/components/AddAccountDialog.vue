@@ -17,12 +17,45 @@
               <label for="cexName" class="input-label">{{ t('accounts.accountName') }}</label>
               <input type="text" id="cexName" v-model="form.name" class="input-field" :placeholder="t('accounts.accountNamePlaceholder')" />
             </div>
+            <!-- 交易所选择器 - 支持搜索 -->
             <div class="form-group">
               <label for="cexExchange" class="input-label">{{ t('accounts.exchange') }}</label>
-              <select id="cexExchange" v-model="form.exchange" class="input-field">
-                <option value="" disabled>{{ t('accounts.selectExchange') }}</option>
-                <option v-for="ex in availableExchanges" :key="ex.id" :value="ex.id">{{ ex.name }}</option>
-              </select>
+              <div class="exchange-selector" v-click-outside="closeExchangeDropdown">
+                <input
+                  type="text"
+                  id="cexExchange"
+                  v-model="exchangeSearchText"
+                  @focus="openExchangeDropdown"
+                  @input="onExchangeSearchInput"
+                  class="input-field"
+                  :placeholder="t('accounts.selectExchange')"
+                />
+                <button class="dropdown-arrow" @click="toggleExchangeDropdown" type="button">
+                  <PhCaretDown v-if="!isExchangeDropdownOpen" :size="16" />
+                  <PhCaretUp v-else :size="16" />
+                </button>
+                <div v-if="isExchangeDropdownOpen" class="exchange-dropdown">
+                  <div v-if="isLoadingExchanges" class="dropdown-loading">
+                    <PhSpinnerGap :size="20" class="animate-spin" />
+                    <span>加载中...</span>
+                  </div>
+                  <template v-else>
+                    <div
+                      v-for="ex in filteredExchanges"
+                      :key="ex.id"
+                      class="exchange-option"
+                      :class="{ selected: form.exchange === ex.id }"
+                      @click="selectExchange(ex)"
+                    >
+                      <span class="exchange-name">{{ ex.name }}</span>
+                      <span class="exchange-category">{{ getCategoryLabel(ex.category) }}</span>
+                    </div>
+                    <div v-if="filteredExchanges.length === 0" class="exchange-no-result">
+                      未找到匹配的交易所
+                    </div>
+                  </template>
+                </div>
+              </div>
             </div>
             <div class="form-group">
               <label for="cexApiKey" class="input-label">{{ t('accounts.apiKey') }}</label>
@@ -199,11 +232,27 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch } from 'vue'
-import { PhX, PhWarning, PhSpinnerGap, PhArrowLeft } from '@phosphor-icons/vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { PhX, PhWarning, PhSpinnerGap, PhArrowLeft, PhCaretDown, PhCaretUp } from '@phosphor-icons/vue'
 import { useI18n } from '../composables/useI18n'
 import { useAccountStore } from '../stores/accountStore'
 import { getInstitutionsByType, searchInstitutions } from '../data/institutions'
+import { cexService } from '../api'
+
+// 点击外部指令（简单实现）
+const vClickOutside = {
+  mounted(el, binding) {
+    el._clickOutside = (event) => {
+      if (!(el === event.target || el.contains(event.target))) {
+        binding.value(event)
+      }
+    }
+    document.addEventListener('click', el._clickOutside)
+  },
+  unmounted(el) {
+    document.removeEventListener('click', el._clickOutside)
+  }
+}
 
 const emit = defineEmits(['close', 'submitted'])
 
@@ -227,6 +276,73 @@ const accountStore = useAccountStore()
 
 const isSubmitting = ref(false)
 const error = ref(null)
+
+// 加载交易所列表状态
+const isLoadingExchanges = ref(false)
+
+// 交易所下拉框状态
+const isExchangeDropdownOpen = ref(false)
+const exchangeSearchText = ref('')
+
+// 交易所分类标签
+const categoryLabels = {
+  spot: '现货',
+  futures: '合约',
+  derivatives: '衍生品',
+  other: '其他'
+}
+
+// 获取分类标签
+const getCategoryLabel = (category) => {
+  return categoryLabels[category] || '其他'
+}
+
+// 过滤后的交易所列表
+const filteredExchanges = computed(() => {
+  if (!exchangeSearchText.value) {
+    return availableExchanges.value
+  }
+  const searchLower = exchangeSearchText.value.toLowerCase()
+  return availableExchanges.value.filter(ex =>
+    ex.name.toLowerCase().includes(searchLower) ||
+    ex.id.toLowerCase().includes(searchLower)
+  )
+})
+
+// 打开交易所下拉框
+const openExchangeDropdown = () => {
+  isExchangeDropdownOpen.value = true
+  // 确保交易所列表已加载
+  loadSupportedExchanges()
+}
+
+// 关闭交易所下拉框
+const closeExchangeDropdown = () => {
+  isExchangeDropdownOpen.value = false
+}
+
+// 切换交易所下拉框
+const toggleExchangeDropdown = () => {
+  if (isExchangeDropdownOpen.value) {
+    closeExchangeDropdown()
+  } else {
+    openExchangeDropdown()
+  }
+}
+
+// 选择交易所
+const selectExchange = (exchange) => {
+  form.exchange = exchange.id
+  exchangeSearchText.value = exchange.name
+  closeExchangeDropdown()
+}
+
+// 交易所搜索输入处理
+const onExchangeSearchInput = () => {
+  if (!isExchangeDropdownOpen.value) {
+    openExchangeDropdown()
+  }
+}
 
 // 手动资产表单步骤
 const manualStep = ref('type') // 'type' | 'institution' | 'detail'
@@ -264,14 +380,41 @@ const resetForm = () => {
   manualStep.value = 'type'
   institutionSearch.value = ''
   customInstitution.value = ''
+  exchangeSearchText.value = ''
+  isExchangeDropdownOpen.value = false
   error.value = null
 }
 
-// 可用的交易所、区块链
+// 从后端加载支持的交易所列表
+const loadSupportedExchanges = async () => {
+  if (availableExchanges.value.length > 3) {
+    // 已加载过，不再重复加载
+    return
+  }
+  try {
+    isLoadingExchanges.value = true
+    const exchanges = await cexService.getSupportedExchanges()
+    // 按分类排序：spot 在前，然后是 futures 和 derivatives
+    const categoryOrder = { spot: 1, futures: 2, derivatives: 3, other: 4 }
+    availableExchanges.value = exchanges.sort((a, b) => {
+      const orderA = categoryOrder[a.category] || 4
+      const orderB = categoryOrder[b.category] || 4
+      if (orderA !== orderB) return orderA - orderB
+      return a.name.localeCompare(b.name)
+    })
+  } catch (err) {
+    console.error('加载交易所列表失败:', err)
+    // 保持默认的 3 个交易所
+  } finally {
+    isLoadingExchanges.value = false
+  }
+}
+
+// 可用的交易所、区块链（初始默认值，会从后端加载）
 const availableExchanges = ref([
-  { id: 'Binance', name: 'Binance' },
-  { id: 'OKX', name: 'OKX' },
-  { id: 'Coinbase', name: 'Coinbase' }
+  { id: 'binance', name: 'Binance' },
+  { id: 'okx', name: 'OKX' },
+  { id: 'coinbase', name: 'Coinbase' }
 ])
 
 const availableBlockchains = ref([
@@ -392,11 +535,22 @@ watch(() => props.editingAccount, (newVal) => {
   }
 }, { immediate: true })
 
-// 监听 visible 变化，在对话框关闭时重置表单和错误
-watch(() => props.visible, (newVal) => {
-  if (!newVal) {
+// 监听 visible 和 accountType 变化，在对话框打开且是 CEX 类型时加载交易所列表
+watch(() => [props.visible, props.accountType], ([visible, type]) => {
+  if (visible && type === 'cex') {
+    loadSupportedExchanges()
+  }
+  // 对话框关闭时重置表单和错误
+  if (!visible) {
     resetForm()
     error.value = null
+  }
+})
+
+// 组件挂载时加载交易所列表（如果默认是 CEX 类型）
+onMounted(() => {
+  if (props.visible && props.accountType === 'cex') {
+    loadSupportedExchanges()
   }
 })
 
@@ -572,6 +726,113 @@ textarea.input-field {
 
 .warning-box p {
   flex: 1;
+}
+
+/* ========== 交易所选择器 ========== */
+.exchange-selector {
+  position: relative;
+}
+
+.exchange-selector .input-field {
+  padding-right: 32px;
+  cursor: text;
+}
+
+.dropdown-arrow {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition-fast);
+}
+
+.dropdown-arrow:hover {
+  color: var(--color-text-primary);
+}
+
+.exchange-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+}
+
+.dropdown-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap-sm);
+  padding: var(--gap-md);
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.exchange-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.exchange-option:last-child {
+  border-bottom: none;
+}
+
+.exchange-option:hover {
+  background: var(--color-bg-elevated);
+}
+
+.exchange-option.selected {
+  background: rgba(75, 131, 240, 0.1);
+  color: var(--color-accent-primary);
+}
+
+.exchange-name {
+  font-size: 0.8125rem;
+  color: var(--color-text-primary);
+}
+
+.exchange-option:hover .exchange-name,
+.exchange-option.selected .exchange-name {
+  color: inherit;
+}
+
+.exchange-category {
+  font-size: 0.6875rem;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-muted);
+}
+
+.exchange-option.selected .exchange-category {
+  background: rgba(75, 131, 240, 0.15);
+  color: var(--color-accent-primary);
+}
+
+.exchange-no-result {
+  padding: var(--gap-md);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
 }
 
 .error-message {

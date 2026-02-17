@@ -4,6 +4,23 @@ package exchange
 
 import "github.com/gogf/gf/v2/frame/g"
 
+// ListSupportedExchangesReq 获取支持的交易所列表请求
+type ListSupportedExchangesReq struct {
+	g.Meta `path:"/exchanges/supported" method:"get" summary:"获取支持的交易所列表" tags:"交易所"`
+}
+
+// ListSupportedExchangesRes 获取支持的交易所列表响应
+type ListSupportedExchangesRes struct {
+	Exchanges []ExchangeInfo `json:"exchanges" dc:"交易所列表"`
+}
+
+// ExchangeInfo 交易所信息
+type ExchangeInfo struct {
+	ID       string `json:"id" dc:"交易所 ID（用于 API 调用）"`
+	Name     string `json:"name" dc:"交易所显示名称"`
+	Category string `json:"category" dc:"交易所分类（spot/futures/derivatives 等）"`
+}
+
 // ListAccountsReq 获取交易所账户列表请求
 type ListAccountsReq struct {
 	g.Meta `path:"/exchanges/accounts" method:"get" summary:"获取交易所账户列表" tags:"交易所"`
