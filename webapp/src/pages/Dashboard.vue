@@ -45,7 +45,6 @@ import OnboardingWizard from '../components/OnboardingWizard.vue'
 import DeFiMiniCard from '../components/DeFiMiniCard.vue'
 import NFTMiniCard from '../components/NFTMiniCard.vue'
 import FeeAnalytics from '../components/FeeAnalytics.vue'
-import StrategyPanel from '../components/StrategyPanel.vue'
 import PullToRefresh from '../components/PullToRefresh.vue'
 import { usePullToRefresh } from '../composables/usePullToRefresh'
 import { useFormatters } from '../composables/useFormatters'
@@ -819,6 +818,11 @@ watch(selectedTimeRange, async (newRange) => {
         <NFTMiniCard />
       </div>
 
+      <!-- 费用分析 -->
+      <div v-if="dashboardStore.widgetConfig.feeAnalytics" class="grid-item fee-card">
+        <FeeAnalytics />
+      </div>
+
       <!-- 6. 持仓明细 (Full Width) -->
       <div v-if="dashboardStore.widgetConfig.holdings" class="grid-item holdings-card">
         <div class="card-header">
@@ -1338,6 +1342,12 @@ watch(selectedTimeRange, async (newRange) => {
   border: none;
   background: transparent;
 }
+.fee-card {
+  grid-column: span 8;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
 
 .icon-btn-sm {
   width: 22px;
@@ -1688,6 +1698,9 @@ watch(selectedTimeRange, async (newRange) => {
   .defi-card, .nft-card {
     grid-column: span 6;
   }
+  .fee-card {
+    grid-column: span 12;
+  }
 }
 
 @media (max-width: 900px) {
@@ -1709,6 +1722,9 @@ watch(selectedTimeRange, async (newRange) => {
   }
   .defi-card, .nft-card {
     grid-column: span 3;
+  }
+  .fee-card {
+    grid-column: span 6;
   }
   .holdings-card {
     grid-column: span 6;

@@ -18,7 +18,6 @@ const DEFAULT_LAYOUT = {
   defiOverview: true,
   nftOverview: true,
   feeAnalytics: true,
-  strategyPanel: true,
 }
 
 export const useDashboardStore = defineStore('dashboard', () => {

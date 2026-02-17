@@ -26,7 +26,6 @@ const widgets = [
   { key: 'defiOverview', labelKey: 'widgets.defiOverview', icon: '🔗' },
   { key: 'nftOverview', labelKey: 'widgets.nftOverview', icon: '🖼' },
   { key: 'feeAnalytics', labelKey: 'widgets.feeAnalytics', icon: '💰' },
-  { key: 'strategyPanel', labelKey: 'widgets.strategyPanel', icon: '🤖' },
 ]
 
 const handleToggle = (key) => {
