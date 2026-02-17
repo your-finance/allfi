@@ -3,7 +3,7 @@
  * 版本徽章组件
  * 显示在侧边栏 logo 下方，点击弹出 Popover 显示版本信息和检查更新
  */
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { PhArrowsClockwise, PhArrowSquareOut, PhInfo, PhDownloadSimple } from '@phosphor-icons/vue'
 import { useSystemStore } from '../stores/systemStore'
 import { useI18n } from '../composables/useI18n'
@@ -52,8 +52,10 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
 })
 
-// 当前版本号（从 Vite define 注入的全局常量取值）
-const appVersion = __APP_VERSION__
+// 当前版本号：优先使用后端 API 返回的版本，降级使用构建时注入的版本
+const appVersion = computed(() => {
+  return systemStore.versionInfo?.version || __APP_VERSION__
+})
 
 // GitHub Releases 地址
 const releasesUrl = 'https://github.com/your-finance/allfi/releases'
