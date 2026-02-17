@@ -59,7 +59,7 @@ const colors = computed(() => themeStore.currentTheme.colors)
 
 // 费用构成环形图
 const doughnutData = computed(() => {
-  if (!feeData.value) return { labels: [], datasets: [] }
+  if (!feeData.value?.breakdown) return { labels: [], datasets: [] }
   const { breakdown } = feeData.value
   return {
     labels: [t('fee.cexTradeFee'), t('fee.gasFee'), t('fee.withdrawFee')],
@@ -146,12 +146,14 @@ const trendOptions = computed(() => ({
 
 // 费用构成百分比
 const breakdownPercentages = computed(() => {
-  if (!feeData.value) return []
+  if (!feeData.value?.breakdown || !feeData.value.total) return []
   const { breakdown, total } = feeData.value
+  // 防止除以零
+  const safeTotal = total || 1
   return [
-    { label: t('fee.cexTradeFee'), value: breakdown.cexTradeFee, pct: (breakdown.cexTradeFee / total * 100).toFixed(1), color: colors.value.accentPrimary },
-    { label: t('fee.gasFee'), value: breakdown.gasFee, pct: (breakdown.gasFee / total * 100).toFixed(1), color: colors.value.accentSecondary },
-    { label: t('fee.withdrawFee'), value: breakdown.withdrawFee, pct: (breakdown.withdrawFee / total * 100).toFixed(1), color: colors.value.accentTertiary || '#F59E0B' },
+    { label: t('fee.cexTradeFee'), value: breakdown.cexTradeFee, pct: (breakdown.cexTradeFee / safeTotal * 100).toFixed(1), color: colors.value.accentPrimary },
+    { label: t('fee.gasFee'), value: breakdown.gasFee, pct: (breakdown.gasFee / safeTotal * 100).toFixed(1), color: colors.value.accentSecondary },
+    { label: t('fee.withdrawFee'), value: breakdown.withdrawFee, pct: (breakdown.withdrawFee / safeTotal * 100).toFixed(1), color: colors.value.accentTertiary || '#F59E0B' },
   ]
 })
 
