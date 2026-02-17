@@ -1,7 +1,7 @@
 #!/bin/bash
-# AllFi Docker 一键部署脚本
-# 用法: curl -sSL https://raw.githubusercontent.com/your-finance/allfi/main/deploy/docker-deploy.sh | bash
-# 或在本地: bash deploy/docker-deploy.sh
+# AllFi Docker 部署脚本
+# 用法: bash deploy/docker-deploy.sh
+# 远程部署: curl -sSL https://raw.githubusercontent.com/your-finance/allfi/main/deploy/docker-deploy.sh | bash
 
 set -e
 
@@ -11,6 +11,9 @@ GREEN='\033[32m'
 YELLOW='\033[33m'
 RED='\033[31m'
 RESET='\033[0m'
+
+# 构建模式：auto/docker/local
+BUILD_MODE="${BUILD_MODE:-auto}"
 
 echo ""
 echo -e "${CYAN}╔══════════════════════════════════════════════╗${RESET}"
@@ -28,7 +31,7 @@ if ! command -v docker >/dev/null 2>&1; then
     echo "    安装指南: https://docs.docker.com/engine/install/"
     exit 1
 fi
-echo -e "${GREEN}  ✓ Docker $(docker --version | grep -oP '\d+\.\d+\.\d+' || echo 'detected')${RESET}"
+echo -e "${GREEN}  ✓ Docker $(docker --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo 'detected')${RESET}"
 
 # 检查 Docker Compose (v2 插件优先，回退 docker-compose)
 COMPOSE_CMD=""
@@ -36,7 +39,6 @@ if docker compose version >/dev/null 2>&1; then
     COMPOSE_CMD="docker compose"
     echo -e "${GREEN}  ✓ Docker Compose (plugin) detected${RESET}"
 elif command -v docker-compose >/dev/null 2>&1; then
-    COMPOSE_CMD="docker-compose"
     echo -e "${GREEN}  ✓ docker-compose (standalone) detected${RESET}"
 else
     echo -e "${RED}  ✗ 未检测到 Docker Compose，请先安装${RESET}"
@@ -50,6 +52,27 @@ if ! command -v openssl >/dev/null 2>&1; then
     exit 1
 fi
 echo -e "${GREEN}  ✓ openssl detected${RESET}"
+
+# 本地构建所需的工具
+if [ "$BUILD_MODE" = "local" ] || [ "$BUILD_MODE" = "auto" ]; then
+    if ! command -v go >/dev/null 2>&1; then
+        echo -e "${YELLOW}  ⊘ 未检测到 Go，将使用 Docker 构建${RESET}"
+        BUILD_MODE="docker"
+    else
+        echo -e "${GREEN}  ✓ Go $(go version | grep -oE '[0-9]+\.[0-9]+' || echo 'detected')${RESET}"
+    fi
+fi
+
+if [ "$BUILD_MODE" = "local" ] || [ "$BUILD_MODE" = "auto" ]; then
+    if command -v pnpm >/dev/null 2>&1; then
+        echo -e "${GREEN}  ✓ pnpm detected${RESET}"
+    elif command -v npm >/dev/null 2>&1; then
+        echo -e "${GREEN}  ✓ npm detected${RESET}"
+    else
+        echo -e "${YELLOW}  ⊘ 未检测到 pnpm/npm，将使用 Docker 构建${RESET}"
+        BUILD_MODE="docker"
+    fi
+fi
 
 echo ""
 
@@ -103,28 +126,115 @@ fi
 
 echo ""
 
+# ==================== 选择构建模式 ====================
+
+# 获取 Docker 内存信息
+DOCKER_MEMORY=$(docker info 2>/dev/null | grep "Total Memory:" | grep -oE '[0-9.]+GiB|[0-9.]+Gi' || echo "8GiB")
+
+# 解析内存数值（单位 GiB）
+MEMORY_NUM=$(echo "$DOCKER_MEMORY" | grep -oE '[0-9.]+' | awk '{print int($1)}')
+
+# 自动判断：内存小于 8GiB 或显式指定本地模式时使用本地构建
+if [ "$BUILD_MODE" = "auto" ] && [ -n "$MEMORY_NUM" ] && [ "$MEMORY_NUM" -lt 8 ]; then
+    echo -e "${YELLOW}>>> Docker 内存不足（${DOCKER_MEMORY}），使用本地构建避免 OOM...${RESET}"
+    BUILD_MODE="local"
+elif [ "$BUILD_MODE" = "auto" ]; then
+    BUILD_MODE="docker"
+fi
+
+if [ "$BUILD_MODE" = "local" ]; then
+    echo -e "${CYAN}>>> 使用本地构建模式（Docker 仅打包）...${RESET}"
+else
+    echo -e "${CYAN}>>> 使用 Docker 构建模式...${RESET}"
+fi
+echo ""
+
+# ==================== 本地构建 ====================
+
+if [ "$BUILD_MODE" = "local" ]; then
+    # 获取版本信息
+    if [ -f VERSION ]; then
+        ALLFI_VERSION=$(cat VERSION)
+        export ALLFI_VERSION
+    elif git describe --tags --abbrev=0 >/dev/null 2>&1; then
+        ALLFI_VERSION=$(git describe --tags --abbrev=0 | sed 's/^v//')
+        export ALLFI_VERSION
+    else
+        ALLFI_VERSION="dev"
+        export ALLFI_VERSION
+    fi
+    GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')
+    export GIT_COMMIT
+    BUILD_TIME=$(date +%Y-%m-%dT%H:%M:%S)
+    export BUILD_TIME
+
+    echo -e "  版本: ${GREEN}${ALLFI_VERSION}${RESET}"
+    echo -e "  提交: ${GREEN}${GIT_COMMIT}${RESET}"
+    echo ""
+
+    # 构建前端
+    echo -e "${CYAN}>>> 构建前端...${RESET}"
+    cd webapp
+    if command -v pnpm >/dev/null 2>&1; then
+        pnpm install && pnpm build
+    else
+        npm install && npm run build
+    fi
+    cd ..
+    echo -e "${GREEN}  ✓ 前端构建完成${RESET}"
+    echo ""
+
+    # 复制前端产物
+    echo -e "${CYAN}>>> 复制前端产物（用于 Go embed）...${RESET}"
+    rm -rf core/internal/statics/dist/*
+    cp -R webapp/dist/* core/internal/statics/dist/
+    echo -e "${GREEN}  ✓ 前端产物已复制到 core/internal/statics/dist/${RESET}"
+    echo ""
+
+    # 构建后端（交叉编译到 Linux）
+    echo -e "${CYAN}>>> 构建后端...${RESET}"
+    cd core
+    CGO_ENABLED=0 GOOS=linux GOARCH=$(uname -m | sed 's/arm64/arm64/;s/x86_64/amd64/') GOMAXPROCS=2 GOGC=20 go build \
+      -p=1 \
+      -ldflags="-s -w \
+      -X your-finance/allfi/internal/version.Version=${ALLFI_VERSION} \
+      -X your-finance/allfi/internal/version.BuildTime=${BUILD_TIME} \
+      -X your-finance/allfi/internal/version.GitCommit=${GIT_COMMIT}" \
+      -o allfi cmd/server/main.go
+    cd ..
+    echo -e "${GREEN}  ✓ 后端构建完成${RESET}"
+    echo ""
+
+    # 构建 Docker 镜像（仅打包）
+    echo -e "${CYAN}>>> 构建 Docker 镜像（仅打包）...${RESET}"
+    docker build -t allfi-backend:latest -f - . <<'DOCKERFILE'
+FROM alpine:3.21
+RUN apk add --no-cache ca-certificates tzdata wget
+RUN addgroup -S allfi && adduser -S allfi -G allfi
+WORKDIR /app
+COPY core/allfi ./allfi
+COPY core/manifest/config/config.yaml manifest/config/config.yaml
+RUN mkdir -p /app/data /app/logs && chown -R allfi:allfi /app
+USER allfi
+EXPOSE 8080
+VOLUME ["/app/data"]
+ENTRYPOINT ["./allfi"]
+DOCKERFILE
+    echo -e "${GREEN}  ✓ Docker 镜像构建完成${RESET}"
+    echo ""
+fi
+
 # ==================== 启动服务 ====================
 
 echo -e "${CYAN}>>> 启动 Docker 服务...${RESET}"
-echo -e "  ${YELLOW}首次启动需要构建镜像，可能需要几分钟...${RESET}"
-echo ""
-
-# 获取版本号（VERSION 文件由 CI 维护，是权威版本源）
-if [ -f VERSION ]; then
-    export ALLFI_VERSION=$(cat VERSION)
-elif git describe --tags --abbrev=0 >/dev/null 2>&1; then
-    export ALLFI_VERSION=$(git describe --tags --abbrev=0 | sed 's/^v//')
+if [ "$BUILD_MODE" = "local" ]; then
+    echo -e "  ${GREEN}使用预构建镜像启动...${RESET}"
 else
-    export ALLFI_VERSION="dev"
+    echo -e "  ${YELLOW}首次启动需要构建镜像，可能需要几分钟...${RESET}"
+    echo ""
 fi
-export GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')
-export BUILD_TIME=$(date +%Y-%m-%dT%H:%M:%S)
 
-echo -e "  版本: ${GREEN}${ALLFI_VERSION}${RESET}"
-echo -e "  提交: ${GREEN}${GIT_COMMIT}${RESET}"
-echo ""
-
-$COMPOSE_CMD up -d --build
+$COMPOSE_CMD up -d ${BUILD_MODE:+--build}
 
 echo ""
 echo -e "${GREEN}╔══════════════════════════════════════════════╗${RESET}"
@@ -133,7 +243,7 @@ echo -e "${GREEN}╚════════════════════
 echo ""
 echo -e "  前端: ${CYAN}http://localhost:${FRONTEND_PORT:-3174}${RESET}"
 echo -e "  后端: ${CYAN}http://localhost:${SERVER_PORT:-8080}${RESET}"
-echo -e "  API 文档: ${CYAN}http://localhost:${SERVER_PORT:-8080}/api/v1/docs${RESET}"
+echo -e "  API 文档: ${CYAN}http://localhost:${SERVER_PORT:-8080}/swagger/${RESET}"
 echo ""
 echo -e "  首次访问需设置 ${YELLOW}PIN 码${RESET}（4-8 位数字）"
 echo ""

@@ -109,7 +109,7 @@ AllFi 是一个**开源、自托管**的全资产聚合平台，统一管理你�
 
 前置条件：Docker 20.10+, Docker Compose v2+
 
-#### 一键脚本部署
+#### 一键脚本部署（智能构建模式）
 
 ```bash
 # 克隆仓库并一键启动
@@ -118,7 +118,21 @@ cd allfi
 bash deploy/docker-deploy.sh
 ```
 
-脚本自动完成：自动检测 Docker 环境 → 生成 `.env` + 安全密钥 → 构建并启动全部服务。
+脚本特性：
+- **智能构建模式**：自动检测 Docker 内存，内存 < 8GiB 时自动切换为本地构建模式，避免 OOM
+- **完整环境检查**：自动检测 Docker、Docker Compose、openssl
+- **自动配置**：自动生成 `.env` + 安全密钥
+- **远程部署支持**：支持直接通过 curl 远程执行部署
+
+#### 手动指定构建模式
+
+```bash
+# 强制使用本地构建模式（宿主机需要 Go + pnpm/npm）
+BUILD_MODE=local bash deploy/docker-deploy.sh
+
+# 强制使用 Docker 构建模式
+BUILD_MODE=docker bash deploy/docker-deploy.sh
+```
 
 #### 手动 Docker 部署
 
@@ -131,28 +145,14 @@ cp .env.example .env
 # 编辑 .env，至少修改 ALLFI_MASTER_KEY（或用下一行自动生成）
 sed -i "s|CHANGE_ME_USE_openssl_rand_base64_32|$(openssl rand -base64 32)|" .env
 
-# 启动服务
-# 选项 A：本地目录版（推荐 - 数据在 ./data，易于备份迁移）
-mkdir -p data
-docker compose -f docker-compose.local.yml up -d --build
-
-# 选项 B：命名卷版（简单设置）
-docker compose up -d --build
+# 启动服务（根据内存情况自动选择构建模式）
+docker compose up -d
 ```
-
-#### 部署版本对比
-
-| 版本 | 数据存储 | 迁移便利性 | 适用场景 |
-|------|---------|-----------|---------|
-| **docker-compose.local.yml** | 本地 `./data` 目录 | ✅ 简单（打包整个目录） | 生产环境、需要备份 |
-| **docker-compose.yml** | Docker 命名卷 | ⚠️ 需要 docker 命令导出 | 快速体验、简单设置 |
-
-> **推荐**使用 `docker-compose.local.yml`（本地目录版），数据文件直接可见，便于备份和迁移。
 
 #### 默认端口映射
 
 | 服务 | 容器端口 | 主机端口 | 访问地址 |
-|------|---------|---------|---------| 
+|------|---------|---------|---------|
 | AllFi（前端 + API） | 8080 | **3174** | http://localhost:3174 |
 | AllFi（直接 API） | 8080 | **8080** | http://localhost:8080 |
 
@@ -167,41 +167,38 @@ docker compose up -d --build
 > SERVER_PORT=9090      # 后端改为 9090 端口
 > ```
 > ```bash
-> docker compose -f docker-compose.local.yml up -d --build   # 修改后重启生效
+> docker compose up -d --build   # 修改后重启生效
 > ```
 
-#### 数据备份与迁移（本地目录版）
+#### 数据备份与迁移
 
-使用 `docker-compose.local.yml` 时，数据存储在 `./data` 目录，可以轻松备份和迁移：
+AllFi 数据存储在 Docker 卷 `allfi-data` 中，可以轻松备份和迁移：
 
 ```bash
 # 备份数据
-tar czf allfi-backup-$(date +%Y%m%d).tar.gz data/
+docker compose exec -T allfi-backend tar czf - /app/data | gzip > allfi-backup-$(date +%Y%m%d).tar.gz
 
 # 迁移到新服务器
-# 1. 在源服务器停止并打包
-docker compose -f docker-compose.local.yml down
-cd ..
-tar czf allfi-complete.tar.gz allfi/
+# 1. 在源服务器停止并导出数据
+docker compose down
+docker run --rm -v allfi-data:/data -v $(pwd):/backup alpine:3.21 tar czf /backup/allfi-data.tar.gz -C /data .
 
 # 2. 传输到新服务器
-scp allfi-complete.tar.gz user@new-server:/path/
+scp allfi-data.tar.gz user@new-server:/path/
 
-# 3. 在新服务器解压并启动
-tar xzf allfi-complete.tar.gz
-cd allfi/
-docker compose -f docker-compose.local.yml up -d --build
+# 3. 在新服务器导入数据并启动
+docker run --rm -v allfi-data:/data -v $(pwd):/backup alpine:3.21 tar xzf /backup/allfi-data.tar.gz -C /data
+docker compose up -d
 ```
 
 #### 常用 Docker 命令
 
 ```bash
-# 以下命令适用于本地目录版，命名卷版去掉 -f docker-compose.local.yml 即可
-docker compose -f docker-compose.local.yml logs -f       # 查看日志
-docker compose -f docker-compose.local.yml down          # 停止服务
-docker compose -f docker-compose.local.yml restart       # 重启服务
-docker compose -f docker-compose.local.yml up -d --build # 重新构建并启动
-docker compose -f docker-compose.local.yml ps            # 查看状态
+docker compose logs -f       # 查看日志
+docker compose down          # 停止服务
+docker compose restart       # 重启服务
+docker compose up -d --build # 重新构建并启动
+docker compose ps            # 查看状态
 ```
 
 #### 反向代理配置（生产环境推荐）
