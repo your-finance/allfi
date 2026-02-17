@@ -3,13 +3,18 @@
 
 services:
   backend:
-    build:
-      context: .
-      dockerfile: core/Dockerfile
-      args:
-        APP_VERSION: "${ALLFI_VERSION:-0.3.0}"
-        BUILD_TIME: "${BUILD_TIME:-unknown}"
-        GIT_COMMIT: "${GIT_COMMIT:-unknown}"
+    # 使用本地构建的镜像（避免 Docker OOM）
+    # 如需重新构建，运行: bash deploy/build-local.sh
+    image: allfi-backend:latest
+    # build 配置保留，如需使用 Docker 构建可取消注释并注释掉 image:
+    # build:
+    #   context: .
+    #   dockerfile: core/Dockerfile
+    #   args:
+    #     APP_VERSION: "${ALLFI_VERSION:-0.3.0}"
+    #     BUILD_TIME: "${BUILD_TIME:-unknown}"
+    #     GIT_COMMIT: "${GIT_COMMIT:-unknown}"
+    #   shm_size: 2gb
     container_name: allfi-backend
     restart: unless-stopped
     ports:
@@ -39,6 +44,8 @@ services:
     tmpfs:
       - /tmp:uid=100,gid=101
       - /app/logs:uid=100,gid=101
+    mem_limit: 512m
+    memswap_limit: 512m
     healthcheck:
       test: [ "CMD", "wget", "-q", "--spider", "http://localhost:8080/api/v1/health" ]
       interval: 30s

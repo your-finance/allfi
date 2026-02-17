@@ -47,8 +47,10 @@ ARG APP_VERSION=dev
 ARG BUILD_TIME=unknown
 ARG GIT_COMMIT=unknown
 
-# 禁用 CGO 以确保静态链接和跨平台兼容性
-RUN CGO_ENABLED=0 go build \
+# 增加共享内存，禁用 CGO，限制并行编译以降低内存消耗
+RUN mount -t tmpfs -o size=2G tmpfs /tmp 2>/dev/null || true
+RUN CGO_ENABLED=0 GOMAXPROCS=2 GOGC=20 go build \
+  -p=1 \
   -ldflags="-s -w \
   -X your-finance/allfi/internal/version.Version=${APP_VERSION} \
   -X your-finance/allfi/internal/version.BuildTime=${BUILD_TIME} \

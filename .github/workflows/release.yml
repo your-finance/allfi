@@ -50,13 +50,13 @@ jobs:
           # 获取 tag 的日期
           TAG_DATE=$(git log -1 --format=%ai "${TAG}" | cut -d' ' -f1)
 
-          # 获取 git log
+          # 获取 git log（过滤掉自动生成的 VERSION/CHANGEHISTORY 更新提交）
           if [ -n "${PREV_TAG}" ]; then
             echo "📝 获取 ${PREV_TAG}..${TAG} 之间的提交记录"
-            COMMITS=$(git log "${PREV_TAG}..${TAG}" --pretty=format:"%s" --no-merges)
+            COMMITS=$(git log "${PREV_TAG}..${TAG}" --pretty=format:"%s" --no-merges | grep -v "自动更新 VERSION 和 CHANGEHISTORY.md")
           else
             echo "📝 获取所有提交记录（首次发版）"
-            COMMITS=$(git log "${TAG}" --pretty=format:"%s" --no-merges)
+            COMMITS=$(git log "${TAG}" --pretty=format:"%s" --no-merges | grep -v "自动更新 VERSION 和 CHANGEHISTORY.md")
           fi
 
           # 创建变更记录临时文件
