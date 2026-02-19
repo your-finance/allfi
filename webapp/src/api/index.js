@@ -942,6 +942,51 @@ export const settingsService = {
       return true
     }
     return post('/users/reset-settings')
+  },
+
+  /**
+   * 获取 API Key 配置列表
+   * @returns {Promise<{keys: Array}>}
+   */
+  async getAPIKeys() {
+    if (USE_MOCK) {
+      await simulateDelay(200)
+      return {
+        keys: [
+          { provider: 'etherscan', display_name: 'Etherscan', configured: false, masked_key: '', description: '以太坊区块链浏览器 API' },
+          { provider: 'bscscan', display_name: 'BscScan', configured: false, masked_key: '', description: 'BSC 区块链浏览器 API' },
+          { provider: 'coingecko', display_name: 'CoinGecko', configured: false, masked_key: '', description: '加密货币价格 API（可选）' }
+        ]
+      }
+    }
+    return get('/system/apikeys')
+  },
+
+  /**
+   * 更新 API Key
+   * @param {string} provider - 服务商标识
+   * @param {string} apiKey - API Key
+   * @returns {Promise<{success: boolean}>}
+   */
+  async updateAPIKey(provider, apiKey) {
+    if (USE_MOCK) {
+      await simulateDelay(500)
+      return { success: true }
+    }
+    return put('/system/apikeys', { provider, api_key: apiKey })
+  },
+
+  /**
+   * 删除 API Key
+   * @param {string} provider - 服务商标识
+   * @returns {Promise<{success: boolean}>}
+   */
+  async deleteAPIKey(provider) {
+    if (USE_MOCK) {
+      await simulateDelay(300)
+      return { success: true }
+    }
+    return del(`/system/apikeys?provider=${provider}`)
   }
 }
 

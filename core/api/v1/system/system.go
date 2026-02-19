@@ -88,3 +88,47 @@ type UpdateRecord struct {
 type GetUpdateHistoryRes struct {
 	Records []UpdateRecord `json:"records" dc:"更新记录列表"`
 }
+
+// ====================== API Key 管理 ======================
+
+// APIKeyItem API Key 列表项（脱敏显示）
+type APIKeyItem struct {
+	Provider    string `json:"provider" dc:"服务商标识（etherscan/bscscan/coingecko）"`
+	DisplayName string `json:"display_name" dc:"服务商显示名称"`
+	Configured  bool   `json:"configured" dc:"是否已配置"`
+	MaskedKey   string `json:"masked_key" dc:"脱敏后的 Key（如 abc...xyz）"`
+	Description string `json:"description" dc:"用途说明"`
+}
+
+// GetAPIKeysReq 获取 API Key 列表请求
+type GetAPIKeysReq struct {
+	g.Meta `path:"/system/apikeys" method:"get" summary:"获取 API Key 列表" tags:"系统管理"`
+}
+
+// GetAPIKeysRes 获取 API Key 列表响应
+type GetAPIKeysRes struct {
+	Keys []APIKeyItem `json:"keys" dc:"API Key 列表"`
+}
+
+// UpdateAPIKeyReq 更新 API Key 请求
+type UpdateAPIKeyReq struct {
+	g.Meta   `path:"/system/apikeys" method:"put" summary:"更新 API Key" tags:"系统管理"`
+	Provider string `json:"provider" v:"required|in:etherscan,bscscan,coingecko" dc:"服务商标识"`
+	APIKey   string `json:"api_key" v:"required|length:8,128" dc:"API Key"`
+}
+
+// UpdateAPIKeyRes 更新 API Key 响应
+type UpdateAPIKeyRes struct {
+	Success bool `json:"success" dc:"是否成功"`
+}
+
+// DeleteAPIKeyReq 删除 API Key 请求
+type DeleteAPIKeyReq struct {
+	g.Meta   `path:"/system/apikeys" method:"delete" summary:"删除 API Key" tags:"系统管理"`
+	Provider string `json:"provider" v:"required|in:etherscan,bscscan,coingecko" dc:"服务商标识"`
+}
+
+// DeleteAPIKeyRes 删除 API Key 响应
+type DeleteAPIKeyRes struct {
+	Success bool `json:"success" dc:"是否成功"`
+}

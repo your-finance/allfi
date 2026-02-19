@@ -56,6 +56,35 @@ func (c *SystemController) GetUpdateHistory(ctx context.Context, req *systemApi.
 	return service.System().GetUpdateHistory(ctx)
 }
 
+// GetAPIKeys 获取 API Key 配置列表（脱敏显示）
+//
+// 对应路由: GET /system/apikeys
+func (c *SystemController) GetAPIKeys(ctx context.Context, req *systemApi.GetAPIKeysReq) (res *systemApi.GetAPIKeysRes, err error) {
+	return service.System().GetAPIKeys(ctx)
+}
+
+// UpdateAPIKey 更新 API Key
+//
+// 对应路由: PUT /system/apikeys
+func (c *SystemController) UpdateAPIKey(ctx context.Context, req *systemApi.UpdateAPIKeyReq) (res *systemApi.UpdateAPIKeyRes, err error) {
+	err = service.System().UpdateAPIKey(ctx, req.Provider, req.APIKey)
+	if err != nil {
+		return nil, err
+	}
+	return &systemApi.UpdateAPIKeyRes{Success: true}, nil
+}
+
+// DeleteAPIKey 删除 API Key
+//
+// 对应路由: DELETE /system/apikeys
+func (c *SystemController) DeleteAPIKey(ctx context.Context, req *systemApi.DeleteAPIKeyReq) (res *systemApi.DeleteAPIKeyRes, err error) {
+	err = service.System().DeleteAPIKey(ctx, req.Provider)
+	if err != nil {
+		return nil, err
+	}
+	return &systemApi.DeleteAPIKeyRes{Success: true}, nil
+}
+
 // Register 注册系统管理路由
 // 使用 group.Bind 自动绑定控制器方法到路由
 func Register(group *ghttp.RouterGroup) {

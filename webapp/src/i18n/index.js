@@ -416,6 +416,16 @@ export const translations = {
       historyRetention: '历史数据保留',
       historyRetentionDesc: '资产快照的保存时长',
 
+      // API 配置
+      apiConfigSection: 'API 配置',
+      apiConfigDesc: '配置第三方 API Key 以获取更好的数据服务',
+      apiKeyPlaceholder: '输入 API Key',
+      apiKeyConfigured: '已配置',
+      apiKeyNotConfigured: '未配置（使用免费公共 RPC）',
+      apiKeySaveSuccess: 'API Key 保存成功',
+      apiKeyDeleteSuccess: 'API Key 已删除',
+      apiKeyDeleteConfirm: '确定要删除此 API Key 吗？删除后将使用免费公共 RPC。',
+
       // 交易同步设置
       txSyncSection: '交易同步',
       txSyncEnabled: '开启交易同步',
@@ -1390,6 +1400,16 @@ export const translations = {
       historyRetention: '歷史資料保留',
       historyRetentionDesc: '資產快照的保存時長',
 
+      // API 配置
+      apiConfigSection: 'API 配置',
+      apiConfigDesc: '配置第三方 API Key 以獲取更好的資料服務',
+      apiKeyPlaceholder: '輸入 API Key',
+      apiKeyConfigured: '已配置',
+      apiKeyNotConfigured: '未配置（使用免費公共 RPC）',
+      apiKeySaveSuccess: 'API Key 儲存成功',
+      apiKeyDeleteSuccess: 'API Key 已刪除',
+      apiKeyDeleteConfirm: '確定要刪除此 API Key 嗎？刪除後將使用免費公共 RPC。',
+
       txSyncSection: '交易同步',
       txSyncEnabled: '開啟交易同步',
       txSyncEnabledDesc: '自動同步 CEX 和鏈上交易紀錄',
@@ -2357,6 +2377,16 @@ export const translations = {
       refreshIntervalDesc: 'Time interval for auto refresh',
       historyRetention: 'History Retention',
       historyRetentionDesc: 'How long to keep asset snapshots',
+
+      // API Configuration
+      apiConfigSection: 'API Configuration',
+      apiConfigDesc: 'Configure third-party API keys for better data services',
+      apiKeyPlaceholder: 'Enter API Key',
+      apiKeyConfigured: 'Configured',
+      apiKeyNotConfigured: 'Not configured (using free public RPC)',
+      apiKeySaveSuccess: 'API Key saved successfully',
+      apiKeyDeleteSuccess: 'API Key deleted',
+      apiKeyDeleteConfirm: 'Are you sure you want to delete this API Key? Free public RPC will be used instead.',
 
       txSyncSection: 'Transaction Sync',
       txSyncEnabled: 'Enable Transaction Sync',

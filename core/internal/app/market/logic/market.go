@@ -16,6 +16,7 @@ import (
 	"your-finance/allfi/internal/app/market/model"
 	"your-finance/allfi/internal/app/market/service"
 	"your-finance/allfi/internal/integrations/etherscan"
+	"your-finance/allfi/internal/utils"
 )
 
 // chainGasCache 单条链的 Gas 价格缓存
@@ -118,14 +119,13 @@ func (s *sMarket) GetGasPrice(ctx context.Context) (*model.MultiChainGasResponse
 // getChainGasPrice 获取指定链的 Gas 价格（带 15 秒缓存）
 //
 // 通用方法，支持 Ethereum / BSC / Polygon 等所有 EVM 兼容链。
-// 通过 etherscan.NewChainClient 创建对应链的客户端，复用相同的
-// Gas Oracle API 格式（各 *Scan 平台接口一致）。
+// 优先使用 Etherscan API（需要 API Key），无 Key 时自动降级到公共 RPC。
 //
 // 缓存策略:
 // 1. 先检查该链的缓存是否有效
-// 2. 缓存过期则调用对应链的 *Scan API
-// 3. API 失败时返回过期缓存
-// 4. 都没有时返回零值
+// 2. 缓存过期则尝试 Etherscan API（有 Key 时）
+// 3. 无 Key 或 API 失败时降级到公共 RPC
+// 4. 都失败时返回过期缓存或零值
 //
 // 参数:
 //   - chainName: 链标识（ethereum / bsc / polygon）
@@ -140,43 +140,49 @@ func (s *sMarket) getChainGasPrice(ctx context.Context, chainName string, envKey
 	}
 	s.gasCacheMu.RUnlock()
 
-	// 缓存过期，创建对应链的客户端并调用 API
-	apiKey := os.Getenv(envKey)
+	var gasPrice *etherscan.GasPrice
+
+	// 尝试通过 Etherscan API 获取（需要 API Key）
+	// 优先级：数据库配置 > 环境变量
+	apiKey := utils.ResolveAPIKey(ctx, chainName)
 	if apiKey == "" {
-		g.Log().Warning(ctx, "API Key 未配置，Gas 价格将返回零值",
-			"chain", chainName,
-			"envKey", envKey,
-		)
-		return &etherscan.GasPrice{}
+		// chainName 可能与 provider 不完全一致，尝试用 envKey 对应的 provider
+		apiKey = os.Getenv(envKey)
 	}
-
-	client, err := etherscan.NewChainClient(chainName, apiKey)
-	if err != nil {
-		g.Log().Warning(ctx, "创建链客户端失败",
-			"chain", chainName,
-			"error", err,
-		)
-		return &etherscan.GasPrice{}
-	}
-
-	gasPrice, err := client.GetGasPrice(ctx)
-	if err != nil {
-		g.Log().Warning(ctx, "获取 Gas 价格失败",
-			"chain", chainName,
-			"error", err,
-		)
-
-		// API 失败时返回过期缓存
-		s.gasCacheMu.RLock()
-		if cached, ok := s.gasCache[chainName]; ok && cached.data != nil {
-			data := cached.data
-			s.gasCacheMu.RUnlock()
-			return data
+	if apiKey != "" {
+		client, err := etherscan.NewChainClient(chainName, apiKey)
+		if err == nil {
+			gasPrice, err = client.GetGasPrice(ctx)
+			if err != nil {
+				g.Log().Warning(ctx, "Etherscan API 获取 Gas 价格失败，降级到公共 RPC",
+					"chain", chainName,
+					"error", err,
+				)
+			}
 		}
-		s.gasCacheMu.RUnlock()
+	}
 
-		// 都没有就返回零值
-		return &etherscan.GasPrice{}
+	// Etherscan 未返回结果时，降级到公共 RPC
+	if gasPrice == nil {
+		rpcPrice, err := etherscan.GetGasPriceViaRPC(ctx, chainName)
+		if err != nil {
+			g.Log().Warning(ctx, "公共 RPC 获取 Gas 价格也失败",
+				"chain", chainName,
+				"error", err,
+			)
+
+			// 都失败时返回过期缓存
+			s.gasCacheMu.RLock()
+			if cached, ok := s.gasCache[chainName]; ok && cached.data != nil {
+				data := cached.data
+				s.gasCacheMu.RUnlock()
+				return data
+			}
+			s.gasCacheMu.RUnlock()
+
+			return &etherscan.GasPrice{}
+		}
+		gasPrice = rpcPrice
 	}
 
 	// 更新缓存（写锁）

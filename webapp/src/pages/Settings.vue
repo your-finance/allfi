@@ -23,7 +23,10 @@ import {
   PhWarning,
   PhLock,
   PhTrophy,
-  PhClockClockwise
+  PhClockClockwise,
+  PhPlugsConnected,
+  PhPencilSimple,
+  PhX
 } from '@phosphor-icons/vue'
 import AchievementPanel from '../components/AchievementPanel.vue'
 import { useAchievementStore } from '../stores/achievementStore'
@@ -377,9 +380,70 @@ const triggerSync = async () => {
   }
 }
 
+// ========== API Key 管理 ==========
+const apiKeys = ref([])
+const apiKeyLoading = ref(false)
+const apiKeySaving = ref(false)
+const editingProvider = ref(null)
+const editingKey = ref('')
+
+// 加载 API Key 列表
+const loadAPIKeys = async () => {
+  apiKeyLoading.value = true
+  try {
+    const data = await settingsService.getAPIKeys()
+    apiKeys.value = data || []
+  } catch {
+    // 静默失败
+  } finally {
+    apiKeyLoading.value = false
+  }
+}
+
+// 开始编辑
+const startEditAPIKey = (provider) => {
+  editingProvider.value = provider
+  editingKey.value = ''
+}
+
+// 取消编辑
+const cancelEditAPIKey = () => {
+  editingProvider.value = null
+  editingKey.value = ''
+}
+
+// 保存 API Key
+const saveAPIKey = async (provider) => {
+  if (!editingKey.value.trim()) return
+  apiKeySaving.value = true
+  try {
+    await settingsService.updateAPIKey(provider, editingKey.value.trim())
+    showToast(t('settings.apiKeySaveSuccess'), 'success')
+    cancelEditAPIKey()
+    await loadAPIKeys()
+  } catch {
+    showToast(t('common.operationFailed'), 'error')
+  } finally {
+    apiKeySaving.value = false
+  }
+}
+
+// 删除 API Key
+const deleteAPIKey = async (provider) => {
+  if (!confirm(t('settings.apiKeyDeleteConfirm'))) return
+  try {
+    await settingsService.deleteAPIKey(provider)
+    showToast(t('settings.apiKeyDeleteSuccess'), 'success')
+    await loadAPIKeys()
+  } catch {
+    showToast(t('common.operationFailed'), 'error')
+  }
+}
+
 // 页面加载时也获取同步设置
 onMounted(() => {
   loadTxSyncSettings()
+  loadAPIKeys()
 })
 </script>
 
@@ -564,6 +628,82 @@ onMounted(() => {
               </option>
             </select>
           </div>
+        </div>
+      </section>
+
+      <!-- API 配置 -->
+      <section class="settings-section">
+        <div class="section-header">
+          <PhPlugsConnected :size="20" weight="duotone" />
+          <h2 class="section-title">{{ t('settings.apiConfigSection') }}</h2>
+        </div>
+
+        <div class="glass-card settings-card">
+          <p class="apikey-section-desc">{{ t('settings.apiConfigDesc') }}</p>
+
+          <template v-if="apiKeyLoading">
+            <div class="setting-item">
+              <span class="setting-desc">Loading...</span>
+            </div>
+          </template>
+
+          <template v-else>
+            <div
+              v-for="(item, idx) in apiKeys"
+              :key="item.provider"
+            >
+              <div class="setting-divider" v-if="idx > 0" />
+              <div class="setting-item">
+                <div class="setting-info">
+                  <span class="setting-label">{{ item.display_name }}</span>
+                  <span class="setting-desc">{{ item.description }}</span>
+                </div>
+
+                <!-- 编辑模式 -->
+                <div v-if="editingProvider === item.provider" class="apikey-edit">
+                  <input
+                    v-model="editingKey"
+                    type="text"
+                    class="input apikey-input"
+                    :placeholder="t('settings.apiKeyPlaceholder')"
+                    @keyup.enter="saveAPIKey(item.provider)"
+                    @keyup.escape="cancelEditAPIKey"
+                  />
+                  <button
+                    class="btn btn-primary btn-sm"
+                    :disabled="apiKeySaving || !editingKey.trim()"
+                    @click="saveAPIKey(item.provider)"
+                  >
+                    <PhArrowsClockwise v-if="apiKeySaving" :size="14" class="spin" />
+                    <PhCheck v-else :size="14" />
+                  </button>
+                  <button class="btn btn-secondary btn-sm" @click="cancelEditAPIKey">
+                    <PhX :size="14" />
+                  </button>
+                </div>
+
+                <!-- 显示模式 -->
+                <div v-else class="apikey-display">
+                  <span
+                    class="apikey-status"
+                    :class="item.configured ? 'configured' : 'not-configured'"
+                  >
+                    {{ item.configured ? item.masked_key : t('settings.apiKeyNotConfigured') }}
+                  </span>
+                  <button class="btn-icon" @click="startEditAPIKey(item.provider)">
+                    <PhPencilSimple :size="16" />
+                  </button>
+                  <button
+                    v-if="item.configured"
+                    class="btn-icon danger"
+                    @click="deleteAPIKey(item.provider)"
+                  >
+                    <PhTrash :size="16" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </template>
         </div>
       </section>
 
@@ -1959,6 +2099,72 @@ onMounted(() => {
   display: block;
   font-size: 12px;
   color: var(--color-text-muted);
+}
+
+/* ========== API Key 管理 ========== */
+.apikey-section-desc {
+  padding: var(--gap-sm) var(--gap-lg);
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.apikey-edit {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-xs);
+}
+
+.apikey-input {
+  width: 200px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.apikey-display {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-xs);
+}
+
+.apikey-status {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+}
+
+.apikey-status.configured {
+  background: color-mix(in srgb, var(--color-success) 12%, transparent);
+  color: var(--color-success);
+}
+
+.apikey-status.not-configured {
+  background: color-mix(in srgb, var(--color-text-muted) 10%, transparent);
+  color: var(--color-text-muted);
+}
+
+.btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-icon:hover {
+  background: color-mix(in srgb, var(--color-text-muted) 12%, transparent);
+  color: var(--color-text-primary);
+}
+
+.btn-icon.danger:hover {
+  background: color-mix(in srgb, var(--color-error) 12%, transparent);
+  color: var(--color-error);
 }
 
 .spin {

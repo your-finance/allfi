@@ -36,6 +36,18 @@ type ISystem interface {
 	// GetUpdateHistory 获取历史更新记录
 	// 从 data/update_history.json 文件中读取
 	GetUpdateHistory(ctx context.Context) (*systemApi.GetUpdateHistoryRes, error)
+
+	// GetAPIKeys 获取所有 API Key 配置（脱敏显示）
+	GetAPIKeys(ctx context.Context) (*systemApi.GetAPIKeysRes, error)
+
+	// UpdateAPIKey 更新指定服务商的 API Key（加密存储）
+	UpdateAPIKey(ctx context.Context, provider string, apiKey string) error
+
+	// DeleteAPIKey 删除指定服务商的 API Key
+	DeleteAPIKey(ctx context.Context, provider string) error
+
+	// GetAPIKeyPlain 获取指定服务商的 API Key 明文（内部使用，不对外暴露）
+	GetAPIKeyPlain(ctx context.Context, provider string) string
 }
 
 // localSystem 系统管理服务实例（延迟注入）
