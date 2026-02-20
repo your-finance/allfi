@@ -158,13 +158,12 @@ docker compose up -d
 
 > AllFi 采用 Go embed 方案，前端静态文件内嵌到后端二进制中，单个端口同时提供前端页面和 API 服务。
 
-访问 [http://localhost:3174](http://localhost:3174) 即可使用。首次访问需设置 PIN 码（4-8 位数字）。
+访问 [http://localhost:5173](http://localhost:5173) 即可使用。首次访问需设置 PIN 码（4-8 位数字）。
 
 > **自定义端口**：编辑 `.env` 文件修改端口映射，然后重启服务：
 > ```bash
 > # .env
-> FRONTEND_PORT=3000    # 前端改为 3000 端口
-> SERVER_PORT=9090      # 后端改为 9090 端口
+> ALLFI_PORT=3000    # 改为 3000 端口
 > ```
 > ```bash
 > docker compose up -d --build   # 修改后重启生效

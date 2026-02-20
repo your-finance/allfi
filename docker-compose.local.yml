@@ -14,10 +14,8 @@ services:
     container_name: allfi-backend
     restart: unless-stopped
     ports:
-      # Unified port: Serve both Frontend (static) and Backend (API)
-      - "${FRONTEND_PORT:-3174}:8080"
-      # Optional: Keep 8080 for backward compatibility or direct API access
-      - "${SERVER_PORT:-8080}:8080"
+      # 统一端口：前端静态文件 + 后端 API 均通过此端口访问
+      - "${ALLFI_PORT:-5173}:8080"
     volumes:
       # 本地目录挂载（替代命名卷，便于备份迁移）
       - ./data:/app/data

@@ -103,13 +103,12 @@ docker compose up -d --build
 
 > AllFi uses Go embed — frontend static files are embedded into the backend binary, serving both frontend pages and API from a single port.
 
-Visit http://localhost:3174 to get started. First-time access requires setting a PIN code (4–8 digits).
+Visit http://localhost:5173 to get started. First-time access requires setting a PIN code (4–8 digits).
 
 > **Custom Ports**: Edit the `.env` file to change port mappings, then restart:
 > ```bash
 > # .env
-> FRONTEND_PORT=3000    # Change frontend to port 3000
-> SERVER_PORT=9090      # Change backend to port 9090
+> ALLFI_PORT=3000    # Change to port 3000
 > ```
 > ```bash
 > docker compose -f docker-compose.local.yml up -d --build   # Restart to apply changes

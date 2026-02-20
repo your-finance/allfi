@@ -43,6 +43,10 @@ export const useAssetStore = defineStore('asset', () => {
   // 离线状态
   const isOffline = ref(!navigator.onLine)
 
+  // 监听浏览器网络状态变化
+  window.addEventListener('online', () => { isOffline.value = false })
+  window.addEventListener('offline', () => { isOffline.value = true })
+
   // ========== 计算属性 ==========
 
   // 总资产价值
@@ -233,6 +237,7 @@ export const useAssetStore = defineStore('asset', () => {
     try {
       summary.value = await assetService.getSummary()
       lastRefreshTime.value = new Date()
+      isOffline.value = false
       // 缓存成功数据
       cacheData(CACHE_SUMMARY_KEY, summary.value)
     } catch (err) {
@@ -284,6 +289,7 @@ export const useAssetStore = defineStore('asset', () => {
 
     try {
       historyData.value = await assetService.getHistory(timeRange)
+      isOffline.value = false
       // 缓存成功数据
       cacheData(CACHE_HISTORY_KEY, historyData.value)
     } catch (err) {

@@ -236,14 +236,19 @@ fi
 
 $COMPOSE_CMD up -d ${BUILD_MODE:+--build}
 
+# 从 .env 文件读取实际端口配置（docker-compose 使用 .env，脚本也需要同步）
+if [ -f ".env" ]; then
+    _ALLFI_PORT=$(grep -E '^ALLFI_PORT=' .env | cut -d= -f2 | tr -d '[:space:]')
+fi
+_ALLFI_PORT="${_ALLFI_PORT:-5173}"
+
 echo ""
 echo -e "${GREEN}╔══════════════════════════════════════════════╗${RESET}"
 echo -e "${GREEN}║           AllFi 部署完成！                   ║${RESET}"
 echo -e "${GREEN}╚══════════════════════════════════════════════╝${RESET}"
 echo ""
-echo -e "  前端: ${CYAN}http://localhost:${FRONTEND_PORT:-3174}${RESET}"
-echo -e "  后端: ${CYAN}http://localhost:${SERVER_PORT:-8080}${RESET}"
-echo -e "  API 文档: ${CYAN}http://localhost:${SERVER_PORT:-8080}/swagger/${RESET}"
+echo -e "  访问地址: ${CYAN}http://localhost:${_ALLFI_PORT}${RESET}"
+echo -e "  API 文档: ${CYAN}http://localhost:${_ALLFI_PORT}/swagger/${RESET}"
 echo ""
 echo -e "  首次访问需设置 ${YELLOW}PIN 码${RESET}（4-8 位数字）"
 echo ""

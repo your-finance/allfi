@@ -165,6 +165,13 @@ func main() {
 			return
 		}
 
+		// 跳过 GoFrame 内置路由（Swagger、OpenAPI 文档）
+		// 这些路由由 GoFrame 自动处理，不应返回 SPA fallback
+		if strings.HasPrefix(r.URL.Path, "/swagger") || r.URL.Path == "/api.json" {
+			r.Middleware.Next()
+			return
+		}
+
 		staticFS := statics.GetFS()
 		path := strings.TrimPrefix(r.URL.Path, "/")
 		if path == "" {

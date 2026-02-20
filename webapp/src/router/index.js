@@ -143,6 +143,14 @@ const router = createRouter({
 
 // 路由守卫 - PIN 认证检查
 router.beforeEach((to, from, next) => {
+  // 跳过需要代理到后端的路径（如 Swagger）
+  const proxyPaths = ['/swagger', '/api.json']
+  if (proxyPaths.some(path => to.path.startsWith(path))) {
+    // 让浏览器直接请求，不走 Vue Router
+    window.location.href = to.fullPath
+    return
+  }
+
   const authStore = useAuthStore()
 
   // 恢复会话

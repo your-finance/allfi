@@ -258,8 +258,8 @@ start_docker() {
 
     echo ""
     success "Docker 服务已启动"
-    echo "  前端: http://localhost:${FRONTEND_PORT:-5173}"
-    echo "  后端: http://localhost:${SERVER_PORT:-8080}"
+    echo "  访问地址: http://localhost:${ALLFI_PORT:-5173}"
+    echo "  API 文档: http://localhost:${ALLFI_PORT:-5173}/swagger/"
     echo ""
     echo "  查看日志: docker-compose logs -f"
     echo "  停止服务: docker-compose down"

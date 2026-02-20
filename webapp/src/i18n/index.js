@@ -841,6 +841,8 @@ export const translations = {
       suggestionBatchDesc: '避免频繁小额提现，每次提现会收取固定费用，合并提现可节省手续费',
       suggestionMakerTitle: '使用限价单降低交易费',
       suggestionMakerDesc: '在 CEX 使用 Maker 限价单替代 Taker 市价单，可享受更低的手续费率',
+      suggestionTitle: '费用优化建议',
+      suggestionDesc: '根据您的交易模式，我们发现了一些可以优化费用的方法',
     },
 
     // Widget 配置
@@ -1819,6 +1821,8 @@ export const translations = {
       suggestionBatchDesc: '避免頻繁小額提現，每次提現會收取固定費用，合併提現可節省手續費',
       suggestionMakerTitle: '使用限價單降低交易費',
       suggestionMakerDesc: '在 CEX 使用 Maker 限價單替代 Taker 市價單，可享受更低的手續費率',
+      suggestionTitle: '費用優化建議',
+      suggestionDesc: '根據您的交易模式，我們發現了一些可以優化費用的方法',
     },
 
     // Widget 配置
@@ -2797,6 +2801,8 @@ export const translations = {
       suggestionBatchDesc: 'Avoid frequent small withdrawals. Each withdrawal incurs a fixed fee — batch them to save',
       suggestionMakerTitle: 'Use Limit Orders',
       suggestionMakerDesc: 'Use Maker limit orders instead of Taker market orders on CEX for lower fee rates',
+      suggestionTitle: 'Fee Optimization Suggestion',
+      suggestionDesc: 'Based on your trading patterns, we found ways to optimize your fees',
     },
 
     // Widgets

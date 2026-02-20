@@ -93,8 +93,7 @@ BSCSCAN_API_KEY=你的密钥
 COINGECKO_API_KEY=
 
 # 服务端口（默认即可）
-SERVER_PORT=8080
-FRONTEND_PORT=3174
+ALLFI_PORT=5173
 ```
 
 ### 步骤三：启动服务
@@ -637,19 +636,18 @@ sudo journalctl -u allfi -f
 
 ### 3. 端口被占用
 
-**现象**：启动时提示端口 `8080` 或 `3174` 已被占用。
+**现象**：启动时提示端口 `5173` 已被占用。
 
 **解决**：修改 `.env` 中的端口配置：
 
 ```env
-SERVER_PORT=9090
-FRONTEND_PORT=3000
+ALLFI_PORT=3000
 ```
 
 或者查找并关闭占用端口的进程：
 
 ```bash
-lsof -i :8080
+lsof -i :5173
 ```
 
 ### 4. 数据库文件权限问题

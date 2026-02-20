@@ -93,6 +93,15 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true
+      },
+      // 代理 Swagger UI 和 OpenAPI 文档
+      '/swagger': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
+      },
+      '/api.json': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
       }
     }
   },
