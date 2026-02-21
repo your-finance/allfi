@@ -71,7 +71,9 @@ async function request(endpoint, options = {}) {
     const data = await response.json()
 
     // 处理 401 未授权（Token 过期或无效）
-    if (response.status === 401) {
+    // 需要同时检查 HTTP 状态码和响应体中的 code 字段
+    // 后端使用 GoFrame 的 WriteJsonExit，默认返回 200 状态码，错误码在 code 字段中
+    if (response.status === 401 || data.code === 401) {
       localStorage.removeItem('allfi-auth')
       // 非认证接口收到 401 时跳转登录页
       if (!endpoint.startsWith('/auth/')) {
