@@ -37,6 +37,24 @@ type rpcError struct {
 	Message string `json:"message"`
 }
 
+// UnmarshalJSON 支持字符串和标准的对象结构，兼容不规范的 RPC 节点返回
+func (e *rpcError) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err == nil {
+		e.Code = -1
+		e.Message = s
+		return nil
+	}
+
+	type Alias rpcError
+	var aux Alias
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	*e = rpcError(aux)
+	return nil
+}
+
 // GetGasPriceViaRPC 通过公共 RPC 节点获取 Gas 价格
 // 调用 eth_gasPrice 方法，返回与 Etherscan Gas Oracle 兼容的 GasPrice 结构
 // 由于 RPC 只返回单一建议价格，Safe/Normal/Fast 按比例估算
