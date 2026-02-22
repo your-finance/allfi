@@ -227,6 +227,10 @@ func (s *sSystem) Rollback(ctx context.Context, targetVersion string) (*systemAp
 
 // GetUpdateStatus 获取当前更新/回滚操作的进度
 func (s *sSystem) GetUpdateStatus(ctx context.Context) (*systemApi.GetUpdateStatusRes, error) {
+	if _, err := os.Stat("/.dockerenv"); err == nil {
+		return s.getUpdateStatusDocker(ctx)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -236,6 +240,46 @@ func (s *sSystem) GetUpdateStatus(ctx context.Context) (*systemApi.GetUpdateStat
 		Total:    s.updateTotal,
 		StepName: s.stepName,
 		Message:  s.updateMsg,
+	}, nil
+}
+
+// getUpdateStatusDocker Docker 模式下获取 updater 服务的状态
+func (s *sSystem) getUpdateStatusDocker(ctx context.Context) (*systemApi.GetUpdateStatusRes, error) {
+	client := &http.Client{Timeout: 5 * time.Second}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, dockerUpdaterURL+"/status", nil)
+	if err != nil {
+		return nil, fmt.Errorf("构造 updater 请求失败: %w", err)
+	}
+	// dockerUpdaterURL 是 "http://updater:8081/update"，所以需要替换掉 path
+	req.URL.Path = "/status"
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("连接 updater 服务失败: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("updater 服务返回状态码 %d", resp.StatusCode)
+	}
+
+	var status struct {
+		State    string `json:"state"`
+		Step     int    `json:"step"`
+		Total    int    `json:"total"`
+		StepName string `json:"step_name"`
+		Message  string `json:"message"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
+		return nil, fmt.Errorf("解析 updater 状态失败: %w", err)
+	}
+
+	return &systemApi.GetUpdateStatusRes{
+		State:    status.State,
+		Step:     status.Step,
+		Total:    status.Total,
+		StepName: status.StepName,
+		Message:  status.Message,
 	}, nil
 }
 
