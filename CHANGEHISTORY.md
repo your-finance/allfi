@@ -10,6 +10,22 @@
 
 
 
+
+## v0.1.7（2026-02-23）
+
+### 功能新增
+
+- feat(system): 实现 OTA 二进制零依赖热升级, 彻底移除基于 Git 的更新逻辑; 并重构了底层 Docker 一键部署架构
+
+### 问题修复
+
+- fix(rpc): handle non-compliant string error responses in JSON-RPC
+- 修复前端 401 认证错误未检测的问题
+
+### 其他变更
+
+- 前后端状态同步逻辑存在缺陷
+
 ## v0.1.6（2026-02-20）
 
 ### 功能新增
