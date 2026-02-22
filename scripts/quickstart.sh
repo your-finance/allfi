@@ -301,6 +301,9 @@ main() {
         --help|-h)
             echo "用法: bash scripts/quickstart.sh [选项]"
             echo ""
+            echo "提示: 如果您不需要开发/修改源码，强烈推荐直接从 Releases 下载平台对应的免编译二进制文件！"
+            echo "      该文件提供了真正的内置 OTA 热更新功能。"
+            echo ""
             echo "选项:"
             echo "  (无参数)     完整启动（前端 + 后端）"
             echo "  --mock, -m   纯前端 Mock 模式（无需后端）"
@@ -309,11 +312,18 @@ main() {
             echo "  --help, -h   显示帮助信息"
             echo ""
             echo "示例:"
-            echo "  bash scripts/quickstart.sh          # 首次完整启动"
+            echo "  bash scripts/quickstart.sh          # 首次完整开发启动"
             echo "  bash scripts/quickstart.sh --mock   # 快速体验 UI"
             echo "  bash scripts/quickstart.sh --check  # 检查环境"
             ;;
         *)
+            echo "=========================================================================="
+            echo "提示: 侦测到本地构建源码请求。"
+            echo "如果您不是开发者，强烈推荐从 GitHub Releases 下载免安装的 AllFi 二进制包执行。"
+            echo "二进制包自带 OTA 自升级方案，完全不需要本地 Git / Go / Node.js 环境。"
+            echo "=========================================================================="
+            sleep 2
+            
             check_dependencies || exit 1
             check_proxy
             init_env

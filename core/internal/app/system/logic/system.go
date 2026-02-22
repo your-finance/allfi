@@ -3,9 +3,12 @@
 package logic
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -20,6 +23,8 @@ import (
 	"github.com/gogf/gf/v2/os/gfile"
 
 	jsoniter "github.com/json-iterator/go"
+
+	"github.com/inconshreveable/go-update"
 
 	systemApi "your-finance/allfi/api/v1/system"
 	"your-finance/allfi/internal/app/system/service"
@@ -161,7 +166,7 @@ func (s *sSystem) CheckUpdate(ctx context.Context) (*systemApi.CheckUpdateRes, e
 //
 // 功能说明:
 // 1. 检测运行模式，Docker 模式转发给 updater 服务
-// 2. 宿主机模式下异步执行 git fetch + git checkout
+// 2. 宿主机模式下异步执行 OTA 二进制热替换更新
 // 3. 使用 sync.Mutex 保护更新状态
 // 4. 立即返回 status: "started"，后台执行实际更新操作
 func (s *sSystem) ApplyUpdate(ctx context.Context, targetVersion string) (*systemApi.ApplyUpdateRes, error) {
@@ -182,7 +187,7 @@ func (s *sSystem) ApplyUpdate(ctx context.Context, targetVersion string) (*syste
 		return s.applyUpdateDocker(ctx, targetVersion)
 	}
 
-	// 宿主机模式：异步执行 git checkout
+	// 宿主机模式：异步执行 OTA 二进制热替换
 	s.setUpdateState("updating", 0, 3, "准备更新", fmt.Sprintf("目标版本: %s", targetVersion))
 
 	go s.doHostUpdate(targetVersion, false)
@@ -214,7 +219,7 @@ func (s *sSystem) Rollback(ctx context.Context, targetVersion string) (*systemAp
 		return s.rollbackDocker(ctx, targetVersion)
 	}
 
-	// 宿主机模式：异步执行 git checkout
+	// 宿主机模式：异步执行 OTA 二进制热替换回滚
 	s.setUpdateState("updating", 0, 3, "准备回滚", fmt.Sprintf("目标版本: %s", targetVersion))
 
 	go s.doHostUpdate(targetVersion, true)
@@ -314,23 +319,19 @@ func (s *sSystem) setUpdateState(state string, step, total int, stepName, msg st
 	s.updateMsg = msg
 }
 
-// doHostUpdate 宿主机模式下执行更新/回滚
+// doHostUpdate 宿主机模式下执行 OTA 更新/回滚
 //
 // 步骤:
-// 1. 保存更新前状态到历史记录
-// 2. git fetch --tags 拉取最新标签
-// 3. git checkout v<targetVersion> 切换到目标版本
-//
-// isRollback 为 true 时在历史记录中标记为 rolled_back
+// 1. 根据当前架构下载对应平台的 Release 压缩包 (.tar.gz)
+// 2. 解压并提取 allfi 二进制文件进行自身覆盖替换 (Self-Update)
+// 3. 执行成功后重启进程
 func (s *sSystem) doHostUpdate(targetVersion string, isRollback bool) {
-	// 步骤 1：保存更新前状态
 	actionName := "更新"
 	if isRollback {
 		actionName = "回滚"
 	}
-	s.setUpdateState("updating", 1, 3, "保存当前状态", fmt.Sprintf("正在保存%s前状态", actionName))
 
-	// 记录当前版本到历史
+	// 记录当前版本到历史 (预存 started 状态)
 	record := systemApi.UpdateRecord{
 		Version:   targetVersion,
 		GitCommit: version.GitCommit,
@@ -338,36 +339,80 @@ func (s *sSystem) doHostUpdate(targetVersion string, isRollback bool) {
 		Status:    "started",
 	}
 
-	// 步骤 2：拉取最新标签
-	s.setUpdateState("updating", 2, 3, "拉取代码", "正在执行 git fetch --tags")
+	// 1. 拼接要下载的 Release 包全名
+	platform := fmt.Sprintf("%s-%s", runtime.GOOS, runtime.GOARCH)
+	tarballName := fmt.Sprintf("allfi-%s-%s.tar.gz", targetVersion, platform)
+	downloadURL := fmt.Sprintf("https://github.com/your-finance/allfi/releases/download/v%s/%s", targetVersion, tarballName)
 
-	cmd := exec.Command("git", "fetch", "--tags")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		errMsg := fmt.Sprintf("git fetch 失败: %s, %v", string(output), err)
+	s.setUpdateState("updating", 1, 3, "下载新版本", fmt.Sprintf("正在下载包: %s", tarballName))
+	g.Log().Info(context.Background(), fmt.Sprintf("准备执行 %s，下载地址: %s", actionName, downloadURL))
+
+	// 2. 发起下载请求
+	client := &http.Client{Timeout: 300 * time.Second} // 下载二进制包需要较长超时
+	resp, err := client.Get(downloadURL)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		errMsg := fmt.Sprintf("下载 %s 失败，请检查网络（状态码: %d）", tarballName, resp.StatusCode)
+		if err != nil {
+			errMsg = fmt.Sprintf("下载异常被中断: %v", err)
+		}
 		g.Log().Error(context.Background(), errMsg)
-		s.setUpdateState("failed", 2, 3, "拉取代码失败", errMsg)
+		s.setUpdateState("failed", 1, 3, "下载失败", errMsg)
+		record.Status = "failed"
+		_ = s.appendHistory(record)
+		return
+	}
+	defer resp.Body.Close()
 
-		// 记录失败
+	// 3. 解析 tar.gz，并在里面找到可执行文件 "allfi"
+	s.setUpdateState("updating", 2, 3, "替换新版本", "正在提取执行文件并替换当前进程...")
+	gz, err := gzip.NewReader(resp.Body)
+	if err != nil {
+		s.setUpdateState("failed", 2, 3, "读取压缩包失败", fmt.Sprintf("解压包异常: %v", err))
+		record.Status = "failed"
+		_ = s.appendHistory(record)
+		return
+	}
+	defer gz.Close()
+
+	tr := tar.NewReader(gz)
+	var binaryReader io.Reader
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			s.setUpdateState("failed", 2, 3, "解析压缩包失败", fmt.Sprintf("读取错误: %v", err))
+			record.Status = "failed"
+			_ = s.appendHistory(record)
+			return
+		}
+
+		// release 结构是 "allfi-{version}-{platform}/allfi"
+		if !header.FileInfo().IsDir() && filepath.Base(header.Name) == "allfi" {
+			// 对于 tarball 中名为 allfi 的可扫码可执行文件截获
+			binaryReader = tr
+			break
+		}
+	}
+
+	if binaryReader == nil {
+		s.setUpdateState("failed", 2, 3, "更新失败", "在安装包中未找到 allfi 二进制文件")
 		record.Status = "failed"
 		_ = s.appendHistory(record)
 		return
 	}
 
-	// 步骤 3：切换到目标版本
-	s.setUpdateState("updating", 3, 3, "切换版本", fmt.Sprintf("正在 checkout v%s", targetVersion))
-
-	cmd = exec.Command("git", "checkout", fmt.Sprintf("v%s", targetVersion))
-	if output, err := cmd.CombinedOutput(); err != nil {
-		errMsg := fmt.Sprintf("git checkout 失败: %s, %v", string(output), err)
-		g.Log().Error(context.Background(), errMsg)
-		s.setUpdateState("failed", 3, 3, "切换版本失败", errMsg)
-
+	// 4. 执行原位替换（将自身的可执行文件无缝覆盖）
+	err = update.Apply(binaryReader, update.Options{})
+	if err != nil {
+		s.setUpdateState("failed", 2, 3, "覆盖二进制文件失败", fmt.Sprintf("替换发生错误: %v", err))
 		record.Status = "failed"
 		_ = s.appendHistory(record)
 		return
 	}
 
-	// 更新成功
+	// 5. 更新成功，标记重启
 	if isRollback {
 		record.Status = "rolled_back"
 	} else {
@@ -375,8 +420,33 @@ func (s *sSystem) doHostUpdate(targetVersion string, isRollback bool) {
 	}
 	_ = s.appendHistory(record)
 
-	s.setUpdateState("completed", 3, 3, fmt.Sprintf("%s完成", actionName),
-		fmt.Sprintf("已成功%s到版本 %s", actionName, targetVersion))
+	s.setUpdateState("completed", 3, 3, fmt.Sprintf("%s完成", actionName), fmt.Sprintf("已可平滑重启应用新版本 %s", targetVersion))
+
+	g.Log().Info(context.Background(), fmt.Sprintf("OTA 自升级（%s）已成功将二进制文件替换到版本 %s", actionName, targetVersion))
+
+	// 重启当前服务进程
+	go func() {
+		// 休眠2秒让接口成功返回 status: "completed" 给前端后，再干掉老进程
+		time.Sleep(2 * time.Second)
+		exe, err := os.Executable()
+		if err != nil {
+			g.Log().Error(context.Background(), "重启失败，无法找到可执行文件位置: ", err)
+			return
+		}
+
+		// 将老参数原样带给新进程重启
+		cmd := exec.Command(exe, os.Args[1:]...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		g.Log().Info(context.Background(), "开始重启，启动新版本进程...")
+		if err := cmd.Start(); err != nil {
+			g.Log().Error(context.Background(), "新版本进程启动失败: ", err)
+			return
+		}
+		// 正确退出旧进程
+		os.Exit(0)
+	}()
 }
 
 // applyUpdateDocker Docker 模式下转发更新请求给 updater 服务

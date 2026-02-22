@@ -54,18 +54,18 @@ All data is stored locally. API keys are encrypted with AES-256-GCM and never le
 
 Prerequisites: Docker 20.10+, Docker Compose v2+
 
-#### One-click Script Deployment
+#### One-click Script Deployment (Recommended)
 
 ```bash
-# Clone repo and deploy
-git clone https://github.com/your-finance/allfi.git
-cd allfi
-bash deploy/docker-deploy.sh
+# Fetch the standalone binary auto-deployment script (No git clone needed!)
+curl -sSL https://raw.githubusercontent.com/your-finance/allfi/master/deploy/docker-deploy.sh | bash
 ```
 
-The script automatically: checks Docker environment → generates `.env` + security keys → builds and starts all services.
+The script automatically: determines your OS architecture → downloads the pre-built binary package → generates `.env` + security keys → builds a lightweight Docker image without needing compiler toolchains → starts all services.
 
-#### Manual Docker Deployment
+#### Manual Docker Deployment from Source
+
+(If you have cloned the repo or want to build from source code)
 
 ```bash
 git clone https://github.com/your-finance/allfi.git
@@ -76,23 +76,16 @@ cp .env.example .env
 # Edit .env — set ALLFI_MASTER_KEY (or auto-generate with the line below)
 sed -i "s|CHANGE_ME_USE_openssl_rand_base64_32|$(openssl rand -base64 32)|" .env
 
-# Start services
-# Option A: Local directory (recommended — data in ./data, easy backup & migration)
-mkdir -p data
-docker compose -f docker-compose.local.yml up -d --build
-
-# Option B: Named volumes (simple setup)
+# Build from source using Docker Compose (requires higher memory)
 docker compose up -d --build
 ```
 
 #### Deployment Version Comparison
 
-| Version | Data Storage | Migration | Use Case |
-|---------|-------------|-----------|----------|
-| **docker-compose.local.yml** | Local `./data` directory | ✅ Easy (tar the directory) | Production, frequent backups |
-| **docker-compose.yml** | Docker named volumes | ⚠️ Requires docker commands | Quick start, simple setup |
-
-> **Recommended**: Use `docker-compose.local.yml` (local directory version) — data files are directly visible, easy to backup and migrate.
+| Version | Data Storage | Use Case |
+|---------|-------------|----------|
+| **Script / docker-compose.yml** | Docker named volumes | Simple setup, one click deploy |
+| **From Source / Manual** | Docker or local volumes | Developers and modifications |
 
 #### Default Port Mapping
 
@@ -114,38 +107,31 @@ Visit http://localhost:5173 to get started. First-time access requires setting a
 > docker compose -f docker-compose.local.yml up -d --build   # Restart to apply changes
 > ```
 
-#### Data Backup & Migration (Local Directory Version)
-
-When using `docker-compose.local.yml`, data is stored in the `./data` directory for easy backup and migration:
-
 ```bash
-# Backup data
-tar czf allfi-backup-$(date +%Y%m%d).tar.gz data/
-
-# Migrate to a new server
 # 1. Stop and archive on the source server
-docker compose -f docker-compose.local.yml down
-cd ..
-tar czf allfi-complete.tar.gz allfi/
+cd allfi-docker
+docker compose down
+
+# Assuming your volume is allfi-data, you can export the volume backing it
+docker run --rm -v allfi-data:/data -v $(pwd):/backup alpine:3.21 tar czf /backup/allfi-data.tar.gz -C /data .
 
 # 2. Transfer to the new server
-scp allfi-complete.tar.gz user@new-server:/path/
+scp allfi-data.tar.gz user@new-server:/path/
 
 # 3. Extract and start on the new server
-tar xzf allfi-complete.tar.gz
-cd allfi/
-docker compose -f docker-compose.local.yml up -d --build
+# Just run the curl command on the new server to deploy, 
+# then restore the allfi-data volume and restart docker compose.
 ```
 
 #### Common Docker Commands
 
 ```bash
-# Commands below use local directory version; remove -f docker-compose.local.yml for named volumes
-docker compose -f docker-compose.local.yml logs -f       # View logs
-docker compose -f docker-compose.local.yml down          # Stop services
-docker compose -f docker-compose.local.yml restart       # Restart services
-docker compose -f docker-compose.local.yml up -d --build # Rebuild and restart
-docker compose -f docker-compose.local.yml ps            # View status
+cd allfi-docker
+docker compose logs -f       # View logs
+docker compose down          # Stop services
+docker compose restart       # Restart services
+docker compose up -d         # Start services
+docker compose ps            # View status
 ```
 
 #### Reverse Proxy Configuration (Recommended for Production)
@@ -217,7 +203,17 @@ sudo ln -s /etc/nginx/sites-available/allfi /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl restart nginx
 ```
 
-### Option 2: Local Development
+### Option 2: Standalone Binary (Recommended)
+
+Perfect for users running on their host machines without Docker. AllFi provides zero-dependency pre-compiled binaries containing both frontend and backend plus an OTA (Over-The-Air) update module.
+
+1. Download the correct archive for your architecture from [GitHub Releases](https://github.com/your-finance/allfi/releases) (e.g., `allfi-1.0.0-darwin-arm64.tar.gz`).
+2. Extract the archive and execute `./allfi` in your terminal. 
+3. Visit http://localhost:8080 to get started!
+
+> **OTA One-Click Update**: Once started this way, you can just click "Update" via the settings in the frontend user interface. AllFi will fetch the latest binary from GitHub Releases behind the scene, automatically swap the executable in-place natively without any external SDK requirements, and quickly restart itself!
+
+### Option 3: Local Development
 
 For developers who need to modify the code. Requires: Go 1.24+, Node.js 20+, pnpm.
 
@@ -232,7 +228,7 @@ Visit http://localhost:3174 to get started. First-time access requires setting a
 
 > **Note**: `make setup` auto-detects your environment. If Go or pnpm is missing, it will skip the corresponding dependency installation and show a warning.
 
-### Option 3: Mock Mode (No Backend)
+### Option 4: Mock Mode (No Backend)
 
 Just want to see the UI? No backend needed. Requires: Node.js 20+, pnpm.
 

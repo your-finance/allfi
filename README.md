@@ -109,32 +109,23 @@ AllFi 是一个**开源、自托管**的全资产聚合平台，统一管理你�
 
 前置条件：Docker 20.10+, Docker Compose v2+
 
-#### 一键脚本部署（智能构建模式）
+#### 一键脚本部署（推荐）
 
 ```bash
-# 克隆仓库并一键启动
-git clone https://github.com/your-finance/allfi.git
-cd allfi
-bash deploy/docker-deploy.sh
+# 一键自动提取无依赖二进制代码并打包部署 Docker 服务（免克隆源码）
+curl -sSL https://raw.githubusercontent.com/your-finance/allfi/master/deploy/docker-deploy.sh | bash
 ```
 
 脚本特性：
-- **智能构建模式**：自动检测 Docker 内存，内存 < 8GiB 时自动切换为本地构建模式，避免 OOM
-- **完整环境检查**：自动检测 Docker、Docker Compose、openssl
-- **自动配置**：自动生成 `.env` + 安全密钥
-- **远程部署支持**：支持直接通过 curl 远程执行部署
-
-#### 手动指定构建模式
-
-```bash
-# 强制使用本地构建模式（宿主机需要 Go + pnpm/npm）
-BUILD_MODE=local bash deploy/docker-deploy.sh
-
-# 强制使用 Docker 构建模式
-BUILD_MODE=docker bash deploy/docker-deploy.sh
-```
+- **完全免环境依赖**：无需安装 git / go / node 等开发工具。
+- **自动适配架构**：自动识别 AMD64 或 ARM64 并抓取预先构建编译的程序。
+- **完整环境检查**：自动检测 Docker、Docker Compose。
+- **自动配置**：自动生成 `.env` + 安全密钥。
+- **内置 OTA 升级**：未来更新只需页面点击即可无缝平滑在线重启升级。
 
 #### 手动 Docker 部署
+
+（如果您已经克隆了代码到本地，或者想手动构建）
 
 ```bash
 git clone https://github.com/your-finance/allfi.git
@@ -145,8 +136,8 @@ cp .env.example .env
 # 编辑 .env，至少修改 ALLFI_MASTER_KEY（或用下一行自动生成）
 sed -i "s|CHANGE_ME_USE_openssl_rand_base64_32|$(openssl rand -base64 32)|" .env
 
-# 启动服务（根据内存情况自动选择构建模式）
-docker compose up -d
+# 通过源码直接开始构建（此过程需依赖较高内存）
+docker compose up -d --build
 ```
 
 #### 默认端口映射
@@ -269,7 +260,17 @@ sudo ln -s /etc/nginx/sites-available/allfi /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl restart nginx
 ```
 
-### 方式二：本地开发
+### 方式二：宿主机二进制运行（推荐）
+
+适合希望运行于宿主机但不熟悉 Docker 的用户。AllFi 提供了无需安装任何依赖（如 Git/Go/Node.js）的跨平台可执行包（包含前后端和 OTA 热升级模块）。
+
+1. 访问 [GitHub Releases](https://github.com/your-finance/allfi/releases) 下载适合您系统架构的压缩包（如 `allfi-1.0.0-darwin-arm64.tar.gz`）。
+2. 解压并在终端中执行该可执行文件 `./allfi` 即可一键启动后端、并内嵌访问前端。
+3. 访问 [http://localhost:8080](http://localhost:8080) 即可使用。
+
+> **OTA 一键更新**：本地二进制包启动后，可在前端界面的系统设置中实现**「一键热更新」**，AllFi 会后台自动下载最新代码并一处热替换当前进程与代码，平滑重启到最新版本，全程零环境依赖配置。
+
+### 方式三：本地开发
 
 适合需要修改代码的开发者。依赖：Go 1.24+, Node.js 20+, pnpm。
 
@@ -284,7 +285,7 @@ make dev      # 同时启动前后端开发服务器
 
 > **注意**：`make setup` 会自动检测本地环境。如果缺少 Go 或 pnpm，会跳过对应的依赖安装步骤并给出提示。
 
-### 方式三：Mock 体验（无需后端）
+### 方式四：Mock 体验（无需后端）
 
 只想快速看看 UI？不需要启动后端。依赖：Node.js 20+, pnpm。
 
