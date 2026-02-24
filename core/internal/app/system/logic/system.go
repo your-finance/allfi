@@ -74,7 +74,7 @@ func (s *sSystem) GetVersion(ctx context.Context) (*systemApi.GetVersionRes, err
 	}
 
 	return &systemApi.GetVersionRes{
-		Version:   version.Version,
+		Version:   version.ShortVersion(),
 		BuildTime: version.BuildTime,
 		GitCommit: version.GitCommit,
 		RunMode:   runMode,
@@ -90,7 +90,7 @@ func (s *sSystem) GetVersion(ctx context.Context) (*systemApi.GetVersionRes, err
 // 3. 使用语义版本比较（major.minor.patch 逐级比较）
 // 4. 网络错误或 API 异常时返回 has_update=false + 错误信息
 func (s *sSystem) CheckUpdate(ctx context.Context) (*systemApi.CheckUpdateRes, error) {
-	currentVer := version.Version
+	currentVer := version.ShortVersion()
 
 	// 构造带超时的 HTTP 请求
 	client := &http.Client{Timeout: 10 * time.Second}

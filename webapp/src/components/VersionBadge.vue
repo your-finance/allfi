@@ -53,8 +53,10 @@ onUnmounted(() => {
 })
 
 // 当前版本号：优先使用后端 API 返回的版本，降级使用构建时注入的版本
+// 统一去掉 v 前缀，由模板负责添加
 const appVersion = computed(() => {
-  return systemStore.versionInfo?.version || __APP_VERSION__
+  const v = systemStore.versionInfo?.version || __APP_VERSION__
+  return v.replace(/^v/, '')
 })
 
 // GitHub Releases 地址
