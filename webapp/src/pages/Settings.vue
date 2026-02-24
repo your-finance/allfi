@@ -67,10 +67,23 @@ const updateNotifPreference = async (field, value) => {
   }
 }
 
-// 页面加载时获取通知偏好和系统信息
-onMounted(() => {
+// 页面加载时获取通知偏好、用户设置和交易同步设置
+onMounted(async () => {
   notifStore.loadPreferences()
   achStore.fetchAchievements()
+  loadTxSyncSettings()
+  // 从数据库加载用户设置
+  try {
+    const data = await settingsService.getSettings()
+    if (data) {
+      if (data.currency) settings.value.currency = data.currency
+      if (data.auto_refresh !== undefined) settings.value.autoRefresh = data.auto_refresh === 'true'
+      if (data.refresh_interval) settings.value.refreshInterval = Number(data.refresh_interval)
+      if (data.history_retention) settings.value.historyRetention = Number(data.history_retention)
+    }
+  } catch {
+    // 静默失败，使用默认值
+  }
 })
 
 // 操作状态
@@ -233,15 +246,23 @@ const selectTheme = (themeId) => {
   }, 300)
 }
 
-// 保存设置
+// 保存设置（持久化到数据库）
 const saveSettings = async () => {
   isSaving.value = true
-  await new Promise(resolve => setTimeout(resolve, 800))
-  isSaving.value = false
-  saveSuccess.value = true
-  setTimeout(() => {
-    saveSuccess.value = false
-  }, 2000)
+  try {
+    await settingsService.updateSettings({
+      currency: settings.value.currency,
+      auto_refresh: String(settings.value.autoRefresh),
+      refresh_interval: String(settings.value.refreshInterval),
+      history_retention: String(settings.value.historyRetention),
+    })
+    saveSuccess.value = true
+    setTimeout(() => { saveSuccess.value = false }, 2000)
+  } catch {
+    showToast(t('common.operationFailed'), 'error')
+  } finally {
+    isSaving.value = false
+  }
 }
 
 // 打开导出格式选择弹窗
