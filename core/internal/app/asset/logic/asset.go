@@ -345,6 +345,11 @@ func (s *sAsset) createAssetSnapshot(ctx context.Context, userID int) error {
 		return gerror.Wrap(err, "计算总资产失败")
 	}
 
+	// 没有任何资产，跳过快照
+	if totalValueUSD == 0 {
+		return nil
+	}
+
 	// 计算各来源资产价值
 	cexValue, _ := dao.AssetDetails.Ctx(ctx).
 		Where(dao.AssetDetails.Columns().UserId, userID).
