@@ -16,16 +16,20 @@ export const currencies = [
 // 隐私模式遮盖字符
 const PRIVACY_MASK = '••••'
 
+// 全局货币状态
+const CURRENCY_STORAGE_KEY = 'allfi-currency'
+const initialCurrency = localStorage.getItem(CURRENCY_STORAGE_KEY) || 'USDC'
+const currentCurrency = ref(initialCurrency)
+
 export function useFormatters() {
   const themeStore = useThemeStore()
-  const currentCurrency = ref('USDC')
-  
+
   // 获取当前货币符号
   const currencySymbol = computed(() => {
     const currency = currencies.find(c => c.code === currentCurrency.value)
     return currency?.symbol || '$'
   })
-  
+
   /**
    * 格式化货币数值
    * @param {number} value - 数值
@@ -46,9 +50,9 @@ export function useFormatters() {
     if (value === null || value === undefined || isNaN(value)) {
       return showSymbol ? `${currencySymbol.value}0.00` : '0.00'
     }
-    
+
     let formatted
-    
+
     if (compact && Math.abs(value) >= 1000000000) {
       formatted = (value / 1000000000).toFixed(2) + 'B'
     } else if (compact && Math.abs(value) >= 1000000) {
@@ -61,10 +65,10 @@ export function useFormatters() {
         maximumFractionDigits: decimals
       }).format(value)
     }
-    
+
     return showSymbol ? `${currencySymbol.value}${formatted}` : formatted
   }
-  
+
   /**
    * 格式化数字（带千分位）
    * @param {number} value - 数值
@@ -79,13 +83,13 @@ export function useFormatters() {
     if (value === null || value === undefined || isNaN(value)) {
       return '0'
     }
-    
+
     return new Intl.NumberFormat('en-US', {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals
     }).format(value)
   }
-  
+
   /**
    * 格式化百分比
    * @param {number} value - 数值（已经是百分比形式）
@@ -95,11 +99,11 @@ export function useFormatters() {
     if (value === null || value === undefined || isNaN(value)) {
       return '0.00%'
     }
-    
+
     const sign = showSign && value > 0 ? '+' : ''
     return `${sign}${value.toFixed(2)}%`
   }
-  
+
   /**
    * 格式化日期
    * @param {Date|string|number} date - 日期
@@ -107,11 +111,11 @@ export function useFormatters() {
    */
   const formatDate = (date, format = 'short') => {
     const d = new Date(date)
-    
+
     if (isNaN(d.getTime())) {
       return '-'
     }
-    
+
     const options = {
       short: { month: 'short', day: 'numeric' },
       medium: { month: 'short', day: 'numeric', year: 'numeric' },
@@ -119,10 +123,10 @@ export function useFormatters() {
       time: { hour: '2-digit', minute: '2-digit' },
       datetime: { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }
     }
-    
+
     return new Intl.DateTimeFormat('zh-CN', options[format] || options.short).format(d)
   }
-  
+
   /**
    * 格式化相对时间
    * @param {Date|string|number} date - 日期
@@ -131,19 +135,19 @@ export function useFormatters() {
     const d = new Date(date)
     const now = new Date()
     const diff = now - d
-    
+
     const minutes = Math.floor(diff / 60000)
     const hours = Math.floor(diff / 3600000)
     const days = Math.floor(diff / 86400000)
-    
+
     if (minutes < 1) return '刚刚'
     if (minutes < 60) return `${minutes}分钟前`
     if (hours < 24) return `${hours}小时前`
     if (days < 7) return `${days}天前`
-    
+
     return formatDate(date, 'short')
   }
-  
+
   /**
    * 缩短地址显示
    * @param {string} address - 钱包地址
@@ -161,6 +165,7 @@ export function useFormatters() {
   const setPricingCurrency = (code) => {
     if (currencies.find(c => c.code === code)) {
       currentCurrency.value = code
+      localStorage.setItem(CURRENCY_STORAGE_KEY, code)
     }
   }
 

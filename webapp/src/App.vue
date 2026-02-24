@@ -45,6 +45,7 @@ import BottomNav from './components/BottomNav.vue'
 import VersionBadge from './components/VersionBadge.vue'
 import { useSystemStore } from './stores/systemStore'
 import { marketService } from './api/marketService.js'
+import { settingsService } from './api/index.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -168,6 +169,18 @@ onMounted(async () => {
   // 初始化需授权的业务数据
   const initAppData = async () => {
     notifStore.initialize()
+    
+    // 加载全局用户设置（用户偏好：语言、计价货币等）
+    try {
+      const data = await settingsService.getSettings()
+      if (data) {
+        if (data.language) themeStore.setLanguage(data.language)
+        if (data.currency) setPricingCurrency(data.currency)
+      }
+    } catch (err) {
+      console.warn('Failed to load user settings:', err)
+    }
+
     await assetStore.loadSummary()
     loadGasPrice()
     if (!gasRefreshTimer) {

@@ -34,6 +34,7 @@ import { useThemeStore } from '../stores/themeStore'
 import { useAuthStore } from '../stores/authStore'
 import { useNotificationStore } from '../stores/notificationStore'
 import { useI18n } from '../composables/useI18n'
+import { useFormatters } from '../composables/useFormatters'
 import { useExportData } from '../composables/useExportData'
 import { useToast } from '../composables/useToast'
 import { settingsService } from '../api/index.js'
@@ -46,6 +47,7 @@ const notifStore = useNotificationStore()
 const { t } = useI18n()
 const { exportAsCSV, exportAsJSON, getDefaultFilename } = useExportData()
 const { showToast } = useToast()
+const { setPricingCurrency } = useFormatters()
 
 // 通知偏好保存状态
 const achStore = useAchievementStore()
@@ -76,7 +78,11 @@ onMounted(async () => {
   try {
     const data = await settingsService.getSettings()
     if (data) {
-      if (data.currency) settings.value.currency = data.currency
+      if (data.language) themeStore.setLanguage(data.language)
+      if (data.currency) {
+        settings.value.currency = data.currency
+        setPricingCurrency(data.currency)
+      }
       if (data.auto_refresh !== undefined) settings.value.autoRefresh = data.auto_refresh === 'true'
       if (data.refresh_interval) settings.value.refreshInterval = Number(data.refresh_interval)
       if (data.history_retention) settings.value.historyRetention = Number(data.history_retention)
@@ -252,6 +258,7 @@ const saveSettings = async () => {
   isSaving.value = true
   try {
     await settingsService.updateSettings({
+      language: themeStore.currentLanguageCode,
       currency: settings.value.currency,
       auto_refresh: String(settings.value.autoRefresh),
       refresh_interval: String(settings.value.refreshInterval),
@@ -574,7 +581,7 @@ onMounted(() => {
                 :key="curr.value"
                 class="currency-btn"
                 :class="{ active: settings.currency === curr.value }"
-                @click="settings.currency = curr.value"
+                @click="settings.currency = curr.value; setPricingCurrency(curr.value)"
               >
                 <span class="currency-symbol">{{ curr.symbol }}</span>
                 <span class="currency-code">{{ curr.value }}</span>
