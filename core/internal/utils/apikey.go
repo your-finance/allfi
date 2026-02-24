@@ -18,9 +18,15 @@ const apiKeyPrefix = "apikey."
 
 // providerEnvMap 服务商到环境变量的映射
 var providerEnvMap = map[string]string{
-	"etherscan": "ETHERSCAN_API_KEY",
-	"bscscan":   "BSCSCAN_API_KEY",
-	"coingecko": "COINGECKO_API_KEY",
+	"etherscan":    "ETHERSCAN_API_KEY",
+	"bscscan":      "BSCSCAN_API_KEY",
+	"coingecko":    "COINGECKO_API_KEY",
+	"ethereum_rpc": "ETHEREUM_RPC_URL",
+	"bsc_rpc":      "BSC_RPC_URL",
+	"polygon_rpc":  "POLYGON_RPC_URL",
+	"arbitrum_rpc": "ARBITRUM_RPC_URL",
+	"optimism_rpc": "OPTIMISM_RPC_URL",
+	"base_rpc":     "BASE_RPC_URL",
 }
 
 // ResolveAPIKey 获取指定服务商的 API Key

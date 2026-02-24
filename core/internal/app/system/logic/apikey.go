@@ -32,6 +32,12 @@ var apiKeyProviders = []struct {
 	{"bscscan", "BscScan", "BSC 区块链浏览器 API（余额查询、Gas 价格、交易记录）", "BSCSCAN_API_KEY"},
 	{"coingecko", "CoinGecko", "加密货币价格 API（可选，免费 API 无需 Key）", "COINGECKO_API_KEY"},
 	{"yahoofinance", "Yahoo Finance", "汇率查询 API（可选，免费 API 无需 Key）", "YAHOO_FINANCE_API_KEY"},
+	{"ethereum_rpc", "Ethereum RPC", "用户自定义以太坊 RPC 端点 URL", "ETHEREUM_RPC_URL"},
+	{"bsc_rpc", "BSC RPC", "用户自定义 BSC RPC 端点 URL", "BSC_RPC_URL"},
+	{"polygon_rpc", "Polygon RPC", "用户自定义 Polygon RPC 端点 URL", "POLYGON_RPC_URL"},
+	{"arbitrum_rpc", "Arbitrum RPC", "用户自定义 Arbitrum RPC 端点 URL", "ARBITRUM_RPC_URL"},
+	{"optimism_rpc", "Optimism RPC", "用户自定义 Optimism RPC 端点 URL", "OPTIMISM_RPC_URL"},
+	{"base_rpc", "Base RPC", "用户自定义 Base RPC 端点 URL", "BASE_RPC_URL"},
 }
 
 // getMasterKey 获取加密主密钥

@@ -63,7 +63,8 @@ func GetGasPriceViaRPC(ctx context.Context, chainName string) (*GasPrice, error)
 	if !ok {
 		return nil, fmt.Errorf("不支持的链: %s", chainName)
 	}
-	if config.PublicRPC == "" {
+	rpcUrl := GetRPCURL(ctx, chainName)
+	if rpcUrl == "" {
 		return nil, fmt.Errorf("链 %s 未配置公共 RPC 端点", chainName)
 	}
 
@@ -81,7 +82,7 @@ func GetGasPriceViaRPC(ctx context.Context, chainName string) (*GasPrice, error)
 	})
 
 	httpClient := &http.Client{Timeout: 15 * time.Second}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, config.PublicRPC, bytes.NewReader(reqBody))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, rpcUrl, bytes.NewReader(reqBody))
 	if err != nil {
 		return nil, fmt.Errorf("构造 RPC 请求失败: %v", err)
 	}

@@ -166,8 +166,8 @@ func (s *sMarket) getChainGasPrice(ctx context.Context, chainName string, envKey
 	if gasPrice == nil {
 		rpcPrice, err := etherscan.GetGasPriceViaRPC(ctx, chainName)
 		if err != nil {
-			config, ok := etherscan.SupportedChains[chainName]
-			if !ok || config.PublicRPC == "" {
+			rpcUrl := etherscan.GetRPCURL(ctx, chainName)
+			if rpcUrl == "" {
 				// 如果没有配置相关 API Key，且也没有相关免费的 RPC 配置，则不再报错
 				g.Log().Debug(ctx, "未配置相关的 API Key，且无免费的公共 RPC 端点，因此跳过 RPC 查询",
 					"chain", chainName,
