@@ -261,7 +261,7 @@ func (s *sReport) generateDailyReport(ctx context.Context, userID int) (*entity.
 		return &existing, nil
 	}
 
-	// 获取今日快照
+	// 获取今日快照，如果没有则获取最新快照
 	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	var todaySnapshots []entity.AssetSnapshots
 	err = assetDao.AssetSnapshots.Ctx(ctx).
@@ -269,10 +269,24 @@ func (s *sReport) generateDailyReport(ctx context.Context, userID int) (*entity.
 		WhereGTE(assetDao.AssetSnapshots.Columns().SnapshotTime, todayStart).
 		OrderDesc(assetDao.AssetSnapshots.Columns().SnapshotTime).
 		Scan(&todaySnapshots)
+
+	var latest entity.AssetSnapshots
 	if err != nil || len(todaySnapshots) == 0 {
-		return nil, gerror.New("未找到今日快照数据")
+		// 没有今日快照，获取最新可用快照
+		g.Log().Info(ctx, "未找到今日快照，使用最新可用快照")
+		var allSnapshots []entity.AssetSnapshots
+		err = assetDao.AssetSnapshots.Ctx(ctx).
+			Where(assetDao.AssetSnapshots.Columns().UserId, userID).
+			OrderDesc(assetDao.AssetSnapshots.Columns().SnapshotTime).
+			Limit(1).
+			Scan(&allSnapshots)
+		if err != nil || len(allSnapshots) == 0 {
+			return nil, gerror.New("未找到任何快照数据，请先添加资产并等待快照生成")
+		}
+		latest = allSnapshots[0]
+	} else {
+		latest = todaySnapshots[0]
 	}
-	latest := todaySnapshots[0]
 
 	// 获取昨日快照
 	yesterdayStart := todayStart.AddDate(0, 0, -1)
@@ -340,17 +354,31 @@ func (s *sReport) generateWeeklyReport(ctx context.Context, userID int) (*entity
 	thisMonday := time.Date(now.Year(), now.Month(), now.Day()-(weekday-1), 0, 0, 0, 0, now.Location())
 	lastMonday := thisMonday.AddDate(0, 0, -7)
 
-	// 获取本周快照
+	// 获取本周快照，如果没有则获取最新快照
 	var thisWeekSnapshots []entity.AssetSnapshots
 	err = assetDao.AssetSnapshots.Ctx(ctx).
 		Where(assetDao.AssetSnapshots.Columns().UserId, userID).
 		WhereGTE(assetDao.AssetSnapshots.Columns().SnapshotTime, thisMonday).
 		OrderDesc(assetDao.AssetSnapshots.Columns().SnapshotTime).
 		Scan(&thisWeekSnapshots)
+
+	var latest entity.AssetSnapshots
 	if err != nil || len(thisWeekSnapshots) == 0 {
-		return nil, gerror.New("未找到本周快照数据")
+		// 没有本周快照，获取最新可用快照
+		g.Log().Info(ctx, "未找到本周快照，使用最新可用快照")
+		var allSnapshots []entity.AssetSnapshots
+		err = assetDao.AssetSnapshots.Ctx(ctx).
+			Where(assetDao.AssetSnapshots.Columns().UserId, userID).
+			OrderDesc(assetDao.AssetSnapshots.Columns().SnapshotTime).
+			Limit(1).
+			Scan(&allSnapshots)
+		if err != nil || len(allSnapshots) == 0 {
+			return nil, gerror.New("未找到任何快照数据，请先添加资产并等待快照生成")
+		}
+		latest = allSnapshots[0]
+	} else {
+		latest = thisWeekSnapshots[0]
 	}
-	latest := thisWeekSnapshots[0]
 
 	// 获取上周快照
 	var lastWeekSnapshots []entity.AssetSnapshots
@@ -413,7 +441,7 @@ func (s *sReport) generateMonthlyReport(ctx context.Context, userID int, month s
 	monthEnd := monthStart.AddDate(0, 1, 0)
 	prevMonthStart := monthStart.AddDate(0, -1, 0)
 
-	// 获取本月快照
+	// 获取本月快照，如果没有则获取最新快照
 	var thisMonthSnapshots []entity.AssetSnapshots
 	err = assetDao.AssetSnapshots.Ctx(ctx).
 		Where(assetDao.AssetSnapshots.Columns().UserId, userID).
@@ -421,10 +449,24 @@ func (s *sReport) generateMonthlyReport(ctx context.Context, userID int, month s
 		WhereLT(assetDao.AssetSnapshots.Columns().SnapshotTime, monthEnd).
 		OrderDesc(assetDao.AssetSnapshots.Columns().SnapshotTime).
 		Scan(&thisMonthSnapshots)
+
+	var latest entity.AssetSnapshots
 	if err != nil || len(thisMonthSnapshots) == 0 {
-		return nil, gerror.Newf("未找到 %s 月的快照数据", month)
+		// 没有本月快照，获取最新可用快照
+		g.Log().Info(ctx, "未找到本月快照，使用最新可用快照")
+		var allSnapshots []entity.AssetSnapshots
+		err = assetDao.AssetSnapshots.Ctx(ctx).
+			Where(assetDao.AssetSnapshots.Columns().UserId, userID).
+			OrderDesc(assetDao.AssetSnapshots.Columns().SnapshotTime).
+			Limit(1).
+			Scan(&allSnapshots)
+		if err != nil || len(allSnapshots) == 0 {
+			return nil, gerror.Newf("未找到任何快照数据，请先添加资产并等待快照生成")
+		}
+		latest = allSnapshots[0]
+	} else {
+		latest = thisMonthSnapshots[0]
 	}
-	latest := thisMonthSnapshots[0]
 
 	// 获取上月快照
 	var prevMonthSnapshots []entity.AssetSnapshots
@@ -508,7 +550,7 @@ func (s *sReport) generateAnnualReport(ctx context.Context, userID int, year str
 	yearEnd := yearStart.AddDate(1, 0, 0)
 	prevYearStart := yearStart.AddDate(-1, 0, 0)
 
-	// 获取本年快照
+	// 获取本年快照，如果没有则获取最新快照
 	var thisYearSnapshots []entity.AssetSnapshots
 	err = assetDao.AssetSnapshots.Ctx(ctx).
 		Where(assetDao.AssetSnapshots.Columns().UserId, userID).
@@ -516,10 +558,24 @@ func (s *sReport) generateAnnualReport(ctx context.Context, userID int, year str
 		WhereLT(assetDao.AssetSnapshots.Columns().SnapshotTime, yearEnd).
 		OrderDesc(assetDao.AssetSnapshots.Columns().SnapshotTime).
 		Scan(&thisYearSnapshots)
+
+	var latest entity.AssetSnapshots
 	if err != nil || len(thisYearSnapshots) == 0 {
-		return nil, gerror.Newf("未找到 %s 年的快照数据", year)
+		// 没有本年快照，获取最新可用快照
+		g.Log().Info(ctx, "未找到本年快照，使用最新可用快照")
+		var allSnapshots []entity.AssetSnapshots
+		err = assetDao.AssetSnapshots.Ctx(ctx).
+			Where(assetDao.AssetSnapshots.Columns().UserId, userID).
+			OrderDesc(assetDao.AssetSnapshots.Columns().SnapshotTime).
+			Limit(1).
+			Scan(&allSnapshots)
+		if err != nil || len(allSnapshots) == 0 {
+			return nil, gerror.Newf("未找到任何快照数据，请先添加资产并等待快照生成")
+		}
+		latest = allSnapshots[0]
+	} else {
+		latest = thisYearSnapshots[0]
 	}
-	latest := thisYearSnapshots[0]
 
 	// 获取上年快照
 	var prevYearSnapshots []entity.AssetSnapshots
