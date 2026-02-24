@@ -1,232 +1,230 @@
 /**
  * 交易记录 Mock 数据
- * 模拟 CEX、链上、手动资产的统一交易记录
- * 类型：buy（买入）、sell（卖出）、transfer（转账）、swap（兑换）、deposit（充值）、withdraw（提现）
+ * 字段格式与后端 API 保持一致：
+ * tx_type, symbol, amount, price, total, fee, fee_coin, tx_hash, timestamp(ISO)
  */
 
-// 生成模拟交易记录
-const now = Date.now()
+const now = new Date()
+const iso = (offsetMs) => new Date(Date.now() - offsetMs).toISOString()
 const DAY = 86400000
 
 export const mockTransactions = [
   // === CEX 交易 ===
   {
-    id: 'tx-001',
-    type: 'buy',
-    timestamp: now - 0.5 * DAY,
-    from: { symbol: 'USDC', amount: 5000 },
-    to: { symbol: 'BTC', amount: 0.052 },
-    fee: { amount: 5.0, currency: 'USDC' },
-    chain: null,
+    id: 1,
     source: 'Binance',
-    sourceType: 'cex',
-    txHash: null,
-    note: '',
+    tx_type: 'buy',
+    symbol: 'BTC',
+    amount: 0.052,
+    price: 96153.85,
+    total: 5000,
+    fee: 5.0,
+    fee_coin: 'USDC',
+    tx_hash: '',
+    timestamp: iso(0.5 * DAY),
   },
   {
-    id: 'tx-002',
-    type: 'sell',
-    timestamp: now - 1.2 * DAY,
-    from: { symbol: 'ETH', amount: 2.5 },
-    to: { symbol: 'USDC', amount: 5750 },
-    fee: { amount: 5.75, currency: 'USDC' },
-    chain: null,
+    id: 2,
     source: 'Binance',
-    sourceType: 'cex',
-    txHash: null,
-    note: '',
+    tx_type: 'sell',
+    symbol: 'ETH',
+    amount: 2.5,
+    price: 2300,
+    total: 5750,
+    fee: 5.75,
+    fee_coin: 'USDC',
+    tx_hash: '',
+    timestamp: iso(1.2 * DAY),
   },
   {
-    id: 'tx-003',
-    type: 'buy',
-    timestamp: now - 2 * DAY,
-    from: { symbol: 'USDC', amount: 1200 },
-    to: { symbol: 'SOL', amount: 8.0 },
-    fee: { amount: 1.2, currency: 'USDC' },
-    chain: null,
+    id: 3,
     source: 'OKX',
-    sourceType: 'cex',
-    txHash: null,
-    note: '',
+    tx_type: 'buy',
+    symbol: 'SOL',
+    amount: 8.0,
+    price: 150,
+    total: 1200,
+    fee: 1.2,
+    fee_coin: 'USDC',
+    tx_hash: '',
+    timestamp: iso(2 * DAY),
   },
   {
-    id: 'tx-004',
-    type: 'deposit',
-    timestamp: now - 3 * DAY,
-    from: { symbol: 'USDC', amount: 10000 },
-    to: { symbol: 'USDC', amount: 10000 },
-    fee: { amount: 0, currency: 'USDC' },
-    chain: 'ETH',
+    id: 4,
     source: 'Binance',
-    sourceType: 'cex',
-    txHash: '0xabc123...def456',
-    note: '从链上充值到 Binance',
+    tx_type: 'deposit',
+    symbol: 'USDC',
+    amount: 10000,
+    price: 1,
+    total: 10000,
+    fee: 0,
+    fee_coin: 'USDC',
+    tx_hash: '0xabc123def456',
+    timestamp: iso(3 * DAY),
   },
   {
-    id: 'tx-005',
-    type: 'withdraw',
-    timestamp: now - 4.5 * DAY,
-    from: { symbol: 'ETH', amount: 5.0 },
-    to: { symbol: 'ETH', amount: 5.0 },
-    fee: { amount: 0.003, currency: 'ETH' },
-    chain: 'ETH',
+    id: 5,
     source: 'OKX',
-    sourceType: 'cex',
-    txHash: '0x789abc...123def',
-    note: '提现到个人钱包',
+    tx_type: 'withdraw',
+    symbol: 'ETH',
+    amount: 5.0,
+    price: 2300,
+    total: 11500,
+    fee: 0.003,
+    fee_coin: 'ETH',
+    tx_hash: '0x789abc123def',
+    timestamp: iso(4.5 * DAY),
   },
   // === 链上交易 ===
   {
-    id: 'tx-006',
-    type: 'swap',
-    timestamp: now - 1 * DAY,
-    from: { symbol: 'ETH', amount: 1.5 },
-    to: { symbol: 'USDC', amount: 3450 },
-    fee: { amount: 0.0045, currency: 'ETH' },
-    chain: 'ETH',
+    id: 6,
     source: 'Uniswap',
-    sourceType: 'blockchain',
-    txHash: '0xdef789...abc123',
-    note: '',
+    tx_type: 'swap',
+    symbol: 'ETH',
+    amount: 1.5,
+    price: 2300,
+    total: 3450,
+    fee: 0.0045,
+    fee_coin: 'ETH',
+    tx_hash: '0xdef789abc123',
+    timestamp: iso(1 * DAY),
   },
   {
-    id: 'tx-007',
-    type: 'transfer',
-    timestamp: now - 2.5 * DAY,
-    from: { symbol: 'USDC', amount: 2000 },
-    to: { symbol: 'USDC', amount: 2000 },
-    fee: { amount: 0.002, currency: 'ETH' },
-    chain: 'ETH',
+    id: 7,
     source: 'Ethereum',
-    sourceType: 'blockchain',
-    txHash: '0x456def...789abc',
-    note: '转账给朋友',
+    tx_type: 'transfer',
+    symbol: 'USDC',
+    amount: 2000,
+    price: 1,
+    total: 2000,
+    fee: 0.002,
+    fee_coin: 'ETH',
+    tx_hash: '0x456def789abc',
+    timestamp: iso(2.5 * DAY),
   },
   {
-    id: 'tx-008',
-    type: 'swap',
-    timestamp: now - 5 * DAY,
-    from: { symbol: 'BNB', amount: 10 },
-    to: { symbol: 'CAKE', amount: 320 },
-    fee: { amount: 0.005, currency: 'BNB' },
-    chain: 'BSC',
+    id: 8,
     source: 'PancakeSwap',
-    sourceType: 'blockchain',
-    txHash: '0xbsc123...456abc',
-    note: '',
+    tx_type: 'swap',
+    symbol: 'BNB',
+    amount: 10,
+    price: 320,
+    total: 3200,
+    fee: 0.005,
+    fee_coin: 'BNB',
+    tx_hash: '0xbsc123456abc',
+    timestamp: iso(5 * DAY),
   },
   {
-    id: 'tx-009',
-    type: 'transfer',
-    timestamp: now - 6 * DAY,
-    from: { symbol: 'SOL', amount: 50 },
-    to: { symbol: 'SOL', amount: 50 },
-    fee: { amount: 0.00025, currency: 'SOL' },
-    chain: 'SOL',
+    id: 9,
     source: 'Solana',
-    sourceType: 'blockchain',
-    txHash: '5vSol...abc123',
-    note: '转移到冷钱包',
+    tx_type: 'transfer',
+    symbol: 'SOL',
+    amount: 50,
+    price: 150,
+    total: 7500,
+    fee: 0.00025,
+    fee_coin: 'SOL',
+    tx_hash: '5vSolabc123',
+    timestamp: iso(6 * DAY),
   },
   // === 更多 CEX 交易 ===
   {
-    id: 'tx-010',
-    type: 'buy',
-    timestamp: now - 7 * DAY,
-    from: { symbol: 'USDC', amount: 3000 },
-    to: { symbol: 'ETH', amount: 1.3 },
-    fee: { amount: 3.0, currency: 'USDC' },
-    chain: null,
+    id: 10,
     source: 'Coinbase',
-    sourceType: 'cex',
-    txHash: null,
-    note: '',
+    tx_type: 'buy',
+    symbol: 'ETH',
+    amount: 1.3,
+    price: 2307.69,
+    total: 3000,
+    fee: 3.0,
+    fee_coin: 'USDC',
+    tx_hash: '',
+    timestamp: iso(7 * DAY),
   },
   {
-    id: 'tx-011',
-    type: 'sell',
-    timestamp: now - 8 * DAY,
-    from: { symbol: 'BTC', amount: 0.1 },
-    to: { symbol: 'USDC', amount: 9600 },
-    fee: { amount: 9.6, currency: 'USDC' },
-    chain: null,
+    id: 11,
     source: 'Binance',
-    sourceType: 'cex',
-    txHash: null,
-    note: '',
+    tx_type: 'sell',
+    symbol: 'BTC',
+    amount: 0.1,
+    price: 96000,
+    total: 9600,
+    fee: 9.6,
+    fee_coin: 'USDC',
+    tx_hash: '',
+    timestamp: iso(8 * DAY),
   },
   {
-    id: 'tx-012',
-    type: 'swap',
-    timestamp: now - 10 * DAY,
-    from: { symbol: 'USDC', amount: 5000 },
-    to: { symbol: 'USDT', amount: 4998 },
-    fee: { amount: 0.001, currency: 'ETH' },
-    chain: 'ETH',
+    id: 12,
     source: 'Curve',
-    sourceType: 'blockchain',
-    txHash: '0xcurve...abc123',
-    note: '稳定币兑换',
+    tx_type: 'swap',
+    symbol: 'USDC',
+    amount: 5000,
+    price: 1,
+    total: 5000,
+    fee: 0.001,
+    fee_coin: 'ETH',
+    tx_hash: '0xcurveabc123',
+    timestamp: iso(10 * DAY),
   },
   {
-    id: 'tx-013',
-    type: 'buy',
-    timestamp: now - 12 * DAY,
-    from: { symbol: 'USDC', amount: 800 },
-    to: { symbol: 'MATIC', amount: 1000 },
-    fee: { amount: 0.8, currency: 'USDC' },
-    chain: null,
+    id: 13,
     source: 'Binance',
-    sourceType: 'cex',
-    txHash: null,
-    note: '',
+    tx_type: 'buy',
+    symbol: 'MATIC',
+    amount: 1000,
+    price: 0.8,
+    total: 800,
+    fee: 0.8,
+    fee_coin: 'USDC',
+    tx_hash: '',
+    timestamp: iso(12 * DAY),
   },
   {
-    id: 'tx-014',
-    type: 'withdraw',
-    timestamp: now - 15 * DAY,
-    from: { symbol: 'USDC', amount: 3000 },
-    to: { symbol: 'USDC', amount: 3000 },
-    fee: { amount: 1.0, currency: 'USDC' },
-    chain: 'ETH',
+    id: 14,
     source: 'Binance',
-    sourceType: 'cex',
-    txHash: '0xwithdraw...abc',
-    note: '提现到 DeFi',
+    tx_type: 'withdraw',
+    symbol: 'USDC',
+    amount: 3000,
+    price: 1,
+    total: 3000,
+    fee: 1.0,
+    fee_coin: 'USDC',
+    tx_hash: '0xwithdrawabc',
+    timestamp: iso(15 * DAY),
   },
   {
-    id: 'tx-015',
-    type: 'transfer',
-    timestamp: now - 20 * DAY,
-    from: { symbol: 'BTC', amount: 0.05 },
-    to: { symbol: 'BTC', amount: 0.05 },
-    fee: { amount: 0.00005, currency: 'BTC' },
-    chain: 'BTC',
+    id: 15,
     source: 'Bitcoin',
-    sourceType: 'blockchain',
-    txHash: 'bc1qxy2...abc',
-    note: '转入冷钱包',
+    tx_type: 'transfer',
+    symbol: 'BTC',
+    amount: 0.05,
+    price: 96000,
+    total: 4800,
+    fee: 0.00005,
+    fee_coin: 'BTC',
+    tx_hash: 'bc1qxy2abc',
+    timestamp: iso(20 * DAY),
   },
-  // === 手动记录 ===
   {
-    id: 'tx-016',
-    type: 'buy',
-    timestamp: now - 25 * DAY,
-    from: { symbol: 'CNY', amount: 50000 },
-    to: { symbol: 'USDC', amount: 7000 },
-    fee: { amount: 0, currency: 'CNY' },
-    chain: null,
+    id: 16,
     source: '手动记录',
-    sourceType: 'manual',
-    txHash: null,
-    note: '场外购入 USDC',
+    tx_type: 'buy',
+    symbol: 'USDC',
+    amount: 7000,
+    price: 7.14,
+    total: 50000,
+    fee: 0,
+    fee_coin: 'CNY',
+    tx_hash: '',
+    timestamp: iso(25 * DAY),
   },
 ]
 
 /**
  * 获取交易记录（支持筛选和分页）
- * @param {Object} options - 筛选选项
- * @returns {Object} 分页结果
+ * 返回格式与后端保持一致：{ transactions, total, page, page_size }
  */
 export function getTransactions(options = {}) {
   const {
@@ -242,19 +240,27 @@ export function getTransactions(options = {}) {
 
   // 按类型筛选
   if (type !== 'all') {
-    filtered = filtered.filter(tx => tx.type === type)
+    filtered = filtered.filter(tx => tx.tx_type === type)
   }
 
-  // 按来源类型筛选
+  // 按来源类型筛选（mock 中通过 source 名称判断）
   if (sourceType !== 'all') {
-    filtered = filtered.filter(tx => tx.sourceType === sourceType)
+    const cexSources = ['Binance', 'OKX', 'Coinbase', 'Bybit', 'Kraken']
+    const blockchainSources = ['Ethereum', 'Uniswap', 'PancakeSwap', 'Curve', 'Solana', 'Bitcoin']
+    if (sourceType === 'cex') {
+      filtered = filtered.filter(tx => cexSources.includes(tx.source))
+    } else if (sourceType === 'blockchain') {
+      filtered = filtered.filter(tx => blockchainSources.includes(tx.source))
+    } else if (sourceType === 'manual') {
+      filtered = filtered.filter(tx => !cexSources.includes(tx.source) && !blockchainSources.includes(tx.source))
+    }
   }
 
   // 按时间范围筛选
   if (timeRange !== 'all') {
     const days = parseInt(timeRange)
     if (!isNaN(days)) {
-      const cutoff = now - days * DAY
+      const cutoff = new Date(Date.now() - days * DAY).toISOString()
       filtered = filtered.filter(tx => tx.timestamp >= cutoff)
     }
   }
@@ -263,21 +269,18 @@ export function getTransactions(options = {}) {
   if (search) {
     const q = search.toLowerCase()
     filtered = filtered.filter(tx =>
-      tx.from.symbol.toLowerCase().includes(q) ||
-      tx.to.symbol.toLowerCase().includes(q) ||
-      tx.source.toLowerCase().includes(q) ||
-      (tx.note && tx.note.toLowerCase().includes(q))
+      tx.symbol.toLowerCase().includes(q) ||
+      tx.source.toLowerCase().includes(q)
     )
   }
 
   // 按时间降序排序
-  filtered.sort((a, b) => b.timestamp - a.timestamp)
+  filtered.sort((a, b) => b.timestamp.localeCompare(a.timestamp))
 
   // 分页
   const total = filtered.length
-  const totalPages = Math.ceil(total / pageSize)
   const start = (page - 1) * pageSize
-  const items = filtered.slice(start, start + pageSize)
+  const transactions = filtered.slice(start, start + pageSize)
 
-  return { items, total, totalPages, page }
+  return { transactions, total, page, page_size: pageSize }
 }

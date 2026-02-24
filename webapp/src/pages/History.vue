@@ -360,67 +360,8 @@ const heatmapData = computed(() => {
   return result
 })
 
-// 历史资金变化记录（模拟数据）
-// 不按事件类型分类，只记录资金快照的变化
-const historyRecords = ref([
-  {
-    id: 1,
-    source: 'CEX',
-    sourceName: 'Binance',
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    changes: [
-      { action: 'increase', asset: 'BTC', amount: 3.12 },
-      { action: 'decrease', asset: 'USDT', amount: 32876 }
-    ]
-  },
-  {
-    id: 2,
-    source: 'Blockchain',
-    sourceName: 'MetaMask',
-    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-    changes: [
-      { action: 'decrease', asset: 'ETH', amount: 2.5 }
-    ]
-  },
-  {
-    id: 3,
-    source: 'CEX',
-    sourceName: 'OKX',
-    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    changes: [
-      { action: 'increase', asset: 'SOL', amount: 150 },
-      { action: 'decrease', asset: 'USDC', amount: 3200 }
-    ]
-  },
-  {
-    id: 4,
-    source: 'Manual',
-    sourceName: '工资卡',
-    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    changes: [
-      { action: 'increase', asset: 'CNY', amount: 15000 }
-    ]
-  },
-  {
-    id: 5,
-    source: 'CEX',
-    sourceName: 'Binance',
-    timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    changes: [
-      { action: 'increase', asset: 'ETH', amount: 8.5 },
-      { action: 'decrease', asset: 'USDT', amount: 18500 }
-    ]
-  },
-  {
-    id: 6,
-    source: 'Blockchain',
-    sourceName: '冷钱包',
-    timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    changes: [
-      { action: 'increase', asset: 'BTC', amount: 0.25 }
-    ]
-  }
-])
+// 历史资金变化记录（暂无真实数据源，待后端实现后接入）
+const historyRecords = ref([])
 
 // 过滤后的记录：选中日期时只显示当天记录
 const filteredRecords = computed(() => {

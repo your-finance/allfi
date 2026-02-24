@@ -31,7 +31,7 @@ const typeConfig = {
   withdraw: { icon: PhUploadSimple, color: '#EF4444', labelKey: 'transaction.typeWithdraw' },
 }
 
-const config = typeConfig[props.tx.type] || typeConfig.transfer
+const config = typeConfig[props.tx.tx_type] || typeConfig.transfer
 
 // 格式化时间（HH:MM）
 const formatTime = (ts) => {
@@ -39,18 +39,12 @@ const formatTime = (ts) => {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-// 区块浏览器链接
+// 区块浏览器链接（通过 tx_hash 前缀判断链）
 const explorerUrl = (tx) => {
-  if (!tx.txHash || !tx.chain) return null
-  const explorers = {
-    ETH: 'https://etherscan.io/tx/',
-    BSC: 'https://bscscan.com/tx/',
-    SOL: 'https://solscan.io/tx/',
-    MATIC: 'https://polygonscan.com/tx/',
-    BTC: 'https://mempool.space/tx/',
-  }
-  const base = explorers[tx.chain]
-  return base ? `${base}${tx.txHash}` : null
+  if (!tx.tx_hash) return null
+  if (tx.tx_hash.startsWith('0x')) return `https://etherscan.io/tx/${tx.tx_hash}`
+  if (tx.tx_hash.startsWith('bc1') || tx.tx_hash.match(/^[13][a-zA-Z0-9]{25,34}$/)) return `https://mempool.space/tx/${tx.tx_hash}`
+  return null
 }
 </script>
 
@@ -77,26 +71,19 @@ const explorerUrl = (tx) => {
       <div class="tx-row-bottom">
         <!-- 资产变动 -->
         <div class="tx-amounts font-mono">
-          <span v-if="tx.type === 'transfer'" class="tx-amount">
-            {{ formatNumber(tx.from.amount, 4) }} {{ tx.from.symbol }}
-          </span>
-          <template v-else>
-            <span class="tx-amount-from">-{{ formatNumber(tx.from.amount, 4) }} {{ tx.from.symbol }}</span>
-            <span class="tx-arrow">&rarr;</span>
-            <span class="tx-amount-to">+{{ formatNumber(tx.to.amount, 4) }} {{ tx.to.symbol }}</span>
-          </template>
+          <span class="tx-amount">{{ formatNumber(tx.amount, 4) }} {{ tx.symbol }}</span>
+          <span class="tx-arrow">&asymp;</span>
+          <span class="tx-amount-to">{{ formatNumber(tx.total, 2) }} USD</span>
         </div>
         <!-- 手续费 -->
-        <div class="tx-fee font-mono" v-if="tx.fee && tx.fee.amount > 0">
-          {{ t('transaction.fee') }}: {{ formatNumber(tx.fee.amount, 6) }} {{ tx.fee.currency }}
+        <div class="tx-fee font-mono" v-if="tx.fee > 0">
+          {{ t('transaction.fee') }}: {{ formatNumber(tx.fee, 6) }} {{ tx.fee_coin }}
         </div>
       </div>
 
-      <!-- 备注 / 区块浏览器链接 -->
-      <div v-if="tx.note || explorerUrl(tx)" class="tx-row-extra">
-        <span v-if="tx.note" class="tx-note">{{ tx.note }}</span>
+      <!-- 区块浏览器链接 -->
+      <div v-if="explorerUrl(tx)" class="tx-row-extra">
         <a
-          v-if="explorerUrl(tx)"
           :href="explorerUrl(tx)"
           target="_blank"
           rel="noopener noreferrer"
