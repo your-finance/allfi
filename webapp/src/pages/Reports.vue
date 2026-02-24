@@ -50,6 +50,7 @@ const showAnnualReport = ref(false)
 const showAnnualShare = ref(false)
 const annualReportData = ref(null)
 const selectedYear = ref(new Date().getFullYear() - 1)
+const hasAnnualReport = ref(false) // 是否有年度报告数据
 
 const openAnnualReport = async () => {
   showAnnualReport.value = true
@@ -238,9 +239,16 @@ const monthLabel = (val) => {
   return opt ? opt.label : val
 }
 
-onMounted(() => {
+onMounted(async () => {
   loadReports()
   initCompareMonths()
+  // 检查是否有年度报告数据
+  try {
+    const data = await annualReportService.getAnnualReport(selectedYear.value)
+    hasAnnualReport.value = !!(data && data.report)
+  } catch (e) {
+    hasAnnualReport.value = false
+  }
 })
 </script>
 
@@ -318,7 +326,7 @@ onMounted(() => {
       </div>
 
       <!-- 年度报告入口 -->
-      <section class="annual-entry">
+      <section v-if="hasAnnualReport" class="annual-entry">
         <div class="annual-card" @click="openAnnualReport">
           <PhBookOpenText :size="24" class="annual-icon" />
           <div class="annual-info">
