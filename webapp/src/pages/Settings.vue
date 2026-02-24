@@ -392,7 +392,7 @@ const loadAPIKeys = async () => {
   apiKeyLoading.value = true
   try {
     const data = await settingsService.getAPIKeys()
-    apiKeys.value = data || []
+    apiKeys.value = data?.keys || []
   } catch {
     // 静默失败
   } finally {
