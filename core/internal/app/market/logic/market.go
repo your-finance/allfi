@@ -28,8 +28,8 @@ type chainGasCache struct {
 // sMarket 市场数据服务实现
 type sMarket struct {
 	// Gas 价格缓存（避免频繁调用 API），按链名索引
-	gasCacheMu sync.RWMutex
-	gasCache   map[string]*chainGasCache
+	gasCacheMu  sync.RWMutex
+	gasCache    map[string]*chainGasCache
 	gasCacheTTL time.Duration
 }
 
@@ -166,10 +166,18 @@ func (s *sMarket) getChainGasPrice(ctx context.Context, chainName string, envKey
 	if gasPrice == nil {
 		rpcPrice, err := etherscan.GetGasPriceViaRPC(ctx, chainName)
 		if err != nil {
-			g.Log().Warning(ctx, "公共 RPC 获取 Gas 价格也失败",
-				"chain", chainName,
-				"error", err,
-			)
+			config, ok := etherscan.SupportedChains[chainName]
+			if !ok || config.PublicRPC == "" {
+				// 如果没有配置相关 API Key，且也没有相关免费的 RPC 配置，则不再报错
+				g.Log().Debug(ctx, "未配置相关的 API Key，且无免费的公共 RPC 端点，因此跳过 RPC 查询",
+					"chain", chainName,
+				)
+			} else {
+				g.Log().Warning(ctx, "公共 RPC 获取 Gas 价格也失败",
+					"chain", chainName,
+					"error", err,
+				)
+			}
 
 			// 都失败时返回过期缓存
 			s.gasCacheMu.RLock()

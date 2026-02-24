@@ -17,6 +17,6 @@ var SupportedChains = map[string]ChainConfig{
 	"bsc":      {Name: "bsc", BaseURL: "https://api.bscscan.com/api", NativeSymbol: "BNB", RateLimitKey: "bscscan", PublicRPC: "https://bsc-dataseed.binance.org"},
 	"arbitrum": {Name: "arbitrum", BaseURL: "https://api.arbiscan.io/api", NativeSymbol: "ETH", RateLimitKey: "arbiscan", PublicRPC: "https://arb1.arbitrum.io/rpc"},
 	"optimism": {Name: "optimism", BaseURL: "https://api-optimistic.etherscan.io/api", NativeSymbol: "ETH", RateLimitKey: "optimism", PublicRPC: "https://mainnet.optimism.io"},
-	"polygon":  {Name: "polygon", BaseURL: "https://api.polygonscan.com/api", NativeSymbol: "MATIC", RateLimitKey: "polygonscan", PublicRPC: "https://polygon-rpc.com"},
+	"polygon":  {Name: "polygon", BaseURL: "https://api.polygonscan.com/api", NativeSymbol: "MATIC", RateLimitKey: "polygonscan", PublicRPC: ""},
 	"base":     {Name: "base", BaseURL: "https://api.basescan.org/api", NativeSymbol: "ETH", RateLimitKey: "basescan", PublicRPC: "https://mainnet.base.org"},
 }
