@@ -31,6 +31,7 @@ var apiKeyProviders = []struct {
 	{"etherscan", "Etherscan", "以太坊区块链浏览器 API（余额查询、Gas 价格、交易记录）", "ETHERSCAN_API_KEY"},
 	{"bscscan", "BscScan", "BSC 区块链浏览器 API（余额查询、Gas 价格、交易记录）", "BSCSCAN_API_KEY"},
 	{"coingecko", "CoinGecko", "加密货币价格 API（可选，免费 API 无需 Key）", "COINGECKO_API_KEY"},
+	{"yahoofinance", "Yahoo Finance", "汇率查询 API（可选，免费 API 无需 Key）", "YAHOO_FINANCE_API_KEY"},
 }
 
 // getMasterKey 获取加密主密钥
