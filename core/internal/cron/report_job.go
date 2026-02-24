@@ -9,7 +9,9 @@ import (
 
 	"github.com/gogf/gf/v2/frame/g"
 
+	assetDao "your-finance/allfi/internal/app/asset/dao"
 	reportService "your-finance/allfi/internal/app/report/service"
+	"your-finance/allfi/internal/consts"
 )
 
 // ReportJob 报告定时任务
@@ -89,6 +91,21 @@ func (j *ReportJob) run() {
 func (j *ReportJob) execute() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
+
+	// 先检查用户是否有资产，没有资产则跳过报告生成
+	userID := consts.GetUserID(ctx)
+	count, err := assetDao.AssetDetails.Ctx(ctx).
+		Where(assetDao.AssetDetails.Columns().UserId, userID).
+		WhereGT(assetDao.AssetDetails.Columns().ValueUsd, 0).
+		Count()
+	if err != nil {
+		g.Log().Debugf(ctx, "[Cron] 检查用户资产失败: %v", err)
+		return
+	}
+	if count == 0 {
+		// 没有资产，跳过报告生成（静默，不需要打日志）
+		return
+	}
 
 	now := time.Now()
 
