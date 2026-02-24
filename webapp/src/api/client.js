@@ -77,7 +77,7 @@ async function request(endpoint, options = {}) {
       localStorage.removeItem('allfi-auth')
       // 非认证接口收到 401 时跳转登录页
       if (!endpoint.startsWith('/auth/')) {
-        window.location.href = '/login'
+        window.dispatchEvent(new CustomEvent('auth-expired'))
       }
       throw new ApiError(1005, data.message || '认证已过期，请重新登录')
     }

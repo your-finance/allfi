@@ -97,3 +97,5 @@ docs/plans/
 updater/allfi-updater
 webapp/.github/prompts/ui-ux-pro-max.prompt.md
 dark-finance-crypto-dashboard-ui-design.png
+allfi-docker/
+*db-journal

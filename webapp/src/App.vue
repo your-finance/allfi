@@ -129,6 +129,13 @@ const navItems = computed(() => [
   { path: '/settings', labelKey: 'nav.settings', icon: PhGear }
 ])
 
+const handleAuthExpired = () => {
+  if (!['/login', '/register', '/2fa'].includes(route.path)) {
+    authStore.logout()
+    router.push('/login')
+  }
+}
+
 // 全局快捷键：Cmd/Ctrl+K 命令面板，Cmd/Ctrl+H 隐私模式，Cmd/Ctrl+B 侧边栏切换
 const handleGlobalKeydown = (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -149,26 +156,51 @@ const handleGlobalKeydown = (e) => {
 onMounted(async () => {
   themeStore.initTheme()
   authStore.restoreSession()
-  await assetStore.loadSummary()
-  notifStore.initialize()
   document.addEventListener('click', handleClickOutside)
   document.addEventListener('keydown', handleGlobalKeydown)
   window.addEventListener('resize', handleResize)
+  window.addEventListener('auth-expired', handleAuthExpired)
 
-  // 加载 Gas 价格并定时刷新（每 30 秒）
-  loadGasPrice()
-  gasRefreshTimer = setInterval(loadGasPrice, 30000)
+  // 初始化需授权的业务数据
+  const initAppData = async () => {
+    notifStore.initialize()
+    await assetStore.loadSummary()
+    loadGasPrice()
+    if (!gasRefreshTimer) {
+      gasRefreshTimer = setInterval(loadGasPrice, 30000)
+    }
+    systemStore.loadVersion()
+    systemStore.checkForUpdate()
+    systemStore.startAutoCheck()
+  }
 
-  // 加载版本信息并自动检查更新
-  systemStore.loadVersion()
-  systemStore.checkForUpdate()
-  systemStore.startAutoCheck()
+  // 清理业务定时器
+  const clearAppData = () => {
+    if (gasRefreshTimer) {
+      clearInterval(gasRefreshTimer)
+      gasRefreshTimer = null
+    }
+    systemStore.stopAutoCheck()
+  }
+
+  if (authStore.isLoggedIn) {
+    initAppData()
+  }
+
+  watch(() => authStore.isLoggedIn, (newVal) => {
+    if (newVal) {
+      initAppData()
+    } else {
+      clearAppData()
+    }
+  })
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
   document.removeEventListener('keydown', handleGlobalKeydown)
   window.removeEventListener('resize', handleResize)
+  window.removeEventListener('auth-expired', handleAuthExpired)
   if (gasRefreshTimer) clearInterval(gasRefreshTimer)
   systemStore.stopAutoCheck()
 })
