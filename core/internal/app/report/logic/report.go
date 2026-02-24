@@ -9,6 +9,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
@@ -116,7 +117,7 @@ func (s *sReport) GenerateReport(ctx context.Context, reportType string) (*repor
 		return nil, checkErr
 	}
 	if !hasAssets {
-		return nil, gerror.New("您还没有添加任何资产，请先添加资产后再生成报告")
+		return nil, gerror.NewCode(gcode.New(4001, "", nil), "您还没有添加任何资产，请先添加资产后再生成报告")
 	}
 
 	var report *entity.Reports
@@ -327,7 +328,15 @@ func (s *sReport) generateDailyReport(ctx context.Context, userID int) (*entity.
 		GeneratedAt:   gtime.Now().Time,
 	}
 
-	result, err := dao.Reports.Ctx(ctx).Insert(report)
+	result, err := dao.Reports.Ctx(ctx).Data(g.Map{
+		dao.Reports.Columns().UserId:        report.UserId,
+		dao.Reports.Columns().Type:          report.Type,
+		dao.Reports.Columns().Period:        report.Period,
+		dao.Reports.Columns().TotalValue:    report.TotalValue,
+		dao.Reports.Columns().Change:        report.Change,
+		dao.Reports.Columns().ChangePercent: report.ChangePercent,
+		dao.Reports.Columns().GeneratedAt:   report.GeneratedAt,
+	}).Insert()
 	if err != nil {
 		return nil, gerror.Wrap(err, "保存日报失败")
 	}
@@ -418,7 +427,15 @@ func (s *sReport) generateWeeklyReport(ctx context.Context, userID int) (*entity
 		GeneratedAt:   gtime.Now().Time,
 	}
 
-	result, err := dao.Reports.Ctx(ctx).Insert(report)
+	result, err := dao.Reports.Ctx(ctx).Data(g.Map{
+		dao.Reports.Columns().UserId:        report.UserId,
+		dao.Reports.Columns().Type:          report.Type,
+		dao.Reports.Columns().Period:        report.Period,
+		dao.Reports.Columns().TotalValue:    report.TotalValue,
+		dao.Reports.Columns().Change:        report.Change,
+		dao.Reports.Columns().ChangePercent: report.ChangePercent,
+		dao.Reports.Columns().GeneratedAt:   report.GeneratedAt,
+	}).Insert()
 	if err != nil {
 		return nil, gerror.Wrap(err, "保存周报失败")
 	}
@@ -527,7 +544,18 @@ func (s *sReport) generateMonthlyReport(ctx context.Context, userID int, month s
 		GeneratedAt:   gtime.Now().Time,
 	}
 
-	result, err := dao.Reports.Ctx(ctx).Insert(report)
+	result, err := dao.Reports.Ctx(ctx).Data(g.Map{
+		dao.Reports.Columns().UserId:        report.UserId,
+		dao.Reports.Columns().Type:          report.Type,
+		dao.Reports.Columns().Period:        report.Period,
+		dao.Reports.Columns().TotalValue:    report.TotalValue,
+		dao.Reports.Columns().Change:        report.Change,
+		dao.Reports.Columns().ChangePercent: report.ChangePercent,
+		dao.Reports.Columns().TopGainers:    report.TopGainers,
+		dao.Reports.Columns().TopLosers:     report.TopLosers,
+		dao.Reports.Columns().Content:       report.Content,
+		dao.Reports.Columns().GeneratedAt:   report.GeneratedAt,
+	}).Insert()
 	if err != nil {
 		return nil, gerror.Wrap(err, "保存月报失败")
 	}
@@ -636,7 +664,18 @@ func (s *sReport) generateAnnualReport(ctx context.Context, userID int, year str
 		GeneratedAt:   gtime.Now().Time,
 	}
 
-	result, err := dao.Reports.Ctx(ctx).Insert(report)
+	result, err := dao.Reports.Ctx(ctx).Data(g.Map{
+		dao.Reports.Columns().UserId:        report.UserId,
+		dao.Reports.Columns().Type:          report.Type,
+		dao.Reports.Columns().Period:        report.Period,
+		dao.Reports.Columns().TotalValue:    report.TotalValue,
+		dao.Reports.Columns().Change:        report.Change,
+		dao.Reports.Columns().ChangePercent: report.ChangePercent,
+		dao.Reports.Columns().TopGainers:    report.TopGainers,
+		dao.Reports.Columns().TopLosers:     report.TopLosers,
+		dao.Reports.Columns().Content:       report.Content,
+		dao.Reports.Columns().GeneratedAt:   report.GeneratedAt,
+	}).Insert()
 	if err != nil {
 		return nil, gerror.Wrap(err, "保存年报失败")
 	}
