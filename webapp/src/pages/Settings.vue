@@ -389,24 +389,14 @@ const editingKey = ref('')
 
 // 加载 API Key 列表
 const loadAPIKeys = async () => {
-  console.log('[Settings] loadAPIKeys called')
   apiKeyLoading.value = true
   try {
-    console.log('[Settings] Calling settingsService.getAPIKeys()')
     const data = await settingsService.getAPIKeys()
-    console.log('[Settings] API Keys raw response:', JSON.stringify(data, null, 2))
-    console.log('[Settings] data?.keys:', data?.keys)
-    console.log('[Settings] Array.isArray(data?.keys):', Array.isArray(data?.keys))
     apiKeys.value = data?.keys || []
-    console.log('[Settings] apiKeys.value after assignment:', JSON.stringify(apiKeys.value, null, 2))
-    console.log('[Settings] apiKeys.value.length:', apiKeys.value.length)
-  } catch (err) {
-    console.error('[Settings] Failed to load API Keys:', err)
-    console.error('[Settings] Error stack:', err.stack)
+  } catch {
     // 静默失败
   } finally {
     apiKeyLoading.value = false
-    console.log('[Settings] loadAPIKeys finished, apiKeyLoading:', apiKeyLoading.value)
   }
 }
 
