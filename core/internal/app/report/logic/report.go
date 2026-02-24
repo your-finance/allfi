@@ -172,7 +172,9 @@ func (s *sReport) GetMonthlyReport(ctx context.Context, month string) (*reportAp
 	// 生成月报
 	report, err := s.generateMonthlyReport(ctx, userID, month)
 	if err != nil {
-		return nil, err
+		// 如果是没有数据的错误，返回 nil 而不是错误
+		g.Log().Info(ctx, "无法生成月度报告", "month", month, "error", err.Error())
+		return &reportApi.GetMonthlyRes{Report: nil}, nil
 	}
 
 	var content interface{}
@@ -224,7 +226,9 @@ func (s *sReport) GetAnnualReport(ctx context.Context, year string) (*reportApi.
 	// 生成年报
 	report, err := s.generateAnnualReport(ctx, userID, year)
 	if err != nil {
-		return nil, err
+		// 如果是没有数据的错误，返回 nil 而不是错误
+		g.Log().Info(ctx, "无法生成年度报告", "year", year, "error", err.Error())
+		return &reportApi.GetAnnualRes{Report: nil}, nil
 	}
 
 	var content interface{}

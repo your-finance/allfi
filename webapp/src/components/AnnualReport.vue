@@ -169,9 +169,18 @@ onMounted(async () => {
   document.addEventListener('keydown', handleKeydown)
   isLoading.value = true
   try {
-    report.value = await annualReportService.getAnnualReport(props.year)
+    const data = await annualReportService.getAnnualReport(props.year)
+    // 如果后端返回 null 或空数据，说明没有报告
+    if (data && data.report) {
+      report.value = data.report
+    } else {
+      report.value = null
+      emit('close') // 自动关闭弹窗
+    }
   } catch (e) {
     console.error('加载年度报告失败:', e)
+    report.value = null
+    emit('close') // 出错时也关闭弹窗
   } finally {
     isLoading.value = false
   }
