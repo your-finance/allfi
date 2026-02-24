@@ -110,6 +110,15 @@ func (s *sReport) GetReport(ctx context.Context, id uint) (*reportApi.GetRes, er
 func (s *sReport) GenerateReport(ctx context.Context, reportType string) (*reportApi.GenerateRes, error) {
 	userID := consts.GetUserID(ctx)
 
+	// 检查用户是否有资产
+	hasAssets, checkErr := s.checkUserHasAssets(ctx, userID)
+	if checkErr != nil {
+		return nil, checkErr
+	}
+	if !hasAssets {
+		return nil, gerror.New("您还没有添加任何资产，请先添加资产后再生成报告")
+	}
+
 	var report *entity.Reports
 	var err error
 
@@ -798,4 +807,17 @@ func toReportSummary(r *entity.Reports) reportApi.ReportSummary {
 		PnLPercent: float64(r.ChangePercent),
 		CreatedAt:  r.GeneratedAt.Format("2006-01-02 15:04:05"),
 	}
+}
+
+// checkUserHasAssets 检查用户是否有资产
+// 返回 true 表示有资产，false 表示没有资产
+func (s *sReport) checkUserHasAssets(ctx context.Context, userID int) (bool, error) {
+	count, err := assetDao.AssetDetails.Ctx(ctx).
+		Where(assetDao.AssetDetails.Columns().UserId, userID).
+		WhereGT(assetDao.AssetDetails.Columns().ValueUsd, 0).
+		Count()
+	if err != nil {
+		return false, gerror.Wrap(err, "检查资产失败")
+	}
+	return count > 0, nil
 }

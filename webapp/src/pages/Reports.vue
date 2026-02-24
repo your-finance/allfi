@@ -30,11 +30,13 @@ import { reportService } from '../api/index.js'
 import { annualReportService } from '../api/annualReportService.js'
 import { useFormatters } from '../composables/useFormatters'
 import { useI18n } from '../composables/useI18n'
+import { useToast } from '../composables/useToast.js'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler)
 
 const { currencySymbol, formatNumber, formatPercent } = useFormatters()
 const { t } = useI18n()
+const { showToast } = useToast()
 
 // 当前标签页
 const activeTab = ref('timeline') // timeline | monthly | compare
@@ -93,8 +95,12 @@ const generateReport = async (type) => {
     // 后端返回 { report: {...} }
     const report = result.report || result
     reports.value.unshift(report)
+    showToast('报告生成成功', 'success')
   } catch (e) {
     console.error('生成报告失败:', e)
+    // 显示错误提示
+    const errorMsg = e.message || e.data?.message || '生成报告失败'
+    showToast(errorMsg, 'error', 5000)
   } finally {
     generating.value = false
   }
