@@ -67,8 +67,15 @@ async function request(endpoint, options = {}) {
     const response = await fetch(url, config)
     clearTimeout(timeoutId)
 
-    // 解析响应
-    const data = await response.json()
+    // 安全解析响应 JSON（处理服务器返回非 JSON 的情况，如纯文本 500）
+    let data
+    try {
+      data = await response.json()
+    } catch (parseError) {
+      // 服务器返回了非 JSON 响应（如纯文本 "Internal Server Error"）
+      const statusText = response.statusText || `HTTP ${response.status}`
+      throw new ApiError(response.status, `服务器错误: ${statusText}`)
+    }
 
     // 处理 401 未授权（Token 过期或无效）
     // 需要同时检查 HTTP 状态码和响应体中的 code 字段
