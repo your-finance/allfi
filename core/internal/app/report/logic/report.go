@@ -327,7 +327,7 @@ func (s *sReport) generateDailyReport(ctx context.Context, userID int) (*entity.
 		GeneratedAt:   gtime.Now().Time,
 	}
 
-	result, err := dao.Reports.Ctx(ctx).OmitEmpty().Insert(report)
+	result, err := dao.Reports.Ctx(ctx).Insert(report)
 	if err != nil {
 		return nil, gerror.Wrap(err, "保存日报失败")
 	}
@@ -418,7 +418,7 @@ func (s *sReport) generateWeeklyReport(ctx context.Context, userID int) (*entity
 		GeneratedAt:   gtime.Now().Time,
 	}
 
-	result, err := dao.Reports.Ctx(ctx).OmitEmpty().Insert(report)
+	result, err := dao.Reports.Ctx(ctx).Insert(report)
 	if err != nil {
 		return nil, gerror.Wrap(err, "保存周报失败")
 	}
@@ -527,7 +527,7 @@ func (s *sReport) generateMonthlyReport(ctx context.Context, userID int, month s
 		GeneratedAt:   gtime.Now().Time,
 	}
 
-	result, err := dao.Reports.Ctx(ctx).OmitEmpty().Insert(report)
+	result, err := dao.Reports.Ctx(ctx).Insert(report)
 	if err != nil {
 		return nil, gerror.Wrap(err, "保存月报失败")
 	}
@@ -636,7 +636,7 @@ func (s *sReport) generateAnnualReport(ctx context.Context, userID int, year str
 		GeneratedAt:   gtime.Now().Time,
 	}
 
-	result, err := dao.Reports.Ctx(ctx).OmitEmpty().Insert(report)
+	result, err := dao.Reports.Ctx(ctx).Insert(report)
 	if err != nil {
 		return nil, gerror.Wrap(err, "保存年报失败")
 	}
