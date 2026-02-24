@@ -1,6 +1,8 @@
 # AllFi — All-Asset Aggregation Platform
 
-> A personal asset dashboard for Web3 professionals — one page, multiple currencies, full picture.
+> A personal asset dashboard curated for Web3 professionals.
+> 
+> "Hitting a new ATH in BTC-margin every day feels exciting yet painful?" — Break free from the pricing illusion caused by BTC dumps! Switch seamlessly between multiple base currencies (USDC / BTC / ETH / Fiat) with a single click to pierce through the market fog and reveal the true picture of your portfolio.
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Go Version](https://img.shields.io/badge/go-%3E%3D1.24-blue.svg)](https://golang.org/)
@@ -43,6 +45,80 @@ All data is stored locally. API keys are encrypted with AES-256-GCM and never le
 | Themes | 4 professional financial themes (3 dark + 1 light) |
 | Languages | Simplified Chinese / Traditional Chinese / English |
 | PWA | Add to home screen, works offline |
+
+---
+
+## Interface Preview
+
+### Asset Dashboard (Nexus Pro Theme)
+
+![Asset Dashboard](resource/02-dashboard-viewport.png)
+
+> Aggregate CEX + On-chain + DeFi + Traditional assets in one screen. Real-time total assets, today's PnL, trends, and distribution pie charts.
+
+### Core Pages
+
+<table>
+  <tr valign="top">
+    <td width="50%">
+      <img src="resource/06-accounts.png" alt="Accounts Management">
+      <br><b>Accounts Management</b> — Tagged management for CEX / On-chain / DeFi / NFT / Traditional
+    </td>
+    <td width="50%">
+      <img src="resource/15-reports-annual.png" alt="Asset Reports">
+      <br><b>Asset Reports</b> — Auto-generated daily / weekly / monthly / annual reports
+    </td>
+  </tr>
+  <tr valign="top">
+    <td width="50%">
+      <img src="resource/12-history-transactions.png" alt="Transaction History">
+      <br><b>Transaction History</b> — Unified CEX + on-chain records with robust filtering
+    </td>
+    <td width="50%">
+      <img src="resource/13-analytics.png" alt="Analytics">
+      <br><b>Analytics</b> — Daily PnL, fee analysis, attribution, and benchmark tracking
+    </td>
+  </tr>
+</table>
+
+### Dashboard Details
+
+<table>
+  <tr valign="top">
+    <td width="33%"><img src="resource/03-dashboard-health-score.png" alt="Health Score"><br><b>Portfolio Health</b> — Cash buffers, concentration limits, platform diversity, volatility</td>
+    <td width="33%"><img src="resource/04-dashboard-nft-fees.png" alt="NFT & Fees"><br><b>NFTs & Fee Tracking</b> — Collection valuations, gas fee spending, cost-saving insights</td>
+    <td width="33%"><img src="resource/05-dashboard-strategy-holdings.png" alt="Strategy & Holdings"><br><b>Strategy Engine</b> — Automated balancing policies and smart portfolio groupings</td>
+  </tr>
+</table>
+
+### 4 Professional Themes
+
+<table>
+  <tr valign="top">
+    <td width="25%"><img src="resource/02-dashboard-viewport.png" alt="Nexus Pro"><br><b>Nexus Pro</b><br>Bloomberg style, professional blue</td>
+    <td width="25%"><img src="resource/22-dashboard-vestia.png" alt="Vestia"><br><b>Vestia</b><br>GitHub dark style</td>
+    <td width="25%"><img src="resource/23-dashboard-xchange.png" alt="XChange"><br><b>XChange</b><br>Exchange style, calm green</td>
+    <td width="25%"><img src="resource/18-dashboard-aurora-light.png" alt="Aurora"><br><b>Aurora</b><br>Professional light theme</td>
+  </tr>
+</table>
+
+### Feature Highlights
+
+<table>
+  <tr valign="top">
+    <td width="50%">
+      <img src="resource/19-dashboard-privacy-mode.png" alt="Privacy Mode">
+      <br><b>Privacy Mode</b> — Ctrl+H to blur amounts ($••••), safe for screen sharing
+      <br><br>
+      <img src="resource/21-login.png" alt="PIN Login">
+      <br><b>PIN Authentication</b> — Simple and secure PIN login with bcrypt integration
+    </td>
+    <td width="50%" align="center">
+      <img src="resource/20-dashboard-mobile.png" alt="Mobile Adapted" width="260">
+      <br><b>Mobile Adapted</b> — Responsive layout + bottom nav + pull-to-refresh
+    </td>
+  </tr>
+</table>
 
 ---
 
