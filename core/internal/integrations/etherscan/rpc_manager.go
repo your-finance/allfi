@@ -65,12 +65,20 @@ func UpdateDynamicRPCs(ctx context.Context) {
 	newMap := make(map[int]string)
 	for _, entry := range entries {
 		for _, rpc := range entry.RPCs {
-			// 简单筛选没有特殊字符且可访问的纯公共 URL
-			if strings.HasPrefix(rpc.URL, "https://") &&
-				!strings.Contains(rpc.URL, "API_KEY") &&
-				!strings.Contains(rpc.URL, "${") {
+			// 简单筛选没有特殊字符、不含已知需鉴权的商业节点名的 HTTPs URL
+			urlLower := strings.ToLower(rpc.URL)
+			if strings.HasPrefix(urlLower, "https://") &&
+				!strings.Contains(urlLower, "api_key") &&
+				!strings.Contains(urlLower, "${") &&
+				!strings.Contains(urlLower, "ankr.com") &&
+				!strings.Contains(urlLower, "alchemy.com") &&
+				!strings.Contains(urlLower, "infura.io") &&
+				!strings.Contains(urlLower, "blastapi.io") &&
+				!strings.Contains(urlLower, "nodereal.io") &&
+				!strings.Contains(urlLower, "getblock.io") &&
+				!strings.Contains(urlLower, "tenderly.co") {
 				newMap[entry.ChainId] = rpc.URL
-				break // 选第一个
+				break // 选第一个合适的
 			}
 		}
 	}
