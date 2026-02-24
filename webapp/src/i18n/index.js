@@ -95,8 +95,19 @@ export const translations = {
       analytics: "数据分析",
       settings: "系统设置",
       reports: "资产报告",
+      about: "关于",
       collapseSidebar: "收起侧边栏",
       expandSidebar: "展开侧边栏",
+    },
+
+    // 用户菜单
+    userMenu: {
+      settings: "系统设置",
+      privacyMode: "隐私模式",
+      switchTheme: "切换主题",
+      refresh: "刷新数据",
+      about: "关于 AllFi",
+      shortcuts: "快捷键",
     },
 
     // 顶部栏
@@ -1113,8 +1124,18 @@ export const translations = {
       analytics: "數據分析",
       settings: "系統設定",
       reports: "資產報告",
+      about: "關於",
       collapseSidebar: "收合側邊欄",
       expandSidebar: "展開側邊欄",
+    },
+
+    userMenu: {
+      settings: "系統設定",
+      privacyMode: "隱私模式",
+      switchTheme: "切換主題",
+      refresh: "重新整理資料",
+      about: "關於 AllFi",
+      shortcuts: "快捷鍵",
     },
 
     topBar: {
@@ -2116,8 +2137,18 @@ export const translations = {
       analytics: "Analytics",
       settings: "Settings",
       reports: "Reports",
+      about: "About",
       collapseSidebar: "Collapse Sidebar",
       expandSidebar: "Expand Sidebar",
+    },
+
+    userMenu: {
+      settings: "Settings",
+      privacyMode: "Privacy Mode",
+      switchTheme: "Switch Theme",
+      refresh: "Refresh Data",
+      about: "About AllFi",
+      shortcuts: "Shortcuts",
     },
 
     topBar: {

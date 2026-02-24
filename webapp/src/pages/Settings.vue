@@ -26,7 +26,11 @@ import {
   PhClockClockwise,
   PhPlugsConnected,
   PhPencilSimple,
-  PhX
+  PhX,
+  PhInfo,
+  PhGithubLogo,
+  PhBookOpen,
+  PhChatCircle
 } from '@phosphor-icons/vue'
 import AchievementPanel from '../components/AchievementPanel.vue'
 import { useAchievementStore } from '../stores/achievementStore'
@@ -38,11 +42,13 @@ import { useExportData } from '../composables/useExportData'
 import { useToast } from '../composables/useToast'
 import { settingsService } from '../api/index.js'
 import { transactionService } from '../api/transactionService.js'
+import { useSystemStore } from '../stores/systemStore'
 
 // 使用主题 Store 和多语言
 const themeStore = useThemeStore()
 const authStore = useAuthStore()
 const notifStore = useNotificationStore()
+const systemStore = useSystemStore()
 const { t } = useI18n()
 const { exportAsCSV, exportAsJSON, getDefaultFilename } = useExportData()
 const { showToast } = useToast()
@@ -72,6 +78,7 @@ onMounted(async () => {
   notifStore.loadPreferences()
   achStore.fetchAchievements()
   loadTxSyncSettings()
+  systemStore.loadVersion()
   // 从数据库加载用户设置
   try {
     const data = await settingsService.getSettings()
@@ -1210,6 +1217,46 @@ onMounted(() => {
         @close="showAchievements = false"
       />
 
+      <!-- 关于 -->
+      <section class="settings-section full-width">
+        <div class="section-header">
+          <PhInfo :size="20" weight="duotone" />
+          <h2 class="section-title">{{ t('settings.aboutSection') }}</h2>
+        </div>
+
+        <div class="glass-card settings-card">
+          <div class="about-content">
+            <div class="about-main">
+              <div class="about-logo">
+                <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="1" y="1" width="26" height="26" rx="5" stroke="var(--color-accent-primary)" stroke-width="1.5" fill="none"/>
+                  <path d="M8 14 L14 8 L20 14 L14 20 Z" fill="var(--color-accent-primary)" opacity="0.8"/>
+                </svg>
+              </div>
+              <div class="about-info">
+                <span class="about-name">AllFi</span>
+                <span class="about-version font-mono">v{{ systemStore.versionInfo?.version || '—' }}</span>
+              </div>
+            </div>
+            <p class="about-desc">{{ t('settings.aboutDesc') }}</p>
+            <div class="about-links">
+              <a href="https://github.com/your-finance/allfi" target="_blank" rel="noopener noreferrer" class="about-link">
+                <PhGithubLogo :size="16" />
+                <span>GitHub</span>
+              </a>
+              <a href="https://github.com/your-finance/allfi/wiki" target="_blank" rel="noopener noreferrer" class="about-link">
+                <PhBookOpen :size="16" />
+                <span>{{ t('settings.docs') }}</span>
+              </a>
+              <a href="https://github.com/your-finance/allfi/issues" target="_blank" rel="noopener noreferrer" class="about-link">
+                <PhChatCircle :size="16" />
+                <span>{{ t('settings.feedback') }}</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- 数据管理 -->
       <section class="settings-section full-width">
         <div class="section-header">
@@ -1728,6 +1775,81 @@ onMounted(() => {
 
 .action-arrow {
   color: var(--color-text-muted);
+}
+
+/* ================== 关于 ================== */
+.about-content {
+  padding: var(--gap-lg);
+}
+
+.about-main {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-md);
+  margin-bottom: var(--gap-md);
+}
+
+.about-logo {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.about-logo svg {
+  width: 100%;
+  height: 100%;
+}
+
+.about-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.about-name {
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.about-version {
+  font-size: 0.75rem;
+  color: var(--color-accent-primary);
+}
+
+.about-desc {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  margin-bottom: var(--gap-md);
+}
+
+.about-links {
+  display: flex;
+  gap: var(--gap-sm);
+  flex-wrap: wrap;
+}
+
+.about-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.about-link:hover {
+  border-color: var(--color-accent-primary);
+  color: var(--color-accent-primary);
 }
 
 

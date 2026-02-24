@@ -25,7 +25,11 @@ import {
   PhChartLine,
   PhNewspaper,
   PhEye,
-  PhEyeSlash
+  PhEyeSlash,
+  PhInfo,
+  PhKeyboard,
+  PhShieldCheck,
+  PhGithubLogo
 } from '@phosphor-icons/vue'
 import { useThemeStore } from './stores/themeStore'
 import { useAuthStore } from './stores/authStore'
@@ -461,6 +465,54 @@ watch(() => route.path, updateDocumentTitle, { immediate: true })
                   <span class="user-email">{{ authStore.userEmail }}</span>
                 </div>
                 <div class="dropdown-divider" />
+
+                <!-- 系统设置 -->
+                <button class="dropdown-item" @click="navigateTo('/settings'); isUserMenuOpen = false">
+                  <PhGear :size="16" />
+                  <span>{{ t('userMenu.settings') }}</span>
+                </button>
+
+                <!-- 隐私模式 -->
+                <button class="dropdown-item" @click="themeStore.togglePrivacyMode(); isUserMenuOpen = false">
+                  <PhEyeSlash v-if="themeStore.privacyMode" :size="16" />
+                  <PhEye v-else :size="16" />
+                  <span>{{ t('userMenu.privacyMode') }}</span>
+                  <span class="menu-badge" :class="{ active: themeStore.privacyMode }">
+                    {{ themeStore.privacyMode ? 'ON' : 'OFF' }}
+                  </span>
+                </button>
+
+                <!-- 切换主题 -->
+                <button class="dropdown-item" @click="quickSwitchTheme(); isUserMenuOpen = false">
+                  <PhPaintBrush :size="16" />
+                  <span>{{ t('userMenu.switchTheme') }}</span>
+                  <span class="menu-badge-text">{{ themeStore.currentTheme.name }}</span>
+                </button>
+
+                <!-- 刷新数据 -->
+                <button class="dropdown-item" @click="assetStore.refreshAll(); isUserMenuOpen = false" :disabled="assetStore.isRefreshing">
+                  <PhArrowsClockwise :size="16" :class="{ 'animate-spin': assetStore.isRefreshing }" />
+                  <span>{{ t('userMenu.refresh') }}</span>
+                </button>
+
+                <div class="dropdown-divider" />
+
+                <!-- 快捷键 -->
+                <button class="dropdown-item" @click="cmdStore.toggle(); isUserMenuOpen = false">
+                  <PhKeyboard :size="16" />
+                  <span>{{ t('userMenu.shortcuts') }}</span>
+                  <span class="menu-shortcut">⌘K</span>
+                </button>
+
+                <!-- 关于 -->
+                <button class="dropdown-item" @click="navigateTo('/settings'); isUserMenuOpen = false">
+                  <PhInfo :size="16" />
+                  <span>{{ t('userMenu.about') }}</span>
+                </button>
+
+                <div class="dropdown-divider" />
+
+                <!-- 退出登录 -->
                 <button class="dropdown-item logout" @click="handleLogout">
                   <PhSignOut :size="16" />
                   <span>{{ t('auth.logout') }}</span>
@@ -698,8 +750,8 @@ watch(() => route.path, updateDocumentTitle, { immediate: true })
 .sidebar-footer {
   display: flex;
   flex-direction: column;
-  gap: var(--gap-sm);
-  padding: var(--gap-md) var(--gap-lg);
+  gap: var(--gap-xs);
+  padding: var(--gap-sm) var(--gap-sm);
   border-top: 1px solid var(--color-border);
 }
 
@@ -1042,7 +1094,8 @@ watch(() => route.path, updateDocumentTitle, { immediate: true })
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  min-width: 180px;
+  min-width: 220px;
+  padding: 4px;
   background: var(--color-bg-elevated);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -1067,6 +1120,68 @@ watch(() => route.path, updateDocumentTitle, { immediate: true })
 
 .user-dropdown .dropdown-item.logout:hover {
   color: var(--color-error);
+}
+
+/* 用户下拉扩展样式 */
+.user-dropdown .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  padding: 7px 12px;
+  width: 100%;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+  text-align: left;
+}
+
+.user-dropdown .dropdown-item:hover {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+}
+
+.user-dropdown .dropdown-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.user-dropdown .dropdown-item span:first-of-type {
+  flex: 1;
+}
+
+.menu-badge {
+  font-size: 0.625rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--color-text-muted) 15%, transparent);
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+}
+
+.menu-badge.active {
+  background: color-mix(in srgb, var(--color-accent-primary) 15%, transparent);
+  color: var(--color-accent-primary);
+}
+
+.menu-badge-text {
+  font-size: 0.6875rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.menu-shortcut {
+  font-size: 0.6875rem;
+  font-family: var(--font-mono);
+  color: var(--color-text-muted);
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--color-text-muted) 10%, transparent);
+  font-weight: 500;
 }
 
 /* ================== 离线提示条 ================== */
