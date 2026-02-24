@@ -504,11 +504,6 @@ watch(() => route.path, updateDocumentTitle, { immediate: true })
                   <span class="menu-shortcut">⌘K</span>
                 </button>
 
-                <!-- 关于 -->
-                <button class="dropdown-item" @click="navigateTo('/settings'); isUserMenuOpen = false">
-                  <PhInfo :size="16" />
-                  <span>{{ t('userMenu.about') }}</span>
-                </button>
 
                 <div class="dropdown-divider" />
 
