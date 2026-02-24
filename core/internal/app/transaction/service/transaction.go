@@ -22,7 +22,7 @@ type ITransaction interface {
 	GetSyncSettings(ctx context.Context) (*transactionApi.GetSyncSettingsRes, error)
 
 	// UpdateSyncSettings 更新同步设置
-	UpdateSyncSettings(ctx context.Context, autoSync *bool, syncInterval *int) (*transactionApi.UpdateSyncSettingsRes, error)
+	UpdateSyncSettings(ctx context.Context, autoSync *bool, syncInterval *int, lookbackDays *int) (*transactionApi.UpdateSyncSettingsRes, error)
 }
 
 var localTransaction ITransaction

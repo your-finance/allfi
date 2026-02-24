@@ -422,6 +422,7 @@ func (s *sTransaction) GetSyncSettings(ctx context.Context) (*transactionApi.Get
 	settings := &transactionApi.SyncSettingsItem{
 		AutoSync:     txModel.DefaultAutoSync,
 		SyncInterval: txModel.DefaultSyncInterval,
+		LookbackDays: txModel.DefaultLookbackDays,
 	}
 
 	// 从系统配置读取
@@ -431,6 +432,7 @@ func (s *sTransaction) GetSyncSettings(ctx context.Context) (*transactionApi.Get
 			txModel.ConfigKeyAutoSync,
 			txModel.ConfigKeySyncInterval,
 			txModel.ConfigKeyLastSyncAt,
+			txModel.ConfigKeyLookbackDays,
 		}).Scan(&configs)
 	if err != nil {
 		g.Log().Warning(ctx, "读取同步设置失败", "error", err)
@@ -447,6 +449,10 @@ func (s *sTransaction) GetSyncSettings(ctx context.Context) (*transactionApi.Get
 			}
 		case txModel.ConfigKeyLastSyncAt:
 			settings.LastSyncAt = cfg.ConfigValue
+		case txModel.ConfigKeyLookbackDays:
+			if v, err := strconv.Atoi(cfg.ConfigValue); err == nil {
+				settings.LookbackDays = v
+			}
 		}
 	}
 
@@ -454,7 +460,7 @@ func (s *sTransaction) GetSyncSettings(ctx context.Context) (*transactionApi.Get
 }
 
 // UpdateSyncSettings 更新同步设置
-func (s *sTransaction) UpdateSyncSettings(ctx context.Context, autoSync *bool, syncInterval *int) (*transactionApi.UpdateSyncSettingsRes, error) {
+func (s *sTransaction) UpdateSyncSettings(ctx context.Context, autoSync *bool, syncInterval *int, lookbackDays *int) (*transactionApi.UpdateSyncSettingsRes, error) {
 	if autoSync != nil {
 		value := "false"
 		if *autoSync {
@@ -465,6 +471,10 @@ func (s *sTransaction) UpdateSyncSettings(ctx context.Context, autoSync *bool, s
 
 	if syncInterval != nil {
 		s.upsertConfig(ctx, txModel.ConfigKeySyncInterval, strconv.Itoa(*syncInterval))
+	}
+
+	if lookbackDays != nil {
+		s.upsertConfig(ctx, txModel.ConfigKeyLookbackDays, strconv.Itoa(*lookbackDays))
 	}
 
 	// 返回最新设置

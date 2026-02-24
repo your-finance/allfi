@@ -35,7 +35,7 @@ func (c *Controller) GetSyncSettings(ctx context.Context, req *transactionApi.Ge
 
 // UpdateSyncSettings 更新同步设置
 func (c *Controller) UpdateSyncSettings(ctx context.Context, req *transactionApi.UpdateSyncSettingsReq) (res *transactionApi.UpdateSyncSettingsRes, err error) {
-	return service.Transaction().UpdateSyncSettings(ctx, req.AutoSync, req.SyncInterval)
+	return service.Transaction().UpdateSyncSettings(ctx, req.AutoSync, req.SyncInterval, req.LookbackDays)
 }
 
 // Register 注册交易记录模块路由

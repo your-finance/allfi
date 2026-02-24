@@ -194,17 +194,18 @@ var tables = []string{
 
 	// 通知偏好表
 	`CREATE TABLE IF NOT EXISTS notification_preferences (
-		id                    INTEGER PRIMARY KEY AUTOINCREMENT,
-		created_at            DATETIME,
-		updated_at            DATETIME,
-		deleted_at            DATETIME,
-		user_id               INTEGER NOT NULL,
-		enable_daily_digest   INTEGER NOT NULL DEFAULT 0,
-		digest_time           TEXT DEFAULT '08:00',
-		enable_price_alert    INTEGER NOT NULL DEFAULT 1,
-		enable_asset_alert    INTEGER NOT NULL DEFAULT 1,
-		asset_alert_threshold REAL DEFAULT 5.0,
-		webhook_url           TEXT DEFAULT ''
+		id                         INTEGER PRIMARY KEY AUTOINCREMENT,
+		created_at                 DATETIME,
+		updated_at                 DATETIME,
+		deleted_at                 DATETIME,
+		user_id                    INTEGER NOT NULL,
+		enable_daily_digest        INTEGER NOT NULL DEFAULT 0,
+		digest_time                TEXT DEFAULT '08:00',
+		enable_price_alert         INTEGER NOT NULL DEFAULT 1,
+		enable_asset_alert         INTEGER NOT NULL DEFAULT 1,
+		asset_alert_threshold      REAL DEFAULT 5.0,
+		webhook_url                TEXT DEFAULT '',
+		enable_push_notification   INTEGER NOT NULL DEFAULT 1
 	)`,
 
 	// 价格预警表
@@ -346,6 +347,12 @@ var indexes = []string{
 	`CREATE INDEX IF NOT EXISTS idx_manual_assets_user ON manual_assets(user_id)`,
 }
 
+// alterations 对已有数据库执行的列变更（幂等，失败忽略）
+var alterations = []string{
+	// v0.x → 新增 enable_push_notification 列
+	`ALTER TABLE notification_preferences ADD COLUMN enable_push_notification INTEGER NOT NULL DEFAULT 1`,
+}
+
 // Initialize 初始化数据库：创建所有表和索引
 // 使用 CREATE TABLE IF NOT EXISTS，幂等安全
 func Initialize(ctx context.Context) error {
@@ -365,6 +372,13 @@ func Initialize(ctx context.Context) error {
 			if _, err := tx.Exec(idx); err != nil {
 				g.Log().Warningf(ctx, "创建索引警告: %v\nSQL: %s", err, idx)
 				// 索引创建失败不阻止启动
+			}
+		}
+
+		// 执行列变更（已有列时忽略错误）
+		for _, alt := range alterations {
+			if _, err := tx.Exec(alt); err != nil {
+				g.Log().Debugf(ctx, "列变更跳过（可能已存在）: %v", err)
 			}
 		}
 

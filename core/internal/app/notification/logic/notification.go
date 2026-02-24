@@ -137,7 +137,7 @@ func (s *sNotification) GetPreferences(ctx context.Context, userID int) (*notifi
 
 	return &notificationApi.PreferenceItem{
 		EmailEnabled:   pref.EnableDailyDigest == 1,
-		PushEnabled:    pref.EnablePriceAlert == 1,
+		PushEnabled:    pref.EnablePushNotification == 1,
 		PriceAlert:     pref.EnablePriceAlert == 1,
 		PortfolioAlert: pref.EnableAssetAlert == 1,
 		SystemNotice:   true,
@@ -169,7 +169,7 @@ func (s *sNotification) UpdatePreferences(ctx context.Context, userID int, req *
 			data[dao.NotificationPreferences.Columns().EnableDailyDigest] = boolToFloat(*req.EmailEnabled)
 		}
 		if req.PushEnabled != nil {
-			data[dao.NotificationPreferences.Columns().EnablePriceAlert] = boolToFloat(*req.PushEnabled)
+			data[dao.NotificationPreferences.Columns().EnablePushNotification] = boolToFloat(*req.PushEnabled)
 		}
 		if req.PriceAlert != nil {
 			data[dao.NotificationPreferences.Columns().EnablePriceAlert] = boolToFloat(*req.PriceAlert)
@@ -191,7 +191,7 @@ func (s *sNotification) UpdatePreferences(ctx context.Context, userID int, req *
 			updateData[dao.NotificationPreferences.Columns().EnableDailyDigest] = boolToFloat(*req.EmailEnabled)
 		}
 		if req.PushEnabled != nil {
-			updateData[dao.NotificationPreferences.Columns().EnablePriceAlert] = boolToFloat(*req.PushEnabled)
+			updateData[dao.NotificationPreferences.Columns().EnablePushNotification] = boolToFloat(*req.PushEnabled)
 		}
 		if req.PriceAlert != nil {
 			updateData[dao.NotificationPreferences.Columns().EnablePriceAlert] = boolToFloat(*req.PriceAlert)

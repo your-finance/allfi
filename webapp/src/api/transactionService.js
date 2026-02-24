@@ -3,11 +3,12 @@
  * 管理交易记录数据的获取、同步设置，支持 Mock/Real 自动切换
  */
 
-import { get, post, put } from './client.js'
-import * as mockTransactionData from '../data/mockTransactionData.js'
+import { get, post, put } from "./client.js";
+import * as mockTransactionData from "../data/mockTransactionData.js";
 
-const USE_MOCK = import.meta.env.VITE_USE_MOCK_API !== 'false'
-const simulateDelay = (ms = 500) => new Promise(resolve => setTimeout(resolve, ms))
+const USE_MOCK = import.meta.env.VITE_USE_MOCK_API !== "false";
+const simulateDelay = (ms = 500) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 export const transactionService = {
   /**
@@ -17,10 +18,10 @@ export const transactionService = {
    */
   async getTransactions(options = {}) {
     if (USE_MOCK) {
-      await simulateDelay(300)
-      return mockTransactionData.getTransactions(options)
+      await simulateDelay(300);
+      return mockTransactionData.getTransactions(options);
     }
-    return get('/transactions', options)
+    return get("/transactions", options);
   },
 
   /**
@@ -29,24 +30,24 @@ export const transactionService = {
    */
   async getSyncSettings() {
     if (USE_MOCK) {
-      await simulateDelay(200)
+      await simulateDelay(200);
       return {
         enabled: false,
         interval_minutes: 360,
         lookback_days: 90,
-        sources: []
-      }
+        sources: [],
+      };
     }
-    const result = await get('/settings/tx-sync')
-    // 后端返回 {settings: {auto_sync, sync_interval, last_sync_at}} 或直接返回设置对象
-    const s = result.settings || result
+    const result = await get("/settings/tx-sync");
+    // 后端返回 {settings: {auto_sync, sync_interval, lookback_days, last_sync_at}}
+    const s = result.settings || result;
     return {
       enabled: s.auto_sync || false,
       interval_minutes: s.sync_interval || 360,
-      lookback_days: 90,
+      lookback_days: s.lookback_days || 90,
       sources: [],
-      last_sync_at: s.last_sync_at
-    }
+      last_sync_at: s.last_sync_at,
+    };
   },
 
   /**
@@ -56,10 +57,17 @@ export const transactionService = {
    */
   async updateSyncSettings(settings) {
     if (USE_MOCK) {
-      await simulateDelay(300)
-      return
+      await simulateDelay(300);
+      return;
     }
-    return put('/settings/tx-sync', settings)
+    // 将前端字段名映射到后端字段名
+    const payload = {};
+    if (settings.enabled !== undefined) payload.auto_sync = settings.enabled;
+    if (settings.interval_minutes !== undefined)
+      payload.sync_interval = settings.interval_minutes;
+    if (settings.lookback_days !== undefined)
+      payload.lookback_days = settings.lookback_days;
+    return put("/settings/tx-sync", payload);
   },
 
   /**
@@ -68,10 +76,10 @@ export const transactionService = {
    */
   async syncTransactions() {
     if (USE_MOCK) {
-      await simulateDelay(1500)
-      return { synced_count: 12 }
+      await simulateDelay(1500);
+      return { synced_count: 12 };
     }
-    return post('/transactions/sync')
+    return post("/transactions/sync");
   },
 
   /**
@@ -80,9 +88,9 @@ export const transactionService = {
    */
   async getTransactionStats() {
     if (USE_MOCK) {
-      await simulateDelay(300)
-      return mockTransactionData.getTransactionStats?.() || {}
+      await simulateDelay(300);
+      return mockTransactionData.getTransactionStats?.() || {};
     }
-    return get('/transactions/stats')
+    return get("/transactions/stats");
   },
-}
+};

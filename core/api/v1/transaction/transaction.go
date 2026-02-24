@@ -73,6 +73,7 @@ type GetSyncSettingsReq struct {
 type SyncSettingsItem struct {
 	AutoSync     bool   `json:"auto_sync" dc:"是否自动同步"`
 	SyncInterval int    `json:"sync_interval" dc:"同步间隔（分钟）"`
+	LookbackDays int    `json:"lookback_days" dc:"回溯天数"`
 	LastSyncAt   string `json:"last_sync_at" dc:"上次同步时间"`
 }
 
@@ -86,6 +87,7 @@ type UpdateSyncSettingsReq struct {
 	g.Meta       `path:"/settings/tx-sync" method:"put" summary:"更新交易同步设置" tags:"交易记录"`
 	AutoSync     *bool `json:"auto_sync" dc:"是否自动同步"`
 	SyncInterval *int  `json:"sync_interval" dc:"同步间隔（分钟）"`
+	LookbackDays *int  `json:"lookback_days" dc:"回溯天数"`
 }
 
 // UpdateSyncSettingsRes 更新交易同步设置响应

@@ -80,6 +80,7 @@ onMounted(async () => {
       if (data.auto_refresh !== undefined) settings.value.autoRefresh = data.auto_refresh === 'true'
       if (data.refresh_interval) settings.value.refreshInterval = Number(data.refresh_interval)
       if (data.history_retention) settings.value.historyRetention = Number(data.history_retention)
+      if (data.confirm_operations !== undefined) settings.value.confirmOperations = data.confirm_operations !== 'false'
     }
   } catch {
     // 静默失败，使用默认值
@@ -255,6 +256,7 @@ const saveSettings = async () => {
       auto_refresh: String(settings.value.autoRefresh),
       refresh_interval: String(settings.value.refreshInterval),
       history_retention: String(settings.value.historyRetention),
+      confirm_operations: String(settings.value.confirmOperations),
     })
     saveSuccess.value = true
     setTimeout(() => { saveSuccess.value = false }, 2000)

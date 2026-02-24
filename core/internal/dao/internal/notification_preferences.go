@@ -21,32 +21,34 @@ type NotificationPreferencesDao struct {
 
 // NotificationPreferencesColumns defines and stores column names for the table notification_preferences.
 type NotificationPreferencesColumns struct {
-	Id                  string //
-	CreatedAt           string //
-	UpdatedAt           string //
-	DeletedAt           string //
-	UserId              string //
-	EnableDailyDigest   string //
-	DigestTime          string //
-	EnablePriceAlert    string //
-	EnableAssetAlert    string //
-	AssetAlertThreshold string //
-	WebhookUrl          string //
+	Id                     string //
+	CreatedAt              string //
+	UpdatedAt              string //
+	DeletedAt              string //
+	UserId                 string //
+	EnableDailyDigest      string //
+	DigestTime             string //
+	EnablePriceAlert       string //
+	EnableAssetAlert       string //
+	AssetAlertThreshold    string //
+	WebhookUrl             string //
+	EnablePushNotification string //
 }
 
 // notificationPreferencesColumns holds the columns for the table notification_preferences.
 var notificationPreferencesColumns = NotificationPreferencesColumns{
-	Id:                  "id",
-	CreatedAt:           "created_at",
-	UpdatedAt:           "updated_at",
-	DeletedAt:           "deleted_at",
-	UserId:              "user_id",
-	EnableDailyDigest:   "enable_daily_digest",
-	DigestTime:          "digest_time",
-	EnablePriceAlert:    "enable_price_alert",
-	EnableAssetAlert:    "enable_asset_alert",
-	AssetAlertThreshold: "asset_alert_threshold",
-	WebhookUrl:          "webhook_url",
+	Id:                     "id",
+	CreatedAt:              "created_at",
+	UpdatedAt:              "updated_at",
+	DeletedAt:              "deleted_at",
+	UserId:                 "user_id",
+	EnableDailyDigest:      "enable_daily_digest",
+	DigestTime:             "digest_time",
+	EnablePriceAlert:       "enable_price_alert",
+	EnableAssetAlert:       "enable_asset_alert",
+	AssetAlertThreshold:    "asset_alert_threshold",
+	WebhookUrl:             "webhook_url",
+	EnablePushNotification: "enable_push_notification",
 }
 
 // NewNotificationPreferencesDao creates and returns a new DAO object for table data access.
