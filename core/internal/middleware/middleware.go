@@ -11,8 +11,7 @@ import (
 //  1. CORS - 跨域请求处理（最先执行，确保预检请求被正确响应）
 //  2. Context - 上下文注入（生成 TraceID 等请求级元数据）
 //  3. Logger - 请求日志（记录请求开始/结束、耗时等信息）
-//  4. ErrorHandler - 错误处理（捕获 panic 和业务错误）
-//  5. MiddlewareHandlerResponse - 统一响应包装（将 Controller 返回值包装为标准 JSON 格式）
+//  4. MiddlewareHandlerResponse - 统一响应包装（将 Controller 返回值包装为标准 JSON 格式，同时处理错误和 panic）
 //
 // 注意：Auth 认证中间件不在此处注册，而是按路由组单独绑定，
 // 因为部分路由（如 /auth/*、/health）不需要认证
@@ -21,7 +20,6 @@ func Register(s *ghttp.Server) {
 		CORS,
 		Context,
 		Logger,
-		ErrorHandler,
 		MiddlewareHandlerResponse,
 	)
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 )
 
@@ -25,11 +26,36 @@ type defaultResponse struct {
 // 拦截所有 Controller 的返回值，包装为项目统一的 JSON 格式
 //
 // 处理逻辑：
-//  1. 先调用 r.Middleware.Next() 执行后续处理器
-//  2. 如果响应已经被写入（如手动调用 WriteJson），则不再处理
-//  3. 如果存在错误（r.GetError()），提取错误码映射到 HTTP 状态码，返回错误 JSON
-//  4. 如果是成功响应，将 r.GetHandlerResponse() 包装在统一格式中
+//  1. 使用 defer 捕获 panic，返回 500 错误 JSON
+//  2. 调用 r.Middleware.Next() 执行后续处理器
+//  3. 如果响应已经被写入（如手动调用 WriteJson），则不再处理
+//  4. 如果存在错误（r.GetError()），提取错误码映射到 HTTP 状态码，返回错误 JSON
+//  5. 如果是成功响应，将 r.GetHandlerResponse() 包装在统一格式中
 func MiddlewareHandlerResponse(r *ghttp.Request) {
+	ctx := r.Context()
+
+	// defer 捕获 panic
+	defer func() {
+		if err := recover(); err != nil {
+			// 记录 panic 日志（包含堆栈）
+			g.Log().Errorf(ctx, "发生panic: %+v", err)
+
+			// 如果响应已被写入，不再处理
+			if r.Response.BufferLength() > 0 {
+				return
+			}
+
+			// 返回 500 错误 JSON
+			r.Response.Header().Set("Content-Type", "application/json")
+			r.Response.WriteStatus(http.StatusInternalServerError)
+			r.Response.WriteJson(defaultResponse{
+				Code:      2001, // CodeInternalError
+				Message:   "服务器内部错误，请稍后重试",
+				Timestamp: time.Now().Unix(),
+			})
+		}
+	}()
+
 	r.Middleware.Next()
 
 	// 如果响应已被写入（Handler 中手动写入了响应），则跳过统一包装
