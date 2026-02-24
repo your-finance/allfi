@@ -90,6 +90,7 @@ core/server
 .cursor
 .claude
 CLAUDE.md
+SKILL.md
 docs/plans/
 .kiro
 .windsurf
@@ -101,3 +102,4 @@ allfi-docker/
 *db-journal
 core/data/
 core/bin/
+skills/

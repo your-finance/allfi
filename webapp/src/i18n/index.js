@@ -533,6 +533,7 @@ export const translations = {
       clearCacheDesc: "清除本地缓存数据以释放空间",
       resetSettings: "重置设置",
       resetSettingsDesc: "将所有设置恢复为默认值",
+      resetConfirm: "确定要重置所有设置吗？此操作不可撤销。",
 
       // 关于
       aboutSection: "关于",
@@ -1548,6 +1549,7 @@ export const translations = {
       clearCacheDesc: "清除本機快取資料以釋放空間",
       resetSettings: "重置設定",
       resetSettingsDesc: "將所有設定恢復為預設值",
+      resetConfirm: "確定要重置所有設定嗎？此操作不可撤銷。",
 
       aboutSection: "關於",
       aboutDesc:
@@ -2564,6 +2566,7 @@ export const translations = {
       clearCacheDesc: "Clear local cache to free up space",
       resetSettings: "Reset Settings",
       resetSettingsDesc: "Restore all settings to default values",
+      resetConfirm: "Are you sure you want to reset all settings? This action cannot be undone.",
 
       aboutSection: "About",
       aboutDesc:

@@ -101,6 +101,9 @@ const isResetting = ref(false)
 // 导出格式弹窗
 const showExportDialog = ref(false)
 
+// 重置设置弹窗
+const showResetDialog = ref(false)
+
 // ========== 2FA 状态管理 ==========
 const is2FAEnabled = computed(() => authStore.user?.has2FA || false)
 const show2FASetupModal = ref(false)
@@ -311,12 +314,8 @@ const clearCache = async () => {
   }
 }
 
-// 重置设置
-const resetSettings = async () => {
-  if (!confirm(t('settings.resetConfirm') || '确定要重置所有设置吗？此操作不可撤销。')) {
-    return
-  }
-
+// 确认重置设置
+const confirmResetSettings = async () => {
   isResetting.value = true
   try {
     await settingsService.resetSettings()
@@ -332,6 +331,7 @@ const resetSettings = async () => {
       confirmOperations: true
     }
     showToast(t('settings.resetSuccess'), 'success')
+    showResetDialog.value = false
   } catch (err) {
     showToast(t('common.operationFailed'), 'error')
   } finally {
@@ -1193,6 +1193,36 @@ onMounted(() => {
         </Transition>
       </Teleport>
 
+      <!-- 重置设置确认弹窗 -->
+      <Teleport to="body">
+        <Transition name="modal">
+          <div v-if="showResetDialog" class="modal-overlay" @click.self="showResetDialog = false">
+            <div class="modal-content glass-card reset-modal">
+              <div class="modal-header warning">
+                <PhWarning :size="32" weight="fill" class="modal-icon warning" />
+                <h3>{{ t('settings.resetSettings') }}</h3>
+                <p class="modal-subtitle">{{ t('settings.resetConfirm') || '确定要重置所有设置吗？此操作不可撤销。' }}</p>
+              </div>
+              
+              <div class="modal-actions">
+                <button class="btn btn-secondary" @click="showResetDialog = false">
+                  {{ t('common.cancel') }}
+                </button>
+                <button 
+                  class="btn btn-danger" 
+                  @click="confirmResetSettings"
+                  :disabled="isResetting"
+                >
+                  <PhArrowsClockwise v-if="isResetting" :size="18" class="spin" />
+                  <span v-else>{{ t('settings.resetSettings') }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </Transition>
+      </Teleport>
+
+
       <!-- 成就系统 -->
       <section class="settings-section full-width">
         <div class="section-header">
@@ -1250,7 +1280,7 @@ onMounted(() => {
               <PhCaretRight :size="20" class="action-arrow" />
             </button>
             
-            <button class="data-action-btn danger" @click="resetSettings">
+            <button class="data-action-btn danger" @click="showResetDialog = true">
               <div class="action-icon reset">
                 <PhTrash :size="24" />
               </div>
