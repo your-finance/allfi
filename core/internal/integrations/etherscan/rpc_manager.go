@@ -1,6 +1,7 @@
 package etherscan
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -62,8 +63,61 @@ func UpdateDynamicRPCs(ctx context.Context) {
 		return
 	}
 
+	// 用于测试 RPC 是否可用的内部函数
+	verifyRPC := func(rpcUrl string) bool {
+		// 构造极简的 JSON-RPC 请求
+		reqBody := []byte(`{"jsonrpc":"2.0","method":"eth_gasPrice","params":[],"id":1}`)
+
+		// 测试请求通常需要较短超时，避免拖慢整体速度
+		testCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		defer cancel()
+
+		testReq, err := http.NewRequestWithContext(testCtx, http.MethodPost, rpcUrl, bytes.NewReader(reqBody))
+		if err != nil {
+			return false
+		}
+		testReq.Header.Set("Content-Type", "application/json")
+
+		testClient := &http.Client{Timeout: 3 * time.Second}
+		testResp, err := testClient.Do(testReq)
+		if err != nil {
+			return false
+		}
+		defer testResp.Body.Close()
+
+		if testResp.StatusCode != http.StatusOK {
+			return false
+		}
+
+		var rpcResp struct {
+			Result interface{} `json:"result"`
+			Error  interface{} `json:"error"`
+		}
+		if err := json.NewDecoder(testResp.Body).Decode(&rpcResp); err != nil {
+			return false
+		}
+
+		// 如果包含 result 且不包含 error，则认为有效
+		return rpcResp.Error == nil && rpcResp.Result != nil
+	}
+
 	newMap := make(map[int]string)
 	for _, entry := range entries {
+		// 只检查我们支持的链
+		isSupported := false
+		for _, cfg := range SupportedChains {
+			if cfg.ChainID == entry.ChainId {
+				isSupported = true
+				break
+			}
+		}
+		if !isSupported {
+			continue
+		}
+
+		var preferredRPCs []string
+		var otherRPCs []string
+
 		for _, rpc := range entry.RPCs {
 			// 简单筛选没有特殊字符、不含已知需鉴权的商业节点名的 HTTPs URL
 			urlLower := strings.ToLower(rpc.URL)
@@ -81,14 +135,19 @@ func UpdateDynamicRPCs(ctx context.Context) {
 				!strings.Contains(urlLower, "rpcfast.com") &&
 				!strings.Contains(urlLower, "gateway.fm") {
 
-				// 优先选择 tracking == "none" 的优质公益节点
-				if rpc.Tracking == "none" || newMap[entry.ChainId] == "" {
-					newMap[entry.ChainId] = rpc.URL
-				}
-				// 一旦找到最优质的公益节点，直接确定并跳出
 				if rpc.Tracking == "none" {
-					break
+					preferredRPCs = append(preferredRPCs, rpc.URL)
+				} else {
+					otherRPCs = append(otherRPCs, rpc.URL)
 				}
+			}
+		}
+
+		// 验证节点并选择第一个可用的
+		for _, url := range append(preferredRPCs, otherRPCs...) {
+			if verifyRPC(url) {
+				newMap[entry.ChainId] = url
+				break
 			}
 		}
 	}
