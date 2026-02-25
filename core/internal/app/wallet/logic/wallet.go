@@ -58,6 +58,7 @@ func (s *sWallet) CreateWallet(ctx context.Context, userID int, req *walletApi.C
 
 	// 地址转小写统一格式
 	address := strings.ToLower(req.Address)
+	req.Blockchain = strings.ToLower(req.Blockchain)
 
 	// 检查地址是否已存在
 	count, err := dao.WalletAddresses.Ctx(ctx).
@@ -141,7 +142,7 @@ func (s *sWallet) UpdateWallet(ctx context.Context, req *walletApi.UpdateAddress
 		dao.WalletAddresses.Columns().UpdatedAt: gtime.Now(),
 	}
 	if req.Blockchain != "" {
-		updateData[dao.WalletAddresses.Columns().Blockchain] = req.Blockchain
+		updateData[dao.WalletAddresses.Columns().Blockchain] = strings.ToLower(req.Blockchain)
 	}
 	if req.Address != "" {
 		updateData[dao.WalletAddresses.Columns().Address] = strings.ToLower(req.Address)
@@ -373,11 +374,12 @@ func (s *sWallet) BatchImport(ctx context.Context, userID int, req *walletApi.Ba
 		}
 
 		address := strings.ToLower(addr.Address)
+		blockchain := strings.ToLower(addr.Blockchain)
 
 		// 检查是否已存在
 		count, err := dao.WalletAddresses.Ctx(ctx).
 			Where(dao.WalletAddresses.Columns().UserId, userID).
-			Where(dao.WalletAddresses.Columns().Blockchain, addr.Blockchain).
+			Where(dao.WalletAddresses.Columns().Blockchain, blockchain).
 			Where(dao.WalletAddresses.Columns().Address, address).
 			WhereNull(dao.WalletAddresses.Columns().DeletedAt).
 			Count()
@@ -390,7 +392,7 @@ func (s *sWallet) BatchImport(ctx context.Context, userID int, req *walletApi.Ba
 		now := gtime.Now()
 		_, err = dao.WalletAddresses.Ctx(ctx).Data(g.Map{
 			dao.WalletAddresses.Columns().UserId:     userID,
-			dao.WalletAddresses.Columns().Blockchain: addr.Blockchain,
+			dao.WalletAddresses.Columns().Blockchain: blockchain,
 			dao.WalletAddresses.Columns().Address:    address,
 			dao.WalletAddresses.Columns().Label:      addr.Label,
 			dao.WalletAddresses.Columns().IsActive:   1,

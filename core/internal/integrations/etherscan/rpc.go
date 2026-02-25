@@ -94,6 +94,10 @@ func GetGasPriceViaRPC(ctx context.Context, chainName string) (*GasPrice, error)
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("RPC HTTP 错误: 状态码 %d", resp.StatusCode)
+	}
+
 	var rpcResp rpcResponse
 	if err := json.NewDecoder(resp.Body).Decode(&rpcResp); err != nil {
 		return nil, fmt.Errorf("解析 RPC 响应失败: %v", err)

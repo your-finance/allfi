@@ -27,7 +27,7 @@ type AddressItem struct {
 // CreateAddressReq 添加钱包地址请求
 type CreateAddressReq struct {
 	g.Meta     `path:"/wallets/addresses" method:"post" summary:"添加钱包地址" tags:"钱包"`
-	Blockchain string `json:"blockchain" v:"required|in:ethereum,bsc,polygon,arbitrum,optimism,base" dc:"区块链网络"`
+	Blockchain string `json:"blockchain" v:"required|in:ethereum,bsc,polygon,arbitrum,optimism,base,Ethereum,BSC,Polygon,Arbitrum,Optimism,Base" dc:"区块链网络"`
 	Address    string `json:"address" v:"required" dc:"钱包地址（0x 开头）"`
 	Label      string `json:"label" dc:"地址标签"`
 }

@@ -133,7 +133,9 @@ func UpdateDynamicRPCs(ctx context.Context) {
 				!strings.Contains(urlLower, "tenderly.co") &&
 				!strings.Contains(urlLower, "quiknode.pro") &&
 				!strings.Contains(urlLower, "rpcfast.com") &&
-				!strings.Contains(urlLower, "gateway.fm") {
+				!strings.Contains(urlLower, "gateway.fm") &&
+				!strings.Contains(urlLower, "1rpc.io") &&
+				!strings.Contains(urlLower, "lava.build") {
 
 				if rpc.Tracking == "none" {
 					preferredRPCs = append(preferredRPCs, rpc.URL)
