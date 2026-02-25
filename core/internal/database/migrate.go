@@ -349,8 +349,7 @@ var indexes = []string{
 
 // alterations 对已有数据库执行的列变更（幂等，失败忽略）
 var alterations = []string{
-	// v0.x → 新增 enable_push_notification 列
-	`ALTER TABLE notification_preferences ADD COLUMN enable_push_notification INTEGER NOT NULL DEFAULT 1`,
+	// enable_push_notification 已包含在建表 DDL 中，无需再 ALTER
 }
 
 // Initialize 初始化数据库：创建所有表和索引

@@ -21,7 +21,11 @@ import (
 	walletService "your-finance/allfi/internal/app/wallet/service"
 	"your-finance/allfi/internal/consts"
 	"your-finance/allfi/internal/integrations/coingecko"
-	"your-finance/allfi/internal/model/entity"
+	assetEntity "your-finance/allfi/internal/app/asset/model/entity"
+	exchangeEntity "your-finance/allfi/internal/app/exchange/model/entity"
+	exchangeRateEntity "your-finance/allfi/internal/app/exchange_rate/model/entity"
+	manualAssetEntity "your-finance/allfi/internal/app/manual_asset/model/entity"
+	walletEntity "your-finance/allfi/internal/app/wallet/model/entity"
 )
 
 // sAsset 资产服务实现
@@ -49,7 +53,7 @@ func (s *sAsset) GetSummary(ctx context.Context, currency string) (*assetApi.Get
 	}
 
 	// 查询所有资产明细
-	var assets []entity.AssetDetails
+	var assets []assetEntity.AssetDetails
 	err := dao.AssetDetails.Ctx(ctx).
 		Where(dao.AssetDetails.Columns().UserId, consts.GetUserID(ctx)).
 		Scan(&assets)
@@ -108,7 +112,7 @@ func (s *sAsset) GetDetails(ctx context.Context, sourceType string, currency str
 	}
 
 	// 执行查询
-	var assets []entity.AssetDetails
+	var assets []assetEntity.AssetDetails
 	err := query.OrderDesc(dao.AssetDetails.Columns().ValueUsd).Scan(&assets)
 	if err != nil {
 		return nil, gerror.Wrap(err, "查询资产明细失败")
@@ -156,7 +160,7 @@ func (s *sAsset) GetHistory(ctx context.Context, days int, currency string) (*as
 	startTime := time.Now().AddDate(0, 0, -days)
 
 	// 查询历史快照
-	var snapshots []entity.AssetSnapshots
+	var snapshots []assetEntity.AssetSnapshots
 	err := dao.AssetSnapshots.Ctx(ctx).
 		Where(dao.AssetSnapshots.Columns().UserId, consts.GetUserID(ctx)).
 		WhereGTE(dao.AssetSnapshots.Columns().SnapshotTime, startTime).
@@ -208,7 +212,7 @@ func (s *sAsset) RefreshAll(ctx context.Context) (*assetApi.RefreshRes, error) {
 	}
 
 	// 2. 获取所有 CEX 账户
-	var exchangeAccounts []entity.ExchangeAccounts
+	var exchangeAccounts []exchangeEntity.ExchangeAccounts
 	err = exchangeDao.ExchangeAccounts.Ctx(ctx).
 		Where(exchangeDao.ExchangeAccounts.Columns().UserId, userID).
 		Where(exchangeDao.ExchangeAccounts.Columns().IsActive, 1).
@@ -238,7 +242,7 @@ func (s *sAsset) RefreshAll(ctx context.Context) (*assetApi.RefreshRes, error) {
 			if bal.Total > 0 {
 				priceUsd = bal.ValueUSD / bal.Total
 			}
-			detail := entity.AssetDetails{
+			detail := assetEntity.AssetDetails{
 				UserId:      userID,
 				SourceType:  "cex",
 				SourceId:    account.Id,
@@ -259,7 +263,7 @@ func (s *sAsset) RefreshAll(ctx context.Context) (*assetApi.RefreshRes, error) {
 	}
 
 	// 4. 获取钱包地址资产
-	var walletAddresses []entity.WalletAddresses
+	var walletAddresses []walletEntity.WalletAddresses
 	err = walletDao.WalletAddresses.Ctx(ctx).
 		Where(walletDao.WalletAddresses.Columns().UserId, userID).
 		Where(walletDao.WalletAddresses.Columns().IsActive, 1).
@@ -294,14 +298,14 @@ func (s *sAsset) RefreshAll(ctx context.Context) (*assetApi.RefreshRes, error) {
 	}
 
 	// 5. 获取手动资产
-	var manualAssets []entity.ManualAssets
+	var manualAssets []manualAssetEntity.ManualAssets
 	err = manualAssetDao.ManualAssets.Ctx(ctx).
 		Where(manualAssetDao.ManualAssets.Columns().UserId, userID).
 		Where(manualAssetDao.ManualAssets.Columns().IsActive, 1).
 		Scan(&manualAssets)
 	if err == nil {
 		for _, ma := range manualAssets {
-			detail := entity.AssetDetails{
+			detail := assetEntity.AssetDetails{
 				UserId:      userID,
 				SourceType:  "manual",
 				SourceId:    ma.Id,
@@ -367,7 +371,7 @@ func (s *sAsset) createAssetSnapshot(ctx context.Context, userID int) error {
 		Sum(dao.AssetDetails.Columns().ValueUsd)
 
 	// 创建快照记录
-	snapshot := entity.AssetSnapshots{
+	snapshot := assetEntity.AssetSnapshots{
 		UserId:             userID,
 		TotalValueUsd:      totalValueUSD,
 		CexValueUsd:        cexValue,
@@ -398,7 +402,7 @@ func (s *sAsset) getConversionRate(ctx context.Context, currency string) float64
 	}
 
 	// 1. 尝试从 exchange_rates 表查找 USD -> target 的汇率（法币场景：USD->CNY）
-	var rate entity.ExchangeRates
+	var rate exchangeRateEntity.ExchangeRates
 	err := exchangeRateDao.ExchangeRates.Ctx(ctx).
 		Where(exchangeRateDao.ExchangeRates.Columns().FromCurrency, "USD").
 		Where(exchangeRateDao.ExchangeRates.Columns().ToCurrency, currency).

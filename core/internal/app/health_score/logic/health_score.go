@@ -17,7 +17,7 @@ import (
 	"your-finance/allfi/internal/app/health_score/model"
 	"your-finance/allfi/internal/app/health_score/service"
 	"your-finance/allfi/internal/consts"
-	"your-finance/allfi/internal/model/entity"
+	assetEntity "your-finance/allfi/internal/app/asset/model/entity"
 
 	assetDao "your-finance/allfi/internal/app/asset/dao"
 )
@@ -47,7 +47,7 @@ var blueChips = map[string]bool{
 // GetHealthScore 计算资产健康评分
 func (s *sHealthScore) GetHealthScore(ctx context.Context, currency string) (*model.HealthScoreResult, error) {
 	// 直接从 DAO 查询资产详情
-	var details []entity.AssetDetails
+	var details []assetEntity.AssetDetails
 	err := assetDao.AssetDetails.Ctx(ctx).
 		Where(assetDao.AssetDetails.Columns().UserId, consts.GetUserID(ctx)).
 		Scan(&details)

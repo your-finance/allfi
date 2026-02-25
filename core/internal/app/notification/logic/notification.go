@@ -13,7 +13,7 @@ import (
 	"your-finance/allfi/internal/app/notification/dao"
 	"your-finance/allfi/internal/app/notification/service"
 	webpushService "your-finance/allfi/internal/app/webpush/service"
-	"your-finance/allfi/internal/model/entity"
+	"your-finance/allfi/internal/app/notification/model/entity"
 )
 
 // sNotification 通知服务实现

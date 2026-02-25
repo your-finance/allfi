@@ -12,16 +12,22 @@ import (
 	"github.com/gogf/gf/v2/os/gtime"
 
 	userApi "your-finance/allfi/api/v1/user"
-	"your-finance/allfi/internal/consts"
 	exchangeDao "your-finance/allfi/internal/app/exchange/dao"
+	exchangeEntity "your-finance/allfi/internal/app/exchange/model/entity"
 	goalDao "your-finance/allfi/internal/app/goal/dao"
+	goalEntity "your-finance/allfi/internal/app/goal/model/entity"
 	manualAssetDao "your-finance/allfi/internal/app/manual_asset/dao"
+	manualAssetEntity "your-finance/allfi/internal/app/manual_asset/model/entity"
 	priceAlertDao "your-finance/allfi/internal/app/price_alert/dao"
+	priceAlertEntity "your-finance/allfi/internal/app/price_alert/model/entity"
 	strategyDao "your-finance/allfi/internal/app/strategy/dao"
-	"your-finance/allfi/internal/app/user/dao"
+	strategyEntity "your-finance/allfi/internal/app/strategy/model/entity"
+	systemDao "your-finance/allfi/internal/app/system/dao"
+	systemEntity "your-finance/allfi/internal/app/system/model/entity"
 	"your-finance/allfi/internal/app/user/service"
 	walletDao "your-finance/allfi/internal/app/wallet/dao"
-	"your-finance/allfi/internal/model/entity"
+	walletEntity "your-finance/allfi/internal/app/wallet/model/entity"
+	"your-finance/allfi/internal/consts"
 	"your-finance/allfi/internal/utils"
 )
 
@@ -40,10 +46,10 @@ func New() service.IUser {
 // 从 system_config 表查询所有 config_key 以 "user." 开头的记录
 // 返回去掉前缀后的 key-value 映射
 func (s *sUser) GetSettings(ctx context.Context) (*userApi.GetSettingsRes, error) {
-	var configs []entity.SystemConfig
-	err := dao.SystemConfig.Ctx(ctx).
-		WhereLike(dao.SystemConfig.Columns().ConfigKey, userSettingPrefix+"%").
-		WhereNull(dao.SystemConfig.Columns().DeletedAt).
+	var configs []systemEntity.SystemConfig
+	err := systemDao.SystemConfig.Ctx(ctx).
+		WhereLike(systemDao.SystemConfig.Columns().ConfigKey, userSettingPrefix+"%").
+		WhereNull(systemDao.SystemConfig.Columns().DeletedAt).
 		Scan(&configs)
 	if err != nil {
 		return nil, gerror.Wrap(err, "查询用户设置失败")
@@ -70,13 +76,13 @@ func (s *sUser) UpdateSettings(ctx context.Context, settings map[string]string) 
 	}
 
 	now := gtime.Now()
-	columns := dao.SystemConfig.Columns()
+	columns := systemDao.SystemConfig.Columns()
 
 	for key, value := range settings {
 		configKey := userSettingPrefix + key
 
 		// 查询是否已存在该配置项
-		count, err := dao.SystemConfig.Ctx(ctx).
+		count, err := systemDao.SystemConfig.Ctx(ctx).
 			Where(columns.ConfigKey, configKey).
 			WhereNull(columns.DeletedAt).
 			Count()
@@ -86,7 +92,7 @@ func (s *sUser) UpdateSettings(ctx context.Context, settings map[string]string) 
 
 		if count > 0 {
 			// 已存在则更新
-			_, err = dao.SystemConfig.Ctx(ctx).
+			_, err = systemDao.SystemConfig.Ctx(ctx).
 				Where(columns.ConfigKey, configKey).
 				WhereNull(columns.DeletedAt).
 				Data(g.Map{
@@ -96,7 +102,7 @@ func (s *sUser) UpdateSettings(ctx context.Context, settings map[string]string) 
 				Update()
 		} else {
 			// 不存在则插入
-			_, err = dao.SystemConfig.Ctx(ctx).
+			_, err = systemDao.SystemConfig.Ctx(ctx).
 				Data(g.Map{
 					columns.ConfigKey:   configKey,
 					columns.ConfigValue: value,
@@ -119,8 +125,8 @@ func (s *sUser) UpdateSettings(ctx context.Context, settings map[string]string) 
 // ResetSettings 重置所有用户设置
 // 删除 system_config 表中所有 config_key 以 "user." 开头的记录
 func (s *sUser) ResetSettings(ctx context.Context) error {
-	_, err := dao.SystemConfig.Ctx(ctx).
-		WhereLike(dao.SystemConfig.Columns().ConfigKey, userSettingPrefix+"%").
+	_, err := systemDao.SystemConfig.Ctx(ctx).
+		WhereLike(systemDao.SystemConfig.Columns().ConfigKey, userSettingPrefix+"%").
 		Delete()
 	if err != nil {
 		return gerror.Wrap(err, "重置用户设置失败")
@@ -148,7 +154,7 @@ func (s *sUser) ExportData(ctx context.Context) (*userApi.ExportDataRes, error) 
 	}
 
 	// ===== 交易所账户（不导出加密凭证） =====
-	var accounts []entity.ExchangeAccounts
+	var accounts []exchangeEntity.ExchangeAccounts
 	err := exchangeDao.ExchangeAccounts.Ctx(ctx).
 		Where(exchangeDao.ExchangeAccounts.Columns().UserId, consts.GetUserID(ctx)).
 		Where(exchangeDao.ExchangeAccounts.Columns().IsActive, 1).
@@ -168,7 +174,7 @@ func (s *sUser) ExportData(ctx context.Context) (*userApi.ExportDataRes, error) 
 	}
 
 	// ===== 钱包地址 =====
-	var wallets []entity.WalletAddresses
+	var wallets []walletEntity.WalletAddresses
 	err = walletDao.WalletAddresses.Ctx(ctx).
 		Where(walletDao.WalletAddresses.Columns().UserId, consts.GetUserID(ctx)).
 		Where(walletDao.WalletAddresses.Columns().IsActive, 1).
@@ -188,7 +194,7 @@ func (s *sUser) ExportData(ctx context.Context) (*userApi.ExportDataRes, error) 
 	}
 
 	// ===== 手动资产 =====
-	var manualAssets []entity.ManualAssets
+	var manualAssets []manualAssetEntity.ManualAssets
 	err = manualAssetDao.ManualAssets.Ctx(ctx).
 		Where(manualAssetDao.ManualAssets.Columns().UserId, consts.GetUserID(ctx)).
 		Where(manualAssetDao.ManualAssets.Columns().IsActive, 1).
@@ -211,7 +217,7 @@ func (s *sUser) ExportData(ctx context.Context) (*userApi.ExportDataRes, error) 
 	}
 
 	// ===== 策略 =====
-	var strategies []entity.Strategies
+	var strategies []strategyEntity.Strategies
 	err = strategyDao.Strategies.Ctx(ctx).
 		Where(strategyDao.Strategies.Columns().UserId, consts.GetUserID(ctx)).
 		WhereNull(strategyDao.Strategies.Columns().DeletedAt).
@@ -231,7 +237,7 @@ func (s *sUser) ExportData(ctx context.Context) (*userApi.ExportDataRes, error) 
 	}
 
 	// ===== 目标 =====
-	var goals []entity.Goals
+	var goals []goalEntity.Goals
 	err = goalDao.Goals.Ctx(ctx).
 		WhereNull(goalDao.Goals.Columns().DeletedAt).
 		Scan(&goals)
@@ -255,7 +261,7 @@ func (s *sUser) ExportData(ctx context.Context) (*userApi.ExportDataRes, error) 
 	}
 
 	// ===== 价格预警 =====
-	var alerts []entity.PriceAlerts
+	var alerts []priceAlertEntity.PriceAlerts
 	err = priceAlertDao.PriceAlerts.Ctx(ctx).
 		Where(priceAlertDao.PriceAlerts.Columns().UserId, consts.GetUserID(ctx)).
 		WhereNull(priceAlertDao.PriceAlerts.Columns().DeletedAt).

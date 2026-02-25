@@ -9,16 +9,16 @@ import (
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/golang-jwt/jwt/v5"
 
-	"your-finance/allfi/internal/dao"
-	"your-finance/allfi/internal/model/entity"
+	systemDao "your-finance/allfi/internal/app/system/dao"
+	systemEntity "your-finance/allfi/internal/app/system/model/entity"
 )
 
 // getJWTSecret 从 system_config 表读取 JWT 密钥
 // auth logic 在首次设置 PIN 时自动生成并存入数据库
 func getJWTSecret(r *ghttp.Request) []byte {
-	var config entity.SystemConfig
-	err := dao.SystemConfig.Ctx(r.Context()).
-		Where(dao.SystemConfig.Columns().ConfigKey, "auth.jwt_secret").
+	var config systemEntity.SystemConfig
+	err := systemDao.SystemConfig.Ctx(r.Context()).
+		Where(systemDao.SystemConfig.Columns().ConfigKey, "auth.jwt_secret").
 		Scan(&config)
 	if err != nil || config.ConfigValue == "" {
 		return nil

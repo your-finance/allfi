@@ -16,7 +16,8 @@ import (
 	"your-finance/allfi/internal/app/nft/service"
 	"your-finance/allfi/internal/consts"
 	"your-finance/allfi/internal/integrations/alchemy"
-	"your-finance/allfi/internal/model/entity"
+	nftEntity "your-finance/allfi/internal/app/nft/model/entity"
+	walletEntity "your-finance/allfi/internal/app/wallet/model/entity"
 
 	walletDao "your-finance/allfi/internal/app/wallet/dao"
 )
@@ -47,7 +48,7 @@ func (s *sNft) GetNFTs(ctx context.Context, chain string, collection string) (nf
 	userID := consts.GetUserID(ctx)
 
 	// 获取用户所有钱包地址
-	var wallets []*entity.WalletAddresses
+	var wallets []*walletEntity.WalletAddresses
 	err = walletDao.WalletAddresses.Ctx(ctx).
 		Where(walletDao.WalletAddresses.Columns().UserId, userID).
 		Scan(&wallets)
@@ -64,7 +65,7 @@ func (s *sNft) GetNFTs(ctx context.Context, chain string, collection string) (nf
 
 	for _, wallet := range wallets {
 		// 从缓存获取 NFT 数据
-		var caches []*entity.NftCaches
+		var caches []*nftEntity.NftCaches
 		err = dao.NftCaches.Ctx(ctx).
 			Where(dao.NftCaches.Columns().WalletAddress, wallet.Address).
 			Scan(&caches)
@@ -196,7 +197,7 @@ func (s *sNft) GetCollections(ctx context.Context) (*nftApi.GetCollectionsRes, e
 	userID := consts.GetUserID(ctx)
 
 	// 获取用户所有钱包地址
-	var wallets []*entity.WalletAddresses
+	var wallets []*walletEntity.WalletAddresses
 	err := walletDao.WalletAddresses.Ctx(ctx).
 		Where(walletDao.WalletAddresses.Columns().UserId, userID).
 		Scan(&wallets)
@@ -279,7 +280,7 @@ func isCacheValid(cachedAt time.Time) bool {
 }
 
 // cacheToNFTItem 将缓存记录转换为 NFT 条目
-func cacheToNFTItem(cache *entity.NftCaches, walletAddr string) *model.NFTItem {
+func cacheToNFTItem(cache *nftEntity.NftCaches, walletAddr string) *model.NFTItem {
 	return &model.NFTItem{
 		ID:              uint(cache.Id),
 		ContractAddress: cache.ContractAddress,
@@ -353,7 +354,7 @@ func updateNFTCache(ctx context.Context, walletAddress string, nfts []alchemy.NF
 	// 批量插入新缓存
 	now := time.Now()
 	for _, nft := range nfts {
-		cache := entity.NftCaches{
+		cache := nftEntity.NftCaches{
 			UserId:          consts.GetUserID(ctx),
 			WalletAddress:   walletAddress,
 			ContractAddress: nft.ContractAddress,
@@ -364,9 +365,9 @@ func updateNFTCache(ctx context.Context, walletAddress string, nfts []alchemy.NF
 			Collection:      nft.Collection,
 			CollectionSlug:  nft.CollectionSlug,
 			Chain:           nft.Chain,
-			FloorPrice:      float32(nft.FloorPrice),
+			FloorPrice:      nft.FloorPrice,
 			FloorCurrency:   nft.FloorPriceCurrency,
-			FloorPriceUsd:   float32(nft.FloorPriceUSD),
+			FloorPriceUsd:   nft.FloorPriceUSD,
 			CachedAt:        now,
 		}
 		_, insertErr := dao.NftCaches.Ctx(ctx).Data(cache).Insert()

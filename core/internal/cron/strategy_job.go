@@ -14,7 +14,7 @@ import (
 	notificationService "your-finance/allfi/internal/app/notification/service"
 	strategyDao "your-finance/allfi/internal/app/strategy/dao"
 	strategyService "your-finance/allfi/internal/app/strategy/service"
-	"your-finance/allfi/internal/model/entity"
+	"your-finance/allfi/internal/app/strategy/model/entity"
 )
 
 // 策略偏离度超过此阈值时发送通知（10%）

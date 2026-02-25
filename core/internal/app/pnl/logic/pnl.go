@@ -12,7 +12,7 @@ import (
 
 	"your-finance/allfi/internal/app/pnl/model"
 	"your-finance/allfi/internal/app/pnl/service"
-	"your-finance/allfi/internal/model/entity"
+	assetEntity "your-finance/allfi/internal/app/asset/model/entity"
 
 	assetDao "your-finance/allfi/internal/app/asset/dao"
 )
@@ -41,7 +41,7 @@ func (s *sPnl) GetDailyPnL(ctx context.Context, days int) (daily []*model.DailyP
 	startDate := time.Now().AddDate(0, 0, -days)
 
 	// 获取快照数据
-	var snapshots []*entity.AssetSnapshots
+	var snapshots []*assetEntity.AssetSnapshots
 	err = assetDao.AssetSnapshots.Ctx(ctx).
 		Where(assetDao.AssetSnapshots.Columns().SnapshotTime+" >= ?", startDate).
 		OrderAsc(assetDao.AssetSnapshots.Columns().SnapshotTime).
@@ -125,7 +125,7 @@ func (s *sPnl) GetPnLSummary(ctx context.Context) (*model.PnLSummary, error) {
 	// 获取 90 天快照数据（用于计算所有指标）
 	startDate := time.Now().AddDate(0, 0, -90)
 
-	var snapshots []*entity.AssetSnapshots
+	var snapshots []*assetEntity.AssetSnapshots
 	err := assetDao.AssetSnapshots.Ctx(ctx).
 		Where(assetDao.AssetSnapshots.Columns().SnapshotTime+" >= ?", startDate).
 		OrderAsc(assetDao.AssetSnapshots.Columns().SnapshotTime).
@@ -188,7 +188,7 @@ func (s *sPnl) GetPnLSummary(ctx context.Context) (*model.PnLSummary, error) {
 
 // calculatePeriodPnL 计算指定时段的盈亏
 // 找到最接近 periodStart 的快照作为起始值
-func (s *sPnl) calculatePeriodPnL(snapshots []*entity.AssetSnapshots, periodStart time.Time, currentValue float64) model.PnLPeriod {
+func (s *sPnl) calculatePeriodPnL(snapshots []*assetEntity.AssetSnapshots, periodStart time.Time, currentValue float64) model.PnLPeriod {
 	if len(snapshots) == 0 {
 		return model.PnLPeriod{EndValue: currentValue}
 	}

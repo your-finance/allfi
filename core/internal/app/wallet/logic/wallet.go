@@ -18,7 +18,7 @@ import (
 	"your-finance/allfi/internal/consts"
 	"your-finance/allfi/internal/integrations/coingecko"
 	"your-finance/allfi/internal/integrations/etherscan"
-	"your-finance/allfi/internal/model/entity"
+	"your-finance/allfi/internal/app/wallet/model/entity"
 )
 
 // sWallet 钱包服务实现

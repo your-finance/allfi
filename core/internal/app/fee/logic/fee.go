@@ -13,7 +13,7 @@ import (
 	"your-finance/allfi/internal/app/fee/model"
 	"your-finance/allfi/internal/app/fee/service"
 	transactionDao "your-finance/allfi/internal/app/transaction/dao"
-	"your-finance/allfi/internal/model/entity"
+	txEntity "your-finance/allfi/internal/app/transaction/model/entity"
 )
 
 // sFee 费用分析服务实现
@@ -41,7 +41,7 @@ func (s *sFee) GetFeeAnalytics(ctx context.Context, userID uint, period string, 
 	startTime, prevStart := parsePeriod(period, endTime)
 
 	// 查询当期交易记录
-	var txs []entity.UnifiedTransactions
+	var txs []txEntity.UnifiedTransactions
 	err := transactionDao.UnifiedTransactions.Ctx(ctx).
 		Where(transactionDao.UnifiedTransactions.Columns().UserId, userID).
 		WhereGTE(transactionDao.UnifiedTransactions.Columns().Timestamp, startTime).
@@ -59,7 +59,7 @@ func (s *sFee) GetFeeAnalytics(ctx context.Context, userID uint, period string, 
 
 	// 计算与上期对比
 	if !prevStart.IsZero() {
-		var prevTxs []entity.UnifiedTransactions
+		var prevTxs []txEntity.UnifiedTransactions
 		err := transactionDao.UnifiedTransactions.Ctx(ctx).
 			Where(transactionDao.UnifiedTransactions.Columns().UserId, userID).
 			WhereGTE(transactionDao.UnifiedTransactions.Columns().Timestamp, prevStart).
@@ -87,7 +87,7 @@ func (s *sFee) GetFeeAnalytics(ctx context.Context, userID uint, period string, 
 }
 
 // aggregateFees 汇总交易费用
-func (s *sFee) aggregateFees(txs []entity.UnifiedTransactions, currency string) *model.FeeAnalytics {
+func (s *sFee) aggregateFees(txs []txEntity.UnifiedTransactions, currency string) *model.FeeAnalytics {
 	analytics := &model.FeeAnalytics{
 		Currency: currency,
 	}
@@ -156,7 +156,7 @@ func classifyFeeType(txType, chain string) string {
 }
 
 // calculateDailyTrend 计算每日费用趋势
-func (s *sFee) calculateDailyTrend(txs []entity.UnifiedTransactions) []model.DailyFee {
+func (s *sFee) calculateDailyTrend(txs []txEntity.UnifiedTransactions) []model.DailyFee {
 	dailyMap := make(map[string]float64)
 
 	for _, tx := range txs {

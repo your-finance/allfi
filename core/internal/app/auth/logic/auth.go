@@ -19,8 +19,8 @@ import (
 	authApi "your-finance/allfi/api/v1/auth"
 	"your-finance/allfi/internal/app/auth/model"
 	"your-finance/allfi/internal/app/auth/service"
-	"your-finance/allfi/internal/dao"
-	"your-finance/allfi/internal/model/entity"
+	systemDao "your-finance/allfi/internal/app/system/dao"
+	systemEntity "your-finance/allfi/internal/app/system/model/entity"
 )
 
 // pinPattern PIN 格式正则：4-20 位数字
@@ -240,9 +240,9 @@ func (s *sAuth) clearFailures(ctx context.Context) {
 
 // getConfigValue 从 system_config 表读取配置值
 func (s *sAuth) getConfigValue(ctx context.Context, key string) string {
-	var config entity.SystemConfig
-	err := dao.SystemConfig.Ctx(ctx).
-		Where(dao.SystemConfig.Columns().ConfigKey, key).
+	var config systemEntity.SystemConfig
+	err := systemDao.SystemConfig.Ctx(ctx).
+		Where(systemDao.SystemConfig.Columns().ConfigKey, key).
 		Scan(&config)
 	if err != nil {
 		return ""
@@ -253,8 +253,8 @@ func (s *sAuth) getConfigValue(ctx context.Context, key string) string {
 // setConfigValue 写入 system_config 表
 func (s *sAuth) setConfigValue(ctx context.Context, key string, value string) error {
 	// 检查是否存在
-	count, err := dao.SystemConfig.Ctx(ctx).
-		Where(dao.SystemConfig.Columns().ConfigKey, key).
+	count, err := systemDao.SystemConfig.Ctx(ctx).
+		Where(systemDao.SystemConfig.Columns().ConfigKey, key).
 		Count()
 	if err != nil {
 		return gerror.Wrap(err, "查询配置失败")
@@ -262,18 +262,18 @@ func (s *sAuth) setConfigValue(ctx context.Context, key string, value string) er
 
 	if count > 0 {
 		// 更新
-		_, err = dao.SystemConfig.Ctx(ctx).
-			Where(dao.SystemConfig.Columns().ConfigKey, key).
+		_, err = systemDao.SystemConfig.Ctx(ctx).
+			Where(systemDao.SystemConfig.Columns().ConfigKey, key).
 			Data(g.Map{
-				dao.SystemConfig.Columns().ConfigValue: value,
+				systemDao.SystemConfig.Columns().ConfigValue: value,
 			}).
 			Update()
 	} else {
 		// 插入
-		_, err = dao.SystemConfig.Ctx(ctx).Insert(g.Map{
-			dao.SystemConfig.Columns().ConfigKey:   key,
-			dao.SystemConfig.Columns().ConfigValue: value,
-			dao.SystemConfig.Columns().Description: fmt.Sprintf("认证配置: %s", key),
+		_, err = systemDao.SystemConfig.Ctx(ctx).Insert(g.Map{
+			systemDao.SystemConfig.Columns().ConfigKey:   key,
+			systemDao.SystemConfig.Columns().ConfigValue: value,
+			systemDao.SystemConfig.Columns().Description: fmt.Sprintf("认证配置: %s", key),
 		})
 	}
 	return err

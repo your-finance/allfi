@@ -8,8 +8,8 @@ import (
 
 	"github.com/gogf/gf/v2/frame/g"
 
-	"your-finance/allfi/internal/dao"
-	"your-finance/allfi/internal/model/entity"
+	systemDao "your-finance/allfi/internal/app/system/dao"
+	systemEntity "your-finance/allfi/internal/app/system/model/entity"
 	"your-finance/allfi/utility/crypto"
 )
 
@@ -37,10 +37,10 @@ func ResolveAPIKey(ctx context.Context, provider string) string {
 	masterKey := g.Cfg().MustGet(ctx, "security.masterKey").String()
 	if len(masterKey) == 32 {
 		configKey := apiKeyPrefix + provider
-		var config entity.SystemConfig
-		err := dao.SystemConfig.Ctx(ctx).
-			Where(dao.SystemConfig.Columns().ConfigKey, configKey).
-			WhereNull(dao.SystemConfig.Columns().DeletedAt).
+		var config systemEntity.SystemConfig
+		err := systemDao.SystemConfig.Ctx(ctx).
+			Where(systemDao.SystemConfig.Columns().ConfigKey, configKey).
+			WhereNull(systemDao.SystemConfig.Columns().DeletedAt).
 			Scan(&config)
 		if err == nil && config.ConfigValue != "" {
 			plainKey, decErr := crypto.DecryptAES(config.ConfigValue, masterKey)

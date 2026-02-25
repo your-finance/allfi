@@ -1,14 +1,194 @@
 gfcli:
   gen:
     dao:
+      # ===== 成就模块 =====
       - link: "sqlite::@file(./data/allfi.db)"
-        path: "./internal"
-        group: "default"
+        path: "./internal/app/achievement"
+        tables: "user_achievements"
         stdTime: true
         withTime: true
+        overwriteDao: false
         descriptionTag: true
         noJsonTag: false
         noModelComment: false
-        overwriteDao: false
         jsonCase: "Snake"
-        tables: "exchange_accounts,wallet_addresses,manual_assets,asset_snapshots,asset_details,exchange_rates,system_config,notifications,notification_preferences,web_push_subscriptions,price_alerts,reports,nft_caches,unified_transactions,transaction_daily_summaries,strategies,user_achievements,sync_metadata,goals"
+
+      # ===== 资产模块 =====
+      - link: "sqlite::@file(./data/allfi.db)"
+        path: "./internal/app/asset"
+        tables: "asset_details,asset_snapshots"
+        stdTime: true
+        withTime: true
+        overwriteDao: false
+        descriptionTag: true
+        noJsonTag: false
+        noModelComment: false
+        jsonCase: "Snake"
+
+      # ===== 交易所模块 =====
+      - link: "sqlite::@file(./data/allfi.db)"
+        path: "./internal/app/exchange"
+        tables: "exchange_accounts"
+        stdTime: true
+        withTime: true
+        overwriteDao: false
+        descriptionTag: true
+        noJsonTag: false
+        noModelComment: false
+        jsonCase: "Snake"
+
+      # ===== 汇率模块 =====
+      - link: "sqlite::@file(./data/allfi.db)"
+        path: "./internal/app/exchange_rate"
+        tables: "exchange_rates"
+        stdTime: true
+        withTime: true
+        overwriteDao: false
+        descriptionTag: true
+        noJsonTag: false
+        noModelComment: false
+        jsonCase: "Snake"
+
+      # ===== 目标模块 =====
+      - link: "sqlite::@file(./data/allfi.db)"
+        path: "./internal/app/goal"
+        tables: "goals"
+        stdTime: true
+        withTime: true
+        overwriteDao: false
+        descriptionTag: true
+        noJsonTag: false
+        noModelComment: false
+        jsonCase: "Snake"
+
+      # ===== 手动资产模块 =====
+      - link: "sqlite::@file(./data/allfi.db)"
+        path: "./internal/app/manual_asset"
+        tables: "manual_assets"
+        stdTime: true
+        withTime: true
+        overwriteDao: false
+        descriptionTag: true
+        noJsonTag: false
+        noModelComment: false
+        jsonCase: "Snake"
+
+      # ===== NFT 模块 =====
+      - link: "sqlite::@file(./data/allfi.db)"
+        path: "./internal/app/nft"
+        tables: "nft_caches"
+        stdTime: true
+        withTime: true
+        overwriteDao: false
+        descriptionTag: true
+        noJsonTag: false
+        noModelComment: false
+        jsonCase: "Snake"
+
+      # ===== 通知模块 =====
+      - link: "sqlite::@file(./data/allfi.db)"
+        path: "./internal/app/notification"
+        tables: "notifications,notification_preferences"
+        stdTime: true
+        withTime: true
+        overwriteDao: false
+        descriptionTag: true
+        noJsonTag: false
+        noModelComment: false
+        jsonCase: "Snake"
+
+      # ===== 价格预警模块 =====
+      - link: "sqlite::@file(./data/allfi.db)"
+        path: "./internal/app/price_alert"
+        tables: "price_alerts"
+        stdTime: true
+        withTime: true
+        overwriteDao: false
+        descriptionTag: true
+        noJsonTag: false
+        noModelComment: false
+        jsonCase: "Snake"
+
+      # ===== 报告模块 =====
+      - link: "sqlite::@file(./data/allfi.db)"
+        path: "./internal/app/report"
+        tables: "reports"
+        stdTime: true
+        withTime: true
+        overwriteDao: false
+        descriptionTag: true
+        noJsonTag: false
+        noModelComment: false
+        jsonCase: "Snake"
+
+      # ===== 策略模块 =====
+      - link: "sqlite::@file(./data/allfi.db)"
+        path: "./internal/app/strategy"
+        tables: "strategies"
+        stdTime: true
+        withTime: true
+        overwriteDao: false
+        descriptionTag: true
+        noJsonTag: false
+        noModelComment: false
+        jsonCase: "Snake"
+
+      # ===== 系统模块 =====
+      - link: "sqlite::@file(./data/allfi.db)"
+        path: "./internal/app/system"
+        tables: "system_config"
+        stdTime: true
+        withTime: true
+        overwriteDao: false
+        descriptionTag: true
+        noJsonTag: false
+        noModelComment: false
+        jsonCase: "Snake"
+
+      # ===== 交易记录模块 =====
+      - link: "sqlite::@file(./data/allfi.db)"
+        path: "./internal/app/transaction"
+        tables: "unified_transactions,transaction_daily_summaries,sync_metadata"
+        stdTime: true
+        withTime: true
+        overwriteDao: false
+        descriptionTag: true
+        noJsonTag: false
+        noModelComment: false
+        jsonCase: "Snake"
+
+      # ===== 用户模块 =====
+      - link: "sqlite::@file(./data/allfi.db)"
+        path: "./internal/app/user"
+        tables: "users"
+        stdTime: true
+        withTime: true
+        overwriteDao: false
+        descriptionTag: true
+        noJsonTag: false
+        noModelComment: false
+        jsonCase: "Snake"
+
+      # ===== 钱包模块 =====
+      - link: "sqlite::@file(./data/allfi.db)"
+        path: "./internal/app/wallet"
+        tables: "wallet_addresses"
+        stdTime: true
+        withTime: true
+        overwriteDao: false
+        descriptionTag: true
+        noJsonTag: false
+        noModelComment: false
+        jsonCase: "Snake"
+
+      # ===== WebPush 模块 =====
+      - link: "sqlite::@file(./data/allfi.db)"
+        path: "./internal/app/webpush"
+        tables: "web_push_subscriptions"
+        stdTime: true
+        withTime: true
+        overwriteDao: false
+        descriptionTag: true
+        noJsonTag: false
+        noModelComment: false
+        jsonCase: "Snake"

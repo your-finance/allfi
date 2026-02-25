@@ -12,7 +12,7 @@ import (
 
 	notificationDao "your-finance/allfi/internal/app/notification/dao"
 	notificationService "your-finance/allfi/internal/app/notification/service"
-	"your-finance/allfi/internal/model/entity"
+	"your-finance/allfi/internal/app/notification/model/entity"
 )
 
 // NotificationJob 通知定时任务

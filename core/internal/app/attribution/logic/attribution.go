@@ -13,7 +13,7 @@ import (
 	"your-finance/allfi/internal/app/attribution/model"
 	"your-finance/allfi/internal/app/attribution/service"
 	"your-finance/allfi/internal/consts"
-	"your-finance/allfi/internal/model/entity"
+	assetEntity "your-finance/allfi/internal/app/asset/model/entity"
 )
 
 // sAttribution 资产归因分析服务实现
@@ -45,7 +45,7 @@ func (s *sAttribution) GetAttribution(ctx context.Context, days int, currency st
 	startDate := time.Now().AddDate(0, 0, -(days + 1))
 
 	// 获取快照列表
-	var snapshots []*entity.AssetSnapshots
+	var snapshots []*assetEntity.AssetSnapshots
 	err := assetDao.AssetSnapshots.Ctx(ctx).
 		Where(assetDao.AssetSnapshots.Columns().SnapshotTime+" >= ?", startDate).
 		OrderAsc(assetDao.AssetSnapshots.Columns().SnapshotTime).
@@ -70,7 +70,7 @@ func (s *sAttribution) GetAttribution(ctx context.Context, days int, currency st
 
 	// 获取当前资产详情作为结束状态
 	userID := consts.GetUserID(ctx)
-	var endDetails []*entity.AssetDetails
+	var endDetails []*assetEntity.AssetDetails
 	err = assetDao.AssetDetails.Ctx(ctx).
 		Where(assetDao.AssetDetails.Columns().UserId, userID).
 		Scan(&endDetails)

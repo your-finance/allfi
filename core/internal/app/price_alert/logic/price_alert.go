@@ -17,7 +17,7 @@ import (
 	"your-finance/allfi/internal/app/price_alert/dao"
 	"your-finance/allfi/internal/app/price_alert/service"
 	"your-finance/allfi/internal/integrations/coingecko"
-	"your-finance/allfi/internal/model/entity"
+	"your-finance/allfi/internal/app/price_alert/model/entity"
 )
 
 // sPriceAlert 价格预警服务实现

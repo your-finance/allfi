@@ -12,7 +12,7 @@ import (
 	"your-finance/allfi/internal/app/forecast/model"
 	"your-finance/allfi/internal/app/forecast/service"
 	assetDao "your-finance/allfi/internal/app/asset/dao"
-	"your-finance/allfi/internal/model/entity"
+	assetEntity "your-finance/allfi/internal/app/asset/model/entity"
 )
 
 // sForecast 趋势预测服务实现
@@ -43,7 +43,7 @@ func (s *sForecast) GetForecast(ctx context.Context, targetValue float64, curren
 	// 获取 90 天的快照数据
 	startDate := time.Now().AddDate(0, 0, -90)
 
-	var snapshots []*entity.AssetSnapshots
+	var snapshots []*assetEntity.AssetSnapshots
 	err := assetDao.AssetSnapshots.Ctx(ctx).
 		Where(assetDao.AssetSnapshots.Columns().SnapshotTime+" >= ?", startDate).
 		OrderAsc(assetDao.AssetSnapshots.Columns().SnapshotTime).

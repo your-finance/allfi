@@ -14,7 +14,8 @@ import (
 	"your-finance/allfi/internal/app/manual_asset/dao"
 	"your-finance/allfi/internal/app/manual_asset/service"
 	"your-finance/allfi/internal/integrations/coingecko"
-	"your-finance/allfi/internal/model/entity"
+	exchangeRateEntity "your-finance/allfi/internal/app/exchange_rate/model/entity"
+	manualAssetEntity "your-finance/allfi/internal/app/manual_asset/model/entity"
 )
 
 // sManualAsset 手动资产服务实现
@@ -27,7 +28,7 @@ func New() service.IManualAsset {
 
 // ListManualAssets 获取手动资产列表
 func (s *sManualAsset) ListManualAssets(ctx context.Context, userID int) ([]manualAssetApi.ManualAssetItem, error) {
-	var assets []entity.ManualAssets
+	var assets []manualAssetEntity.ManualAssets
 	err := dao.ManualAssets.Ctx(ctx).
 		Where(dao.ManualAssets.Columns().UserId, userID).
 		Where(dao.ManualAssets.Columns().IsActive, 1).
@@ -82,7 +83,7 @@ func (s *sManualAsset) CreateManualAsset(ctx context.Context, userID int, req *m
 // UpdateManualAsset 更新手动资产
 func (s *sManualAsset) UpdateManualAsset(ctx context.Context, req *manualAssetApi.UpdateReq) (*manualAssetApi.ManualAssetItem, error) {
 	// 检查是否存在
-	var existing entity.ManualAssets
+	var existing manualAssetEntity.ManualAssets
 	err := dao.ManualAssets.Ctx(ctx).
 		Where(dao.ManualAssets.Columns().Id, req.Id).
 		WhereNull(dao.ManualAssets.Columns().DeletedAt).
@@ -152,7 +153,7 @@ func (s *sManualAsset) DeleteManualAsset(ctx context.Context, assetID int) error
 
 // getAssetByID 根据 ID 查询手动资产
 func (s *sManualAsset) getAssetByID(ctx context.Context, assetID int) (*manualAssetApi.ManualAssetItem, error) {
-	var asset entity.ManualAssets
+	var asset manualAssetEntity.ManualAssets
 	err := dao.ManualAssets.Ctx(ctx).
 		Where(dao.ManualAssets.Columns().Id, assetID).
 		WhereNull(dao.ManualAssets.Columns().DeletedAt).
@@ -169,7 +170,7 @@ func (s *sManualAsset) getAssetByID(ctx context.Context, assetID int) (*manualAs
 }
 
 // toAssetItem 将数据库实体转换为 API 响应格式
-func (s *sManualAsset) toAssetItem(a *entity.ManualAssets) manualAssetApi.ManualAssetItem {
+func (s *sManualAsset) toAssetItem(a *manualAssetEntity.ManualAssets) manualAssetApi.ManualAssetItem {
 	return manualAssetApi.ManualAssetItem{
 		ID:        uint(a.Id),
 		AssetType: a.AssetType,
@@ -191,7 +192,7 @@ func (s *sManualAsset) convertToUSD(ctx context.Context, amount float64, currenc
 	}
 
 	// 1. 尝试从 exchange_rates 表查找 currency -> USD 的汇率
-	var rate entity.ExchangeRates
+	var rate exchangeRateEntity.ExchangeRates
 	err := exchangeRateDao.ExchangeRates.Ctx(ctx).
 		Where(exchangeRateDao.ExchangeRates.Columns().FromCurrency, currency).
 		Where(exchangeRateDao.ExchangeRates.Columns().ToCurrency, "USD").

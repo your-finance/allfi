@@ -14,7 +14,7 @@ import (
 
 	systemApi "your-finance/allfi/api/v1/system"
 	"your-finance/allfi/internal/app/system/dao"
-	"your-finance/allfi/internal/model/entity"
+	"your-finance/allfi/internal/app/system/model/entity"
 	"your-finance/allfi/utility/crypto"
 )
 

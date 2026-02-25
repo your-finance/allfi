@@ -16,7 +16,7 @@ import (
 	erModel "your-finance/allfi/internal/app/exchange_rate/model"
 	"your-finance/allfi/internal/app/exchange_rate/service"
 	"your-finance/allfi/internal/integrations/coingecko"
-	"your-finance/allfi/internal/model/entity"
+	"your-finance/allfi/internal/app/exchange_rate/model/entity"
 )
 
 // sExchangeRate 汇率服务实现

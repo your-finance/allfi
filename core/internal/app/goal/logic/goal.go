@@ -12,12 +12,13 @@ import (
 
 	goalApi "your-finance/allfi/api/v1/goal"
 	assetDao "your-finance/allfi/internal/app/asset/dao"
+	assetEntity "your-finance/allfi/internal/app/asset/model/entity"
 	assetService "your-finance/allfi/internal/app/asset/service"
 	"your-finance/allfi/internal/app/goal/dao"
 	goalModel "your-finance/allfi/internal/app/goal/model"
+	goalEntity "your-finance/allfi/internal/app/goal/model/entity"
 	"your-finance/allfi/internal/app/goal/service"
 	"your-finance/allfi/internal/consts"
-	"your-finance/allfi/internal/model/entity"
 )
 
 // sGoal 目标追踪服务实现
@@ -31,7 +32,7 @@ func New() service.IGoal {
 // GetGoals 获取目标列表（带进度百分比）
 // 通过资产服务获取当前值，计算每个目标的进度
 func (s *sGoal) GetGoals(ctx context.Context) ([]goalApi.GoalItem, error) {
-	var goals []entity.Goals
+	var goals []goalEntity.Goals
 	err := dao.Goals.Ctx(ctx).
 		WhereNull(dao.Goals.Columns().DeletedAt).
 		OrderDesc(dao.Goals.Columns().CreatedAt).
@@ -126,7 +127,7 @@ func (s *sGoal) CreateGoal(ctx context.Context, req *goalApi.CreateReq) (*goalAp
 // UpdateGoal 更新目标
 func (s *sGoal) UpdateGoal(ctx context.Context, req *goalApi.UpdateReq) (*goalApi.GoalItem, error) {
 	// 检查是否存在
-	var existing entity.Goals
+	var existing goalEntity.Goals
 	err := dao.Goals.Ctx(ctx).
 		Where(dao.Goals.Columns().Id, req.Id).
 		WhereNull(dao.Goals.Columns().DeletedAt).
@@ -198,7 +199,7 @@ func (s *sGoal) DeleteGoal(ctx context.Context, goalID int) error {
 
 // calculateCurrentValue 根据目标类型计算当前值
 // 通过资产服务和 DAO 查询获取实时数据
-func (s *sGoal) calculateCurrentValue(ctx context.Context, goal *entity.Goals) float64 {
+func (s *sGoal) calculateCurrentValue(ctx context.Context, goal *goalEntity.Goals) float64 {
 	switch goal.Type {
 	case goalModel.GoalTypeAssetValue:
 		// 调用资产服务获取当前总资产值（按目标指定的货币计价）
@@ -211,7 +212,7 @@ func (s *sGoal) calculateCurrentValue(ctx context.Context, goal *entity.Goals) f
 
 	case goalModel.GoalTypeReturnRate:
 		// 从快照数据计算收益率：(最新 - 最旧) / 最旧 * 100
-		var snapshots []entity.AssetSnapshots
+		var snapshots []assetEntity.AssetSnapshots
 		err := assetDao.AssetSnapshots.Ctx(ctx).
 			Where(assetDao.AssetSnapshots.Columns().UserId, consts.GetUserID(ctx)).
 			OrderAsc(assetDao.AssetSnapshots.Columns().SnapshotTime).
@@ -247,7 +248,7 @@ func (s *sGoal) calculateCurrentValue(ctx context.Context, goal *entity.Goals) f
 
 // getGoalByID 根据 ID 查询目标
 func (s *sGoal) getGoalByID(ctx context.Context, goalID int) (*goalApi.GoalItem, error) {
-	var goal entity.Goals
+	var goal goalEntity.Goals
 	err := dao.Goals.Ctx(ctx).
 		Where(dao.Goals.Columns().Id, goalID).
 		WhereNull(dao.Goals.Columns().DeletedAt).
@@ -264,7 +265,7 @@ func (s *sGoal) getGoalByID(ctx context.Context, goalID int) (*goalApi.GoalItem,
 }
 
 // toGoalItem 将数据库实体转换为 API 响应格式
-func (s *sGoal) toGoalItem(g *entity.Goals) goalApi.GoalItem {
+func (s *sGoal) toGoalItem(g *goalEntity.Goals) goalApi.GoalItem {
 	item := goalApi.GoalItem{
 		ID:          uint(g.Id),
 		Title:       g.Title,

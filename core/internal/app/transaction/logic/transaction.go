@@ -12,17 +12,21 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 
 	transactionApi "your-finance/allfi/api/v1/transaction"
-	"your-finance/allfi/internal/consts"
 	exchangeDao "your-finance/allfi/internal/app/exchange/dao"
+	exchangeEntity "your-finance/allfi/internal/app/exchange/model/entity"
+	systemDao "your-finance/allfi/internal/app/system/dao"
+	systemEntity "your-finance/allfi/internal/app/system/model/entity"
 	"your-finance/allfi/internal/app/transaction/dao"
 	txModel "your-finance/allfi/internal/app/transaction/model"
+	txEntity "your-finance/allfi/internal/app/transaction/model/entity"
 	"your-finance/allfi/internal/app/transaction/service"
 	walletDao "your-finance/allfi/internal/app/wallet/dao"
+	walletEntity "your-finance/allfi/internal/app/wallet/model/entity"
+	"your-finance/allfi/internal/consts"
 	"your-finance/allfi/internal/integrations"
 	"your-finance/allfi/internal/integrations/binance"
 	"your-finance/allfi/internal/integrations/coinbase"
 	"your-finance/allfi/internal/integrations/okx"
-	"your-finance/allfi/internal/model/entity"
 	"your-finance/allfi/utility/crypto"
 )
 
@@ -73,7 +77,7 @@ func (s *sTransaction) List(ctx context.Context, page, pageSize int, source, txT
 	}
 
 	// 查询总数和分页数据
-	var transactions []entity.UnifiedTransactions
+	var transactions []txEntity.UnifiedTransactions
 	var total int
 	err := query.
 		OrderDesc(dao.UnifiedTransactions.Columns().Timestamp).
@@ -105,7 +109,7 @@ func (s *sTransaction) Sync(ctx context.Context) (*transactionApi.SyncRes, error
 	syncedCount := 0
 
 	// ===== 1. 同步交易所交易记录 =====
-	var accounts []entity.ExchangeAccounts
+	var accounts []exchangeEntity.ExchangeAccounts
 	err := exchangeDao.ExchangeAccounts.Ctx(ctx).
 		Where(exchangeDao.ExchangeAccounts.Columns().UserId, consts.GetUserID(ctx)).
 		Where(exchangeDao.ExchangeAccounts.Columns().IsActive, 1).
@@ -151,7 +155,7 @@ func (s *sTransaction) Sync(ctx context.Context) (*transactionApi.SyncRes, error
 		}
 
 		// 查询该交易所的同步元数据获取上次同步时间
-		var meta entity.SyncMetadata
+		var meta txEntity.SyncMetadata
 		_ = dao.SyncMetadata.Ctx(ctx).
 			Where(dao.SyncMetadata.Columns().Source, acc.ExchangeName).
 			Scan(&meta)
@@ -203,7 +207,7 @@ func (s *sTransaction) Sync(ctx context.Context) (*transactionApi.SyncRes, error
 	}
 
 	// ===== 2. 记录钱包地址同步状态 =====
-	var wallets []entity.WalletAddresses
+	var wallets []walletEntity.WalletAddresses
 	err = walletDao.WalletAddresses.Ctx(ctx).
 		Where(walletDao.WalletAddresses.Columns().UserId, consts.GetUserID(ctx)).
 		Where(walletDao.WalletAddresses.Columns().IsActive, 1).
@@ -426,9 +430,9 @@ func (s *sTransaction) GetSyncSettings(ctx context.Context) (*transactionApi.Get
 	}
 
 	// 从系统配置读取
-	var configs []entity.SystemConfig
-	err := dao.SystemConfig.Ctx(ctx).
-		WhereIn(dao.SystemConfig.Columns().ConfigKey, g.Slice{
+	var configs []systemEntity.SystemConfig
+	err := systemDao.SystemConfig.Ctx(ctx).
+		WhereIn(systemDao.SystemConfig.Columns().ConfigKey, g.Slice{
 			txModel.ConfigKeyAutoSync,
 			txModel.ConfigKeySyncInterval,
 			txModel.ConfigKeyLastSyncAt,
@@ -484,11 +488,11 @@ func (s *sTransaction) UpdateSyncSettings(ctx context.Context, autoSync *bool, s
 // upsertConfig 更新或插入系统配置
 func (s *sTransaction) upsertConfig(ctx context.Context, key, value string) {
 	// 先尝试更新
-	result, err := dao.SystemConfig.Ctx(ctx).
-		Where(dao.SystemConfig.Columns().ConfigKey, key).
+	result, err := systemDao.SystemConfig.Ctx(ctx).
+		Where(systemDao.SystemConfig.Columns().ConfigKey, key).
 		Data(g.Map{
-			dao.SystemConfig.Columns().ConfigValue: value,
-			dao.SystemConfig.Columns().UpdatedAt:   time.Now(),
+			systemDao.SystemConfig.Columns().ConfigValue: value,
+			systemDao.SystemConfig.Columns().UpdatedAt:   time.Now(),
 		}).Update()
 	if err != nil {
 		g.Log().Warning(ctx, "更新系统配置失败", "key", key, "error", err)
@@ -498,11 +502,11 @@ func (s *sTransaction) upsertConfig(ctx context.Context, key, value string) {
 	affected, _ := result.RowsAffected()
 	if affected == 0 {
 		// 不存在则插入
-		_, err = dao.SystemConfig.Ctx(ctx).Insert(g.Map{
-			dao.SystemConfig.Columns().ConfigKey:   key,
-			dao.SystemConfig.Columns().ConfigValue: value,
-			dao.SystemConfig.Columns().CreatedAt:   time.Now(),
-			dao.SystemConfig.Columns().UpdatedAt:   time.Now(),
+		_, err = systemDao.SystemConfig.Ctx(ctx).Insert(g.Map{
+			systemDao.SystemConfig.Columns().ConfigKey:   key,
+			systemDao.SystemConfig.Columns().ConfigValue: value,
+			systemDao.SystemConfig.Columns().CreatedAt:   time.Now(),
+			systemDao.SystemConfig.Columns().UpdatedAt:   time.Now(),
 		})
 		if err != nil {
 			g.Log().Warning(ctx, "插入系统配置失败", "key", key, "error", err)
@@ -521,7 +525,7 @@ func (s *sTransaction) getUpdatedSettings(ctx context.Context) (*transactionApi.
 
 // toTransactionItem 将实体转换为 API 条目
 // Price = ValueUSD / Amount（当 Amount 不为 0 时）
-func toTransactionItem(tx *entity.UnifiedTransactions) transactionApi.TransactionItem {
+func toTransactionItem(tx *txEntity.UnifiedTransactions) transactionApi.TransactionItem {
 	// 计算单价：ValueUSD / Amount
 	var price float64
 	amount := float64(tx.FromAmount)

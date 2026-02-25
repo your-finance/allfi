@@ -15,7 +15,7 @@ import (
 	walletDao "your-finance/allfi/internal/app/wallet/dao"
 	"your-finance/allfi/internal/consts"
 	defiPkg "your-finance/allfi/internal/integrations/defi"
-	"your-finance/allfi/internal/model/entity"
+	walletEntity "your-finance/allfi/internal/app/wallet/model/entity"
 )
 
 // sDefi DeFi 仓位服务实现
@@ -46,7 +46,7 @@ func (s *sDefi) GetPositions(ctx context.Context, chain string, protocol string)
 	userID := consts.GetUserID(ctx)
 
 	// 获取用户所有钱包地址
-	var wallets []*entity.WalletAddresses
+	var wallets []*walletEntity.WalletAddresses
 	err = walletDao.WalletAddresses.Ctx(ctx).
 		Where(walletDao.WalletAddresses.Columns().UserId, userID).
 		Scan(&wallets)
@@ -77,7 +77,7 @@ func (s *sDefi) GetPositions(ctx context.Context, chain string, protocol string)
 
 	for _, w := range wallets {
 		wg.Add(1)
-		go func(wallet *entity.WalletAddresses) {
+		go func(wallet *walletEntity.WalletAddresses) {
 			defer wg.Done()
 
 			var pos []defiPkg.Position

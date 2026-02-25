@@ -13,7 +13,7 @@ import (
 	"your-finance/allfi/internal/app/webpush/dao"
 	"your-finance/allfi/internal/app/webpush/service"
 	"your-finance/allfi/internal/consts"
-	"your-finance/allfi/internal/model/entity"
+	"your-finance/allfi/internal/app/webpush/model/entity"
 )
 
 // sWebpush WebPush 推送服务实现

@@ -15,7 +15,7 @@ import (
 	"your-finance/allfi/internal/consts"
 	"your-finance/allfi/internal/integrations/coingecko"
 	"your-finance/allfi/internal/integrations/yahoo"
-	"your-finance/allfi/internal/model/entity"
+	assetEntity "your-finance/allfi/internal/app/asset/model/entity"
 )
 
 // sBenchmark 基准对比服务实现
@@ -56,7 +56,7 @@ func (s *sBenchmark) calculateUserReturn(ctx context.Context, days int) (float64
 	startTime := time.Now().AddDate(0, 0, -days)
 
 	// 直接从 DAO 查询快照
-	var snapshots []entity.AssetSnapshots
+	var snapshots []assetEntity.AssetSnapshots
 	err := assetDao.AssetSnapshots.Ctx(ctx).
 		Where(assetDao.AssetSnapshots.Columns().UserId, consts.GetUserID(ctx)).
 		WhereGTE(assetDao.AssetSnapshots.Columns().SnapshotTime, startTime).

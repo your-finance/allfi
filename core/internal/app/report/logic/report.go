@@ -20,7 +20,8 @@ import (
 	reportModel "your-finance/allfi/internal/app/report/model"
 	"your-finance/allfi/internal/app/report/service"
 	"your-finance/allfi/internal/consts"
-	"your-finance/allfi/internal/model/entity"
+	assetEntity "your-finance/allfi/internal/app/asset/model/entity"
+	reportEntity "your-finance/allfi/internal/app/report/model/entity"
 )
 
 // sReport 报告服务实现
@@ -47,7 +48,7 @@ func (s *sReport) GetReports(ctx context.Context, reportType string, limit int) 
 	}
 
 	// 查询
-	var reports []entity.Reports
+	var reports []reportEntity.Reports
 	err := query.
 		OrderDesc(dao.Reports.Columns().GeneratedAt).
 		Limit(limit).
@@ -67,7 +68,7 @@ func (s *sReport) GetReports(ctx context.Context, reportType string, limit int) 
 
 // GetReport 获取单个报告详情
 func (s *sReport) GetReport(ctx context.Context, id uint) (*reportApi.GetRes, error) {
-	var report entity.Reports
+	var report reportEntity.Reports
 	err := dao.Reports.Ctx(ctx).
 		Where(dao.Reports.Columns().Id, id).
 		Scan(&report)
@@ -120,7 +121,7 @@ func (s *sReport) GenerateReport(ctx context.Context, reportType string) (*repor
 		return nil, gerror.NewCode(gcode.New(4001, "", nil), "您还没有添加任何资产，请先添加资产后再生成报告")
 	}
 
-	var report *entity.Reports
+	var report *reportEntity.Reports
 	var err error
 
 	switch reportType {
@@ -151,7 +152,7 @@ func (s *sReport) GetMonthlyReport(ctx context.Context, month string) (*reportAp
 	userID := consts.GetUserID(ctx)
 
 	// 先查找已有报告
-	var existing entity.Reports
+	var existing reportEntity.Reports
 	err := dao.Reports.Ctx(ctx).
 		Where(dao.Reports.Columns().UserId, userID).
 		Where(dao.Reports.Columns().Type, reportModel.ReportTypeMonthly).
@@ -206,7 +207,7 @@ func (s *sReport) GetAnnualReport(ctx context.Context, year string) (*reportApi.
 	userID := consts.GetUserID(ctx)
 
 	// 先查找已有报告
-	var existing entity.Reports
+	var existing reportEntity.Reports
 	err := dao.Reports.Ctx(ctx).
 		Where(dao.Reports.Columns().UserId, userID).
 		Where(dao.Reports.Columns().Type, reportModel.ReportTypeAnnual).
@@ -256,12 +257,12 @@ func (s *sReport) GetAnnualReport(ctx context.Context, year string) (*reportApi.
 }
 
 // generateDailyReport 生成日报
-func (s *sReport) generateDailyReport(ctx context.Context, userID int) (*entity.Reports, error) {
+func (s *sReport) generateDailyReport(ctx context.Context, userID int) (*reportEntity.Reports, error) {
 	now := time.Now()
 	period := now.Format("2006-01-02")
 
 	// 检查是否已存在
-	var existing entity.Reports
+	var existing reportEntity.Reports
 	err := dao.Reports.Ctx(ctx).
 		Where(dao.Reports.Columns().UserId, userID).
 		Where(dao.Reports.Columns().Type, reportModel.ReportTypeDaily).
@@ -273,18 +274,18 @@ func (s *sReport) generateDailyReport(ctx context.Context, userID int) (*entity.
 
 	// 获取今日快照，如果没有则获取最新快照
 	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	var todaySnapshots []entity.AssetSnapshots
+	var todaySnapshots []assetEntity.AssetSnapshots
 	err = assetDao.AssetSnapshots.Ctx(ctx).
 		Where(assetDao.AssetSnapshots.Columns().UserId, userID).
 		WhereGTE(assetDao.AssetSnapshots.Columns().SnapshotTime, todayStart).
 		OrderDesc(assetDao.AssetSnapshots.Columns().SnapshotTime).
 		Scan(&todaySnapshots)
 
-	var latest entity.AssetSnapshots
+	var latest assetEntity.AssetSnapshots
 	if err != nil || len(todaySnapshots) == 0 {
 		// 没有今日快照，获取最新可用快照
 		g.Log().Info(ctx, "未找到今日快照，使用最新可用快照")
-		var allSnapshots []entity.AssetSnapshots
+		var allSnapshots []assetEntity.AssetSnapshots
 		err = assetDao.AssetSnapshots.Ctx(ctx).
 			Where(assetDao.AssetSnapshots.Columns().UserId, userID).
 			OrderDesc(assetDao.AssetSnapshots.Columns().SnapshotTime).
@@ -300,7 +301,7 @@ func (s *sReport) generateDailyReport(ctx context.Context, userID int) (*entity.
 
 	// 获取昨日快照
 	yesterdayStart := todayStart.AddDate(0, 0, -1)
-	var yesterdaySnapshots []entity.AssetSnapshots
+	var yesterdaySnapshots []assetEntity.AssetSnapshots
 	err = assetDao.AssetSnapshots.Ctx(ctx).
 		Where(assetDao.AssetSnapshots.Columns().UserId, userID).
 		WhereGTE(assetDao.AssetSnapshots.Columns().SnapshotTime, yesterdayStart).
@@ -308,21 +309,21 @@ func (s *sReport) generateDailyReport(ctx context.Context, userID int) (*entity.
 		OrderDesc(assetDao.AssetSnapshots.Columns().SnapshotTime).
 		Scan(&yesterdaySnapshots)
 
-	var change, changePercent float32
+	var change, changePercent float64
 	if len(yesterdaySnapshots) > 0 {
-		yesterdayValue := float32(yesterdaySnapshots[0].TotalValueUsd)
-		todayValue := float32(latest.TotalValueUsd)
+		yesterdayValue := yesterdaySnapshots[0].TotalValueUsd
+		todayValue := latest.TotalValueUsd
 		if yesterdayValue > 0 {
 			change = todayValue - yesterdayValue
 			changePercent = (change / yesterdayValue) * 100
 		}
 	}
 
-	report := &entity.Reports{
+	report := &reportEntity.Reports{
 		UserId:        userID,
 		Type:          reportModel.ReportTypeDaily,
 		Period:        period,
-		TotalValue:    float32(latest.TotalValueUsd),
+		TotalValue:    latest.TotalValueUsd,
 		Change:        change,
 		ChangePercent: changePercent,
 		GeneratedAt:   gtime.Now().Time,
@@ -348,13 +349,13 @@ func (s *sReport) generateDailyReport(ctx context.Context, userID int) (*entity.
 }
 
 // generateWeeklyReport 生成周报
-func (s *sReport) generateWeeklyReport(ctx context.Context, userID int) (*entity.Reports, error) {
+func (s *sReport) generateWeeklyReport(ctx context.Context, userID int) (*reportEntity.Reports, error) {
 	now := time.Now()
 	year, week := now.ISOWeek()
 	period := fmt.Sprintf("%d-W%02d", year, week)
 
 	// 检查是否已存在
-	var existing entity.Reports
+	var existing reportEntity.Reports
 	err := dao.Reports.Ctx(ctx).
 		Where(dao.Reports.Columns().UserId, userID).
 		Where(dao.Reports.Columns().Type, reportModel.ReportTypeWeekly).
@@ -373,18 +374,18 @@ func (s *sReport) generateWeeklyReport(ctx context.Context, userID int) (*entity
 	lastMonday := thisMonday.AddDate(0, 0, -7)
 
 	// 获取本周快照，如果没有则获取最新快照
-	var thisWeekSnapshots []entity.AssetSnapshots
+	var thisWeekSnapshots []assetEntity.AssetSnapshots
 	err = assetDao.AssetSnapshots.Ctx(ctx).
 		Where(assetDao.AssetSnapshots.Columns().UserId, userID).
 		WhereGTE(assetDao.AssetSnapshots.Columns().SnapshotTime, thisMonday).
 		OrderDesc(assetDao.AssetSnapshots.Columns().SnapshotTime).
 		Scan(&thisWeekSnapshots)
 
-	var latest entity.AssetSnapshots
+	var latest assetEntity.AssetSnapshots
 	if err != nil || len(thisWeekSnapshots) == 0 {
 		// 没有本周快照，获取最新可用快照
 		g.Log().Info(ctx, "未找到本周快照，使用最新可用快照")
-		var allSnapshots []entity.AssetSnapshots
+		var allSnapshots []assetEntity.AssetSnapshots
 		err = assetDao.AssetSnapshots.Ctx(ctx).
 			Where(assetDao.AssetSnapshots.Columns().UserId, userID).
 			OrderDesc(assetDao.AssetSnapshots.Columns().SnapshotTime).
@@ -399,7 +400,7 @@ func (s *sReport) generateWeeklyReport(ctx context.Context, userID int) (*entity
 	}
 
 	// 获取上周快照
-	var lastWeekSnapshots []entity.AssetSnapshots
+	var lastWeekSnapshots []assetEntity.AssetSnapshots
 	err = assetDao.AssetSnapshots.Ctx(ctx).
 		Where(assetDao.AssetSnapshots.Columns().UserId, userID).
 		WhereGTE(assetDao.AssetSnapshots.Columns().SnapshotTime, lastMonday).
@@ -407,21 +408,21 @@ func (s *sReport) generateWeeklyReport(ctx context.Context, userID int) (*entity
 		OrderAsc(assetDao.AssetSnapshots.Columns().SnapshotTime).
 		Scan(&lastWeekSnapshots)
 
-	var change, changePercent float32
+	var change, changePercent float64
 	if len(lastWeekSnapshots) > 0 {
-		lastValue := float32(lastWeekSnapshots[0].TotalValueUsd)
-		thisValue := float32(latest.TotalValueUsd)
+		lastValue := lastWeekSnapshots[0].TotalValueUsd
+		thisValue := latest.TotalValueUsd
 		if lastValue > 0 {
 			change = thisValue - lastValue
 			changePercent = (change / lastValue) * 100
 		}
 	}
 
-	report := &entity.Reports{
+	report := &reportEntity.Reports{
 		UserId:        userID,
 		Type:          reportModel.ReportTypeWeekly,
 		Period:        period,
-		TotalValue:    float32(latest.TotalValueUsd),
+		TotalValue:    latest.TotalValueUsd,
 		Change:        change,
 		ChangePercent: changePercent,
 		GeneratedAt:   gtime.Now().Time,
@@ -447,9 +448,9 @@ func (s *sReport) generateWeeklyReport(ctx context.Context, userID int) (*entity
 }
 
 // generateMonthlyReport 生成月报
-func (s *sReport) generateMonthlyReport(ctx context.Context, userID int, month string) (*entity.Reports, error) {
+func (s *sReport) generateMonthlyReport(ctx context.Context, userID int, month string) (*reportEntity.Reports, error) {
 	// 检查是否已存在
-	var existing entity.Reports
+	var existing reportEntity.Reports
 	err := dao.Reports.Ctx(ctx).
 		Where(dao.Reports.Columns().UserId, userID).
 		Where(dao.Reports.Columns().Type, reportModel.ReportTypeMonthly).
@@ -468,7 +469,7 @@ func (s *sReport) generateMonthlyReport(ctx context.Context, userID int, month s
 	prevMonthStart := monthStart.AddDate(0, -1, 0)
 
 	// 获取本月快照，如果没有则获取最新快照
-	var thisMonthSnapshots []entity.AssetSnapshots
+	var thisMonthSnapshots []assetEntity.AssetSnapshots
 	err = assetDao.AssetSnapshots.Ctx(ctx).
 		Where(assetDao.AssetSnapshots.Columns().UserId, userID).
 		WhereGTE(assetDao.AssetSnapshots.Columns().SnapshotTime, monthStart).
@@ -476,11 +477,11 @@ func (s *sReport) generateMonthlyReport(ctx context.Context, userID int, month s
 		OrderDesc(assetDao.AssetSnapshots.Columns().SnapshotTime).
 		Scan(&thisMonthSnapshots)
 
-	var latest entity.AssetSnapshots
+	var latest assetEntity.AssetSnapshots
 	if err != nil || len(thisMonthSnapshots) == 0 {
 		// 没有本月快照，获取最新可用快照
 		g.Log().Info(ctx, "未找到本月快照，使用最新可用快照")
-		var allSnapshots []entity.AssetSnapshots
+		var allSnapshots []assetEntity.AssetSnapshots
 		err = assetDao.AssetSnapshots.Ctx(ctx).
 			Where(assetDao.AssetSnapshots.Columns().UserId, userID).
 			OrderDesc(assetDao.AssetSnapshots.Columns().SnapshotTime).
@@ -495,7 +496,7 @@ func (s *sReport) generateMonthlyReport(ctx context.Context, userID int, month s
 	}
 
 	// 获取上月快照
-	var prevMonthSnapshots []entity.AssetSnapshots
+	var prevMonthSnapshots []assetEntity.AssetSnapshots
 	_ = assetDao.AssetSnapshots.Ctx(ctx).
 		Where(assetDao.AssetSnapshots.Columns().UserId, userID).
 		WhereGTE(assetDao.AssetSnapshots.Columns().SnapshotTime, prevMonthStart).
@@ -503,10 +504,10 @@ func (s *sReport) generateMonthlyReport(ctx context.Context, userID int, month s
 		OrderDesc(assetDao.AssetSnapshots.Columns().SnapshotTime).
 		Scan(&prevMonthSnapshots)
 
-	var change, changePercent float32
+	var change, changePercent float64
 	if len(prevMonthSnapshots) > 0 {
-		prevValue := float32(prevMonthSnapshots[0].TotalValueUsd)
-		thisValue := float32(latest.TotalValueUsd)
+		prevValue := prevMonthSnapshots[0].TotalValueUsd
+		thisValue := latest.TotalValueUsd
 		if prevValue > 0 {
 			change = thisValue - prevValue
 			changePercent = (change / prevValue) * 100
@@ -521,7 +522,7 @@ func (s *sReport) generateMonthlyReport(ctx context.Context, userID int, month s
 	// 构建月报内容
 	content := reportModel.ReportContent{
 		Type:          reportModel.ReportTypeMonthly,
-		TotalValue:    float64(float32(latest.TotalValueUsd)),
+		TotalValue:    float64(latest.TotalValueUsd),
 		Change:        float64(change),
 		ChangePercent: float64(changePercent),
 		SnapshotCount: len(thisMonthSnapshots),
@@ -531,11 +532,11 @@ func (s *sReport) generateMonthlyReport(ctx context.Context, userID int, month s
 	}
 	contentJSON, _ := json.Marshal(content)
 
-	report := &entity.Reports{
+	report := &reportEntity.Reports{
 		UserId:        userID,
 		Type:          reportModel.ReportTypeMonthly,
 		Period:        month,
-		TotalValue:    float32(latest.TotalValueUsd),
+		TotalValue:    latest.TotalValueUsd,
 		Change:        change,
 		ChangePercent: changePercent,
 		TopGainers:    string(gainersJSON),
@@ -567,9 +568,9 @@ func (s *sReport) generateMonthlyReport(ctx context.Context, userID int, month s
 }
 
 // generateAnnualReport 生成年报
-func (s *sReport) generateAnnualReport(ctx context.Context, userID int, year string) (*entity.Reports, error) {
+func (s *sReport) generateAnnualReport(ctx context.Context, userID int, year string) (*reportEntity.Reports, error) {
 	// 检查是否已存在
-	var existing entity.Reports
+	var existing reportEntity.Reports
 	err := dao.Reports.Ctx(ctx).
 		Where(dao.Reports.Columns().UserId, userID).
 		Where(dao.Reports.Columns().Type, reportModel.ReportTypeAnnual).
@@ -588,7 +589,7 @@ func (s *sReport) generateAnnualReport(ctx context.Context, userID int, year str
 	prevYearStart := yearStart.AddDate(-1, 0, 0)
 
 	// 获取本年快照，如果没有则获取最新快照
-	var thisYearSnapshots []entity.AssetSnapshots
+	var thisYearSnapshots []assetEntity.AssetSnapshots
 	err = assetDao.AssetSnapshots.Ctx(ctx).
 		Where(assetDao.AssetSnapshots.Columns().UserId, userID).
 		WhereGTE(assetDao.AssetSnapshots.Columns().SnapshotTime, yearStart).
@@ -596,11 +597,11 @@ func (s *sReport) generateAnnualReport(ctx context.Context, userID int, year str
 		OrderDesc(assetDao.AssetSnapshots.Columns().SnapshotTime).
 		Scan(&thisYearSnapshots)
 
-	var latest entity.AssetSnapshots
+	var latest assetEntity.AssetSnapshots
 	if err != nil || len(thisYearSnapshots) == 0 {
 		// 没有本年快照，获取最新可用快照
 		g.Log().Info(ctx, "未找到本年快照，使用最新可用快照")
-		var allSnapshots []entity.AssetSnapshots
+		var allSnapshots []assetEntity.AssetSnapshots
 		err = assetDao.AssetSnapshots.Ctx(ctx).
 			Where(assetDao.AssetSnapshots.Columns().UserId, userID).
 			OrderDesc(assetDao.AssetSnapshots.Columns().SnapshotTime).
@@ -615,7 +616,7 @@ func (s *sReport) generateAnnualReport(ctx context.Context, userID int, year str
 	}
 
 	// 获取上年快照
-	var prevYearSnapshots []entity.AssetSnapshots
+	var prevYearSnapshots []assetEntity.AssetSnapshots
 	_ = assetDao.AssetSnapshots.Ctx(ctx).
 		Where(assetDao.AssetSnapshots.Columns().UserId, userID).
 		WhereGTE(assetDao.AssetSnapshots.Columns().SnapshotTime, prevYearStart).
@@ -623,10 +624,10 @@ func (s *sReport) generateAnnualReport(ctx context.Context, userID int, year str
 		OrderDesc(assetDao.AssetSnapshots.Columns().SnapshotTime).
 		Scan(&prevYearSnapshots)
 
-	var change, changePercent float32
+	var change, changePercent float64
 	if len(prevYearSnapshots) > 0 {
-		prevValue := float32(prevYearSnapshots[0].TotalValueUsd)
-		thisValue := float32(latest.TotalValueUsd)
+		prevValue := prevYearSnapshots[0].TotalValueUsd
+		thisValue := latest.TotalValueUsd
 		if prevValue > 0 {
 			change = thisValue - prevValue
 			changePercent = (change / prevValue) * 100
@@ -641,7 +642,7 @@ func (s *sReport) generateAnnualReport(ctx context.Context, userID int, year str
 	// 构建年报内容
 	content := reportModel.ReportContent{
 		Type:          reportModel.ReportTypeAnnual,
-		TotalValue:    float64(float32(latest.TotalValueUsd)),
+		TotalValue:    float64(latest.TotalValueUsd),
 		Change:        float64(change),
 		ChangePercent: float64(changePercent),
 		SnapshotCount: len(thisYearSnapshots),
@@ -651,11 +652,11 @@ func (s *sReport) generateAnnualReport(ctx context.Context, userID int, year str
 	}
 	contentJSON, _ := json.Marshal(content)
 
-	report := &entity.Reports{
+	report := &reportEntity.Reports{
 		UserId:        userID,
 		Type:          reportModel.ReportTypeAnnual,
 		Period:        year,
-		TotalValue:    float32(latest.TotalValueUsd),
+		TotalValue:    latest.TotalValueUsd,
 		Change:        change,
 		ChangePercent: changePercent,
 		TopGainers:    string(gainersJSON),
@@ -690,7 +691,7 @@ func (s *sReport) generateAnnualReport(ctx context.Context, userID int, year str
 // 按当前持仓价值排序，前 N 为 TopGainers，后 N 为 TopLosers
 func (s *sReport) getTopGainersLosers(ctx context.Context, userID int, topN int) (gainers, losers []reportModel.GainerLoser) {
 	// 获取当前资产明细
-	var details []entity.AssetDetails
+	var details []assetEntity.AssetDetails
 	err := assetDao.AssetDetails.Ctx(ctx).
 		Where(assetDao.AssetDetails.Columns().UserId, userID).
 		Scan(&details)
@@ -750,7 +751,7 @@ func (s *sReport) getTopGainersLosers(ctx context.Context, userID int, topN int)
 // 查询两份报告，提取关键数据，计算差异
 func (s *sReport) Compare(ctx context.Context, reportID1, reportID2 int) (*reportApi.CompareRes, error) {
 	// 查询报告 1
-	var report1 entity.Reports
+	var report1 reportEntity.Reports
 	err := dao.Reports.Ctx(ctx).
 		Where(dao.Reports.Columns().Id, reportID1).
 		Scan(&report1)
@@ -762,7 +763,7 @@ func (s *sReport) Compare(ctx context.Context, reportID1, reportID2 int) (*repor
 	}
 
 	// 查询报告 2
-	var report2 entity.Reports
+	var report2 reportEntity.Reports
 	err = dao.Reports.Ctx(ctx).
 		Where(dao.Reports.Columns().Id, reportID2).
 		Scan(&report2)
@@ -791,7 +792,7 @@ func (s *sReport) Compare(ctx context.Context, reportID1, reportID2 int) (*repor
 
 // extractCompareSummary 从报告实体中提取对比摘要
 // 优先解析 JSON content 字段，回退使用表的直接字段
-func extractCompareSummary(r *entity.Reports) *reportApi.CompareReportSummary {
+func extractCompareSummary(r *reportEntity.Reports) *reportApi.CompareReportSummary {
 	summary := &reportApi.CompareReportSummary{
 		ID:          uint(r.Id),
 		Type:        r.Type,
@@ -822,7 +823,7 @@ func extractCompareSummary(r *entity.Reports) *reportApi.CompareReportSummary {
 }
 
 // toReportSummary 将实体转换为 API 摘要
-func toReportSummary(r *entity.Reports) reportApi.ReportSummary {
+func toReportSummary(r *reportEntity.Reports) reportApi.ReportSummary {
 	title := ""
 	switch r.Type {
 	case reportModel.ReportTypeDaily:

@@ -18,7 +18,7 @@ import (
 	reportDao "your-finance/allfi/internal/app/report/dao"
 	strategyDao "your-finance/allfi/internal/app/strategy/dao"
 	walletDao "your-finance/allfi/internal/app/wallet/dao"
-	"your-finance/allfi/internal/model/entity"
+	"your-finance/allfi/internal/app/achievement/model/entity"
 )
 
 // sAchievement 成就系统服务实现

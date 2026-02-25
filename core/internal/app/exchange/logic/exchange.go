@@ -20,7 +20,7 @@ import (
 	"your-finance/allfi/internal/integrations/binance"
 	"your-finance/allfi/internal/integrations/coinbase"
 	"your-finance/allfi/internal/integrations/okx"
-	"your-finance/allfi/internal/model/entity"
+	"your-finance/allfi/internal/app/exchange/model/entity"
 	"your-finance/allfi/utility/crypto"
 )
 

@@ -1,0 +1,29 @@
+// =================================================================================
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT. Created at 2026-02-25 10:57:34
+// =================================================================================
+
+package entity
+
+import (
+	"time"
+)
+
+// Reports is the golang structure for table reports.
+type Reports struct {
+	Id            int       `json:"id"             orm:"id"             description:""` //
+	CreatedAt     time.Time `json:"created_at"     orm:"created_at"     description:""` //
+	UpdatedAt     time.Time `json:"updated_at"     orm:"updated_at"     description:""` //
+	DeletedAt     time.Time `json:"deleted_at"     orm:"deleted_at"     description:""` //
+	UserId        int       `json:"user_id"        orm:"user_id"        description:""` //
+	Type          string    `json:"type"           orm:"type"           description:""` //
+	Period        string    `json:"period"         orm:"period"         description:""` //
+	TotalValue    float64   `json:"total_value"    orm:"total_value"    description:""` //
+	Change        float64   `json:"change"         orm:"change"         description:""` //
+	ChangePercent float64   `json:"change_percent" orm:"change_percent" description:""` //
+	TopGainers    string    `json:"top_gainers"    orm:"top_gainers"    description:""` //
+	TopLosers     string    `json:"top_losers"     orm:"top_losers"     description:""` //
+	BtcBenchmark  float64   `json:"btc_benchmark"  orm:"btc_benchmark"  description:""` //
+	EthBenchmark  float64   `json:"eth_benchmark"  orm:"eth_benchmark"  description:""` //
+	Content       string    `json:"content"        orm:"content"        description:""` //
+	GeneratedAt   time.Time `json:"generated_at"   orm:"generated_at"   description:""` //
+}

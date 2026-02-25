@@ -19,7 +19,8 @@ import (
 	"your-finance/allfi/internal/app/strategy/service"
 	"your-finance/allfi/internal/consts"
 	"your-finance/allfi/internal/integrations/coingecko"
-	"your-finance/allfi/internal/model/entity"
+	assetEntity "your-finance/allfi/internal/app/asset/model/entity"
+	strategyEntity "your-finance/allfi/internal/app/strategy/model/entity"
 )
 
 // sStrategy 策略服务实现
@@ -32,7 +33,7 @@ func New() service.IStrategy {
 
 // List 获取策略列表
 func (s *sStrategy) List(ctx context.Context) (*strategyApi.ListRes, error) {
-	var strategies []entity.Strategies
+	var strategies []strategyEntity.Strategies
 	err := dao.Strategies.Ctx(ctx).
 		Where(dao.Strategies.Columns().UserId, consts.GetUserID(ctx)).
 		OrderDesc(dao.Strategies.Columns().CreatedAt).
@@ -57,7 +58,7 @@ func (s *sStrategy) Create(ctx context.Context, name, sType string, config any) 
 	}
 
 	now := gtime.Now().Time
-	st := &entity.Strategies{
+	st := &strategyEntity.Strategies{
 		UserId:    consts.GetUserID(ctx),
 		Name:      name,
 		Type:      sType,
@@ -81,7 +82,7 @@ func (s *sStrategy) Create(ctx context.Context, name, sType string, config any) 
 // Update 更新策略
 func (s *sStrategy) Update(ctx context.Context, id uint, name, sType string, config any, isActive *bool) (*strategyApi.UpdateRes, error) {
 	// 检查策略是否存在
-	var existing entity.Strategies
+	var existing strategyEntity.Strategies
 	err := dao.Strategies.Ctx(ctx).
 		Where(dao.Strategies.Columns().Id, id).
 		Scan(&existing)
@@ -125,7 +126,7 @@ func (s *sStrategy) Update(ctx context.Context, id uint, name, sType string, con
 	}
 
 	// 重新查询返回
-	var updated entity.Strategies
+	var updated strategyEntity.Strategies
 	_ = dao.Strategies.Ctx(ctx).
 		Where(dao.Strategies.Columns().Id, id).
 		Scan(&updated)
@@ -149,7 +150,7 @@ func (s *sStrategy) Delete(ctx context.Context, id uint) error {
 // GetAnalysis 获取策略分析（偏离度 + 调仓建议）
 func (s *sStrategy) GetAnalysis(ctx context.Context, id uint) (*strategyApi.GetAnalysisRes, error) {
 	// 获取策略
-	var st entity.Strategies
+	var st strategyEntity.Strategies
 	err := dao.Strategies.Ctx(ctx).
 		Where(dao.Strategies.Columns().Id, id).
 		Scan(&st)
@@ -164,7 +165,7 @@ func (s *sStrategy) GetAnalysis(ctx context.Context, id uint) (*strategyApi.GetA
 	}
 
 	// 获取当前资产明细
-	var details []entity.AssetDetails
+	var details []assetEntity.AssetDetails
 	err = assetDao.AssetDetails.Ctx(ctx).
 		Where(assetDao.AssetDetails.Columns().UserId, consts.GetUserID(ctx)).
 		Scan(&details)
@@ -272,7 +273,7 @@ func (s *sStrategy) GetAnalysis(ctx context.Context, id uint) (*strategyApi.GetA
 }
 
 // toStrategyItem 将实体转换为 API 条目
-func toStrategyItem(st *entity.Strategies) strategyApi.StrategyItem {
+func toStrategyItem(st *strategyEntity.Strategies) strategyApi.StrategyItem {
 	// 解析配置 JSON
 	var config any
 	if st.Config != "" {
