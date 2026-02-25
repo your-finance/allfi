@@ -1,5 +1,6 @@
 // Package coingecko CoinGecko API 客户端
 // 获取加密货币价格（免费 API，无需 API Key）
+// 内置全局价格缓存（60s TTL）和 HTTP 429 退避重试机制
 package coingecko
 
 import (
@@ -8,7 +9,10 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/gogf/gf/v2/frame/g"
 
 	"your-finance/allfi/internal/integrations"
 	"your-finance/allfi/internal/utils"
@@ -16,6 +20,31 @@ import (
 
 const (
 	baseURL = "https://api.coingecko.com/api/v3"
+
+	// priceCacheTTL 价格缓存有效期（60 秒）
+	priceCacheTTL = 60 * time.Second
+
+	// max429Retries 429 错误最大重试次数
+	max429Retries = 2
+
+	// cooldownAfter429 遇到 429 后全局冷却时间
+	cooldownAfter429 = 60 * time.Second
+)
+
+// priceCacheEntry 价格缓存条目
+type priceCacheEntry struct {
+	price     float64
+	fetchedAt time.Time
+}
+
+// 全局价格缓存（所有 Client 实例共享）
+var (
+	globalPriceCache = make(map[string]priceCacheEntry)
+	priceCacheMu     sync.RWMutex
+
+	// 全局 429 冷却截止时间
+	cooldownUntil   time.Time
+	cooldownUntilMu sync.RWMutex
 )
 
 // Client CoinGecko 客户端
@@ -30,6 +59,41 @@ func NewClient(apiKey string) *Client {
 		apiKey:     apiKey,
 		httpClient: &http.Client{Timeout: 30 * time.Second},
 	}
+}
+
+// getCachedPrice 从缓存获取价格，未命中返回 (0, false)
+func getCachedPrice(symbol string) (float64, bool) {
+	priceCacheMu.RLock()
+	defer priceCacheMu.RUnlock()
+	entry, ok := globalPriceCache[symbol]
+	if !ok || time.Since(entry.fetchedAt) > priceCacheTTL {
+		return 0, false
+	}
+	return entry.price, true
+}
+
+// setCachedPrices 批量写入缓存
+func setCachedPrices(prices map[string]float64) {
+	priceCacheMu.Lock()
+	defer priceCacheMu.Unlock()
+	now := time.Now()
+	for symbol, price := range prices {
+		globalPriceCache[symbol] = priceCacheEntry{price: price, fetchedAt: now}
+	}
+}
+
+// isInCooldown 检查是否处于 429 冷却期
+func isInCooldown() bool {
+	cooldownUntilMu.RLock()
+	defer cooldownUntilMu.RUnlock()
+	return time.Now().Before(cooldownUntil)
+}
+
+// setCooldown 设置 429 冷却期
+func setCooldown() {
+	cooldownUntilMu.Lock()
+	defer cooldownUntilMu.Unlock()
+	cooldownUntil = time.Now().Add(cooldownAfter429)
 }
 
 // 币种 ID 映射（CoinGecko 使用 ID 而不是 Symbol）
@@ -83,16 +147,43 @@ func (c *Client) GetPrice(ctx context.Context, symbol string) (float64, error) {
 }
 
 // GetPrices 批量获取币种价格
+// 内置缓存：60 秒内不会重复请求同一币种
+// 内置 429 退避：遇到限流后自动冷却 60 秒
 func (c *Client) GetPrices(ctx context.Context, symbols []string) (map[string]float64, error) {
-	// 限流
+	result := make(map[string]float64)
+	var needFetch []string
+
+	// 1. 先从缓存取，过滤出需要请求的币种
+	for _, symbol := range symbols {
+		upper := strings.ToUpper(symbol)
+		if price, ok := getCachedPrice(upper); ok {
+			result[upper] = price
+		} else {
+			needFetch = append(needFetch, symbol)
+		}
+	}
+
+	// 全部命中缓存，直接返回
+	if len(needFetch) == 0 {
+		return result, nil
+	}
+
+	// 2. 检查是否处于 429 冷却期
+	if isInCooldown() {
+		g.Log().Debug(ctx, "CoinGecko 处于 429 冷却期，使用缓存中的已有数据")
+		// 冷却期内返回已有缓存数据（可能不完整但不会报错）
+		return result, nil
+	}
+
+	// 3. 限流等待
 	if err := utils.WaitForAPI(ctx, "coingecko"); err != nil {
-		return nil, err
+		return result, err
 	}
 
 	// 转换 symbol 为 CoinGecko ID
-	ids := make([]string, 0, len(symbols))
+	ids := make([]string, 0, len(needFetch))
 	symbolMap := make(map[string]string) // id -> symbol
-	for _, symbol := range symbols {
+	for _, symbol := range needFetch {
 		id := GetSymbolID(symbol)
 		ids = append(ids, id)
 		symbolMap[id] = strings.ToUpper(symbol)
@@ -101,43 +192,85 @@ func (c *Client) GetPrices(ctx context.Context, symbols []string) (map[string]fl
 	url := fmt.Sprintf("%s/simple/price?ids=%s&vs_currencies=usd",
 		baseURL, strings.Join(ids, ","))
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	// 4. 请求（带 429 重试）
+	fetchedPrices, err := c.doRequestWithRetry(ctx, url)
 	if err != nil {
-		return nil, err
+		return result, err
 	}
 
-	// 如果有 API Key，添加到请求头
-	if c.apiKey != "" {
-		req.Header.Set("x-cg-pro-api-key", c.apiKey)
-	}
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("请求 CoinGecko API 失败: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		return nil, fmt.Errorf("CoinGecko API 错误: HTTP %d", resp.StatusCode)
-	}
-
-	// 解析响应
-	var result map[string]map[string]float64
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, fmt.Errorf("解析 CoinGecko 响应失败: %v", err)
-	}
-
-	// 转换回 symbol
-	prices := make(map[string]float64)
-	for id, priceData := range result {
+	// 5. 解析并写入缓存
+	newPrices := make(map[string]float64)
+	for id, priceData := range fetchedPrices {
 		if symbol, ok := symbolMap[id]; ok {
 			if usdPrice, ok := priceData["usd"]; ok {
-				prices[symbol] = usdPrice
+				result[symbol] = usdPrice
+				newPrices[symbol] = usdPrice
 			}
 		}
 	}
 
-	return prices, nil
+	if len(newPrices) > 0 {
+		setCachedPrices(newPrices)
+	}
+
+	return result, nil
+}
+
+// doRequestWithRetry 执行 HTTP 请求，遇到 429 自动退避重试
+func (c *Client) doRequestWithRetry(ctx context.Context, url string) (map[string]map[string]float64, error) {
+	var lastErr error
+
+	for attempt := 0; attempt <= max429Retries; attempt++ {
+		if attempt > 0 {
+			// 指数退避：第 1 次等 10 秒，第 2 次等 30 秒
+			backoff := time.Duration(10*(1<<(attempt-1))) * time.Second
+			g.Log().Infof(ctx, "CoinGecko 429 退避重试 %d/%d，等待 %v", attempt, max429Retries, backoff)
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(backoff):
+			}
+		}
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			return nil, err
+		}
+		if c.apiKey != "" {
+			req.Header.Set("x-cg-pro-api-key", c.apiKey)
+		}
+
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("请求 CoinGecko API 失败: %v", err)
+		}
+
+		if resp.StatusCode == http.StatusTooManyRequests {
+			resp.Body.Close()
+			lastErr = fmt.Errorf("CoinGecko API 限流: HTTP 429")
+			if attempt == max429Retries {
+				// 最后一次重试仍然 429，设置全局冷却
+				setCooldown()
+				g.Log().Warning(ctx, "CoinGecko 连续 429，进入全局冷却期 60 秒")
+			}
+			continue
+		}
+
+		defer resp.Body.Close()
+
+		if resp.StatusCode >= 400 {
+			return nil, fmt.Errorf("CoinGecko API 错误: HTTP %d", resp.StatusCode)
+		}
+
+		var result map[string]map[string]float64
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			return nil, fmt.Errorf("解析 CoinGecko 响应失败: %v", err)
+		}
+
+		return result, nil
+	}
+
+	return nil, lastErr
 }
 
 // GetExchangeRate 获取汇率
@@ -182,6 +315,11 @@ func (c *Client) GetExchangeRate(ctx context.Context, from, to string) (float64,
 // 调用 CoinGecko /coins/{id}/market_chart API 获取历史价格数据
 // 返回收益率百分比：(最新价 - 起始价) / 起始价 * 100
 func (c *Client) GetHistoricalPrices(ctx context.Context, symbol string, days int) (float64, error) {
+	// 检查 429 冷却期
+	if isInCooldown() {
+		return 0, fmt.Errorf("CoinGecko 处于限流冷却期")
+	}
+
 	// 限流
 	if err := utils.WaitForAPI(ctx, "coingecko"); err != nil {
 		return 0, err
@@ -208,6 +346,11 @@ func (c *Client) GetHistoricalPrices(ctx context.Context, symbol string, days in
 		return 0, fmt.Errorf("请求 CoinGecko 历史价格失败: %v", err)
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusTooManyRequests {
+		setCooldown()
+		return 0, fmt.Errorf("CoinGecko API 限流: HTTP 429")
+	}
 
 	if resp.StatusCode >= 400 {
 		return 0, fmt.Errorf("CoinGecko API 错误: HTTP %d", resp.StatusCode)
@@ -240,6 +383,11 @@ func (c *Client) GetHistoricalPrices(ctx context.Context, symbol string, days in
 
 // GetMarketData 获取市场数据（包含 24h 变化等）
 func (c *Client) GetMarketData(ctx context.Context, symbols []string) ([]MarketData, error) {
+	// 检查 429 冷却期
+	if isInCooldown() {
+		return nil, fmt.Errorf("CoinGecko 处于限流冷却期")
+	}
+
 	// 限流
 	if err := utils.WaitForAPI(ctx, "coingecko"); err != nil {
 		return nil, err
@@ -263,6 +411,15 @@ func (c *Client) GetMarketData(ctx context.Context, symbols []string) ([]MarketD
 		return nil, fmt.Errorf("请求 CoinGecko API 失败: %v", err)
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusTooManyRequests {
+		setCooldown()
+		return nil, fmt.Errorf("CoinGecko API 限流: HTTP 429")
+	}
+
+	if resp.StatusCode >= 400 {
+		return nil, fmt.Errorf("CoinGecko API 错误: HTTP %d", resp.StatusCode)
+	}
 
 	var result []MarketData
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {

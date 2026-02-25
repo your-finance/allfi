@@ -206,7 +206,7 @@ func (s *sWallet) GetBalances(ctx context.Context, walletID int) (float64, map[s
 	tokenBalances := make(map[string]float64)
 
 	if apiKey == "" {
-		g.Log().Warningf(ctx, "%s API Key 未配置（配置项: %s），将尝试使用公共 RPC 获取原生余额", wallet.Blockchain, configKey)
+		g.Log().Infof(ctx, "%s API Key 未配置（配置项: %s），使用公共 RPC 获取原生余额", wallet.Blockchain, configKey)
 
 		nativeBalance, err = etherscan.GetNativeBalanceViaRPC(ctx, wallet.Blockchain, wallet.Address)
 		if err != nil {

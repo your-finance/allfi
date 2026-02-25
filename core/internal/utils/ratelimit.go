@@ -145,17 +145,17 @@ type RateLimitConfig struct {
 
 // 预定义的 API 限流配置
 var DefaultAPIRateLimits = map[string]RateLimitConfig{
-	"binance":    {Rate: 10, BucketSize: 20},   // Binance: 1200/min = 20/s
-	"okx":        {Rate: 10, BucketSize: 10},   // OKX: 较保守
-	"coinbase":   {Rate: 10, BucketSize: 10},   // Coinbase
-	"etherscan":   {Rate: 5, BucketSize: 5},     // Etherscan 免费版: 5/s
-	"bscscan":     {Rate: 5, BucketSize: 5},     // BscScan 免费版: 5/s
-	"arbiscan":    {Rate: 5, BucketSize: 5},     // Arbiscan 免费版: 5/s
-	"optimism":    {Rate: 5, BucketSize: 5},     // Optimism Explorer 免费版: 5/s
-	"polygonscan": {Rate: 5, BucketSize: 5},     // Polygonscan 免费版: 5/s
-	"basescan":    {Rate: 5, BucketSize: 5},     // Basescan 免费版: 5/s
-	"coingecko":   {Rate: 10, BucketSize: 50},   // CoinGecko 免费版: 10-50/min
-	"yahoo":      {Rate: 5, BucketSize: 10},    // Yahoo Finance
+	"binance":     {Rate: 10, BucketSize: 20}, // Binance: 1200/min = 20/s
+	"okx":         {Rate: 10, BucketSize: 10}, // OKX: 较保守
+	"coinbase":    {Rate: 10, BucketSize: 10}, // Coinbase
+	"etherscan":   {Rate: 5, BucketSize: 5},   // Etherscan 免费版: 5/s
+	"bscscan":     {Rate: 5, BucketSize: 5},   // BscScan 免费版: 5/s
+	"arbiscan":    {Rate: 5, BucketSize: 5},   // Arbiscan 免费版: 5/s
+	"optimism":    {Rate: 5, BucketSize: 5},   // Optimism Explorer 免费版: 5/s
+	"polygonscan": {Rate: 5, BucketSize: 5},   // Polygonscan 免费版: 5/s
+	"basescan":    {Rate: 5, BucketSize: 5},   // Basescan 免费版: 5/s
+	"coingecko":   {Rate: 0.5, BucketSize: 5}, // CoinGecko 免费版: 约 30 次/分钟 = 0.5 次/秒
+	"yahoo":       {Rate: 5, BucketSize: 10},  // Yahoo Finance
 }
 
 // NewRateLimiterManager 创建限流器管理器
