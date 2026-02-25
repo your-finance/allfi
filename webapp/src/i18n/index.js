@@ -801,6 +801,10 @@ export const translations = {
       oct: "10月",
       nov: "11月",
       dec: "12月",
+      noMonthlyData: "暂无月度收益数据",
+      noAllocationData: "暂无资产配置数据",
+      noMilestoneData: "暂无里程碑数据",
+      noStyleData: "暂无投资风格数据",
     },
 
     // 成就系统
@@ -1819,6 +1823,10 @@ export const translations = {
       oct: "10月",
       nov: "11月",
       dec: "12月",
+      noMonthlyData: "暫無月度收益數據",
+      noAllocationData: "暫無資產配置數據",
+      noMilestoneData: "暫無里程碑數據",
+      noStyleData: "暫無投資風格數據",
     },
 
     // 成就系統
@@ -2576,7 +2584,8 @@ export const translations = {
       clearCacheDesc: "Clear local cache to free up space",
       resetSettings: "Reset Settings",
       resetSettingsDesc: "Restore all settings to default values",
-      resetConfirm: "Are you sure you want to reset all settings? This action cannot be undone.",
+      resetConfirm:
+        "Are you sure you want to reset all settings? This action cannot be undone.",
 
       aboutSection: "About",
       aboutDesc:
@@ -2842,6 +2851,10 @@ export const translations = {
       oct: "Oct",
       nov: "Nov",
       dec: "Dec",
+      noMonthlyData: "No monthly return data available",
+      noAllocationData: "No allocation data available",
+      noMilestoneData: "No milestone data available",
+      noStyleData: "No investment style data available",
     },
 
     // Achievement

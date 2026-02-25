@@ -78,6 +78,48 @@ const monthNames = computed(() => [
   t('annualReport.oct'), t('annualReport.nov'), t('annualReport.dec'),
 ])
 
+// 归一化报告数据：后端返回的简单结构 → 前端模板期望的丰富结构
+const normalizeReport = (raw) => {
+  if (!raw) return null
+  // 新后端结构和 mock 数据：summary 是对象；旧后端结构：summary 是字符串
+  if (raw.summary && typeof raw.summary === 'object') return raw
+
+  // 旧后端 ReportContent 字段映射（兼容已存储的旧报告）
+  const totalValue = raw.total_value ?? 0
+  const change = raw.change ?? 0
+  const changePercent = raw.change_percent ?? 0
+  const startValue = totalValue - change
+
+  return {
+    year: props.year,
+    summary: {
+      totalReturn: changePercent,
+      totalReturnValue: change,
+      startValue,
+      endValue: totalValue,
+      bestMonth: null,
+      worstMonth: null,
+      tradingDays: 0,
+      totalTransactions: 0,
+      totalFeesPaid: 0,
+    },
+    monthlyReturns: raw.monthly_returns ?? raw.monthlyReturns ?? [],
+    allocationChanges: null,
+    milestones: [],
+    styleTag: null,
+    styleScore: null,
+    annualStar: null,
+    annualRegret: null,
+    benchmarks: {
+      btc: raw.btc_benchmark ?? 0,
+      eth: raw.eth_benchmark ?? 0,
+      sp500: 0,
+    },
+    topGainers: raw.top_gainers ?? raw.topGainers ?? [],
+    topLosers: raw.top_losers ?? raw.topLosers ?? [],
+  }
+}
+
 // 翻页
 const goNext = () => {
   if (currentPage.value < totalPages - 1) currentPage.value++
@@ -106,7 +148,7 @@ const handleTouchEnd = (e) => {
 
 // 月度收益图表
 const monthlyChartData = computed(() => {
-  if (!report.value) return { labels: [], datasets: [] }
+  if (!report.value || !report.value.monthlyReturns?.length) return { labels: [], datasets: [] }
   const data = report.value.monthlyReturns
   return {
     labels: data.map(m => monthNames.value[m.month - 1]),
@@ -172,7 +214,7 @@ onMounted(async () => {
     const data = await annualReportService.getAnnualReport(props.year)
     // 如果后端返回 null 或空数据，说明没有报告
     if (data && data.report) {
-      report.value = data.report
+      report.value = normalizeReport(data.report)
     } else {
       report.value = null
       emit('close') // 自动关闭弹窗
@@ -236,13 +278,13 @@ onUnmounted(() => {
                 <span class="summary-label">{{ t('annualReport.endValue') }}</span>
                 <span class="summary-value font-mono">${{ formatNumber(report.summary.endValue, 0) }}</span>
               </div>
-              <div class="summary-item">
+              <div class="summary-item" v-if="report.summary.bestMonth">
                 <span class="summary-label">{{ t('annualReport.bestMonth') }}</span>
                 <span class="summary-value font-mono positive">
                   {{ monthNames[report.summary.bestMonth.month - 1] }} +{{ report.summary.bestMonth.return }}%
                 </span>
               </div>
-              <div class="summary-item">
+              <div class="summary-item" v-if="report.summary.worstMonth">
                 <span class="summary-label">{{ t('annualReport.worstMonth') }}</span>
                 <span class="summary-value font-mono negative">
                   {{ monthNames[report.summary.worstMonth.month - 1] }} {{ report.summary.worstMonth.return }}%
@@ -259,39 +301,42 @@ onUnmounted(() => {
             </div>
 
             <!-- 基准对比 -->
-            <div class="benchmark-bar">
+            <div v-if="report.benchmarks && (report.benchmarks.btc || report.benchmarks.eth)" class="benchmark-bar">
               <span class="benchmark-label">{{ t('annualReport.vsBenchmarks') }}</span>
               <span class="benchmark-item">BTC <span class="font-mono">+{{ report.benchmarks.btc }}%</span></span>
               <span class="benchmark-item">ETH <span class="font-mono">+{{ report.benchmarks.eth }}%</span></span>
-              <span class="benchmark-item">S&amp;P 500 <span class="font-mono">+{{ report.benchmarks.sp500 }}%</span></span>
+              <span v-if="report.benchmarks.sp500" class="benchmark-item">S&amp;P 500 <span class="font-mono">+{{ report.benchmarks.sp500 }}%</span></span>
             </div>
           </div>
 
           <!-- 第 2 页：月度收益曲线 -->
           <div v-show="currentPage === 1" class="page page-monthly">
             <div class="page-label">{{ t('annualReport.pageMonthly') }}</div>
-            <div class="chart-wrapper">
-              <Line :data="monthlyChartData" :options="monthlyChartOptions" />
-            </div>
-            <div class="monthly-list">
-              <div
-                v-for="m in report.monthlyReturns"
-                :key="m.month"
-                class="monthly-item"
-              >
-                <span class="ml-month">{{ monthNames[m.month - 1] }}</span>
-                <span class="ml-return font-mono" :class="m.return >= 0 ? 'positive' : 'negative'">
-                  {{ m.return >= 0 ? '+' : '' }}{{ m.return }}%
-                </span>
-                <span class="ml-value font-mono">${{ formatNumber(m.value, 0) }}</span>
+            <template v-if="report.monthlyReturns?.length">
+              <div class="chart-wrapper">
+                <Line :data="monthlyChartData" :options="monthlyChartOptions" />
               </div>
-            </div>
+              <div class="monthly-list">
+                <div
+                  v-for="m in report.monthlyReturns"
+                  :key="m.month"
+                  class="monthly-item"
+                >
+                  <span class="ml-month">{{ monthNames[m.month - 1] }}</span>
+                  <span class="ml-return font-mono" :class="m.return >= 0 ? 'positive' : 'negative'">
+                    {{ m.return >= 0 ? '+' : '' }}{{ m.return }}%
+                  </span>
+                  <span class="ml-value font-mono">${{ formatNumber(m.value, 0) }}</span>
+                </div>
+              </div>
+            </template>
+            <div v-else class="empty-hint">{{ t('annualReport.noMonthlyData') }}</div>
           </div>
 
           <!-- 第 3 页：资产配置变化 -->
           <div v-show="currentPage === 2" class="page page-allocation">
             <div class="page-label">{{ t('annualReport.pageAllocation') }}</div>
-            <div class="alloc-compare">
+            <div v-if="report.allocationChanges" class="alloc-compare">
               <div class="alloc-col">
                 <h4 class="alloc-title">{{ t('annualReport.yearStart') }}</h4>
                 <div
@@ -322,12 +367,13 @@ onUnmounted(() => {
                 </div>
               </div>
             </div>
+            <div v-else class="empty-hint">{{ t('annualReport.noAllocationData') }}</div>
           </div>
 
           <!-- 第 4 页：关键里程碑 -->
           <div v-show="currentPage === 3" class="page page-milestones">
             <div class="page-label">{{ t('annualReport.pageMilestones') }}</div>
-            <div class="milestone-timeline">
+            <div v-if="report.milestones?.length" class="milestone-timeline">
               <div
                 v-for="(ms, idx) in report.milestones"
                 :key="idx"
@@ -344,14 +390,16 @@ onUnmounted(() => {
                 </div>
               </div>
             </div>
+            <div v-else class="empty-hint">{{ t('annualReport.noMilestoneData') }}</div>
           </div>
 
           <!-- 第 5 页：投资风格 + 总结 -->
           <div v-show="currentPage === 4" class="page page-style">
             <div class="page-label">{{ t('annualReport.pageStyle') }}</div>
-            <div class="style-tag">{{ t(styleLabels[report.styleTag]) }}</div>
-            <div class="style-scores">
-              <div v-for="(score, key) in report.styleScore" :key="key" class="score-item">
+            <template v-if="report.styleTag">
+              <div class="style-tag">{{ t(styleLabels[report.styleTag]) }}</div>
+              <div class="style-scores">
+                <div v-for="(score, key) in report.styleScore" :key="key" class="score-item">
                 <span class="score-label">{{ t(`annualReport.score_${key}`) }}</span>
                 <div class="score-bar-track">
                   <div class="score-bar" :style="{ width: score + '%' }" />
@@ -361,8 +409,8 @@ onUnmounted(() => {
             </div>
 
             <!-- 年度之星 & 年度遗憾 -->
-            <div class="star-regret">
-              <div class="sr-card star">
+            <div v-if="report.annualStar || report.annualRegret" class="star-regret">
+              <div v-if="report.annualStar" class="sr-card star">
                 <div class="sr-header">
                   <PhTrophy :size="16" />
                   <span>{{ t('annualReport.annualStar') }}</span>
@@ -371,7 +419,7 @@ onUnmounted(() => {
                 <div class="sr-return font-mono positive">+{{ report.annualStar.return }}%</div>
                 <div class="sr-reason">{{ report.annualStar.reason }}</div>
               </div>
-              <div class="sr-card regret">
+              <div v-if="report.annualRegret" class="sr-card regret">
                 <div class="sr-header">
                   <PhFlag :size="16" />
                   <span>{{ t('annualReport.annualRegret') }}</span>
@@ -381,6 +429,8 @@ onUnmounted(() => {
                 <div class="sr-reason">{{ report.annualRegret.reason }}</div>
               </div>
             </div>
+            </template>
+            <div v-else class="empty-hint">{{ t('annualReport.noStyleData') }}</div>
           </div>
         </div>
 

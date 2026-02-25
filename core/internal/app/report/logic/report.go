@@ -6,7 +6,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/gogf/gf/v2/errors/gcode"
@@ -568,6 +570,7 @@ func (s *sReport) generateMonthlyReport(ctx context.Context, userID int, month s
 }
 
 // generateAnnualReport 生成年报
+// 从快照数据中计算月度收益、最佳/最差月份等丰富数据
 func (s *sReport) generateAnnualReport(ctx context.Context, userID int, year string) (*reportEntity.Reports, error) {
 	// 检查是否已存在
 	var existing reportEntity.Reports
@@ -581,23 +584,23 @@ func (s *sReport) generateAnnualReport(ctx context.Context, userID int, year str
 	}
 
 	// 解析年份
-	yearStart, err := time.Parse("2006", year)
+	yearInt, err := strconv.Atoi(year)
 	if err != nil {
 		return nil, gerror.Newf("年份格式错误: %s", year)
 	}
+	yearStart := time.Date(yearInt, 1, 1, 0, 0, 0, 0, time.Local)
 	yearEnd := yearStart.AddDate(1, 0, 0)
 	prevYearStart := yearStart.AddDate(-1, 0, 0)
 
-	// 获取本年快照，如果没有则获取最新快照
+	// 获取本年所有快照（按时间升序，用于计算月度收益）
 	var thisYearSnapshots []assetEntity.AssetSnapshots
 	err = assetDao.AssetSnapshots.Ctx(ctx).
 		Where(assetDao.AssetSnapshots.Columns().UserId, userID).
 		WhereGTE(assetDao.AssetSnapshots.Columns().SnapshotTime, yearStart).
 		WhereLT(assetDao.AssetSnapshots.Columns().SnapshotTime, yearEnd).
-		OrderDesc(assetDao.AssetSnapshots.Columns().SnapshotTime).
+		OrderAsc(assetDao.AssetSnapshots.Columns().SnapshotTime).
 		Scan(&thisYearSnapshots)
 
-	var latest assetEntity.AssetSnapshots
 	if err != nil || len(thisYearSnapshots) == 0 {
 		// 没有本年快照，获取最新可用快照
 		g.Log().Info(ctx, "未找到本年快照，使用最新可用快照")
@@ -610,12 +613,14 @@ func (s *sReport) generateAnnualReport(ctx context.Context, userID int, year str
 		if err != nil || len(allSnapshots) == 0 {
 			return nil, gerror.Newf("未找到任何快照数据，请先添加资产并等待快照生成")
 		}
-		latest = allSnapshots[0]
-	} else {
-		latest = thisYearSnapshots[0]
+		thisYearSnapshots = allSnapshots
 	}
 
-	// 获取上年快照
+	// 年初和年末快照
+	earliest := thisYearSnapshots[0]
+	latest := thisYearSnapshots[len(thisYearSnapshots)-1]
+
+	// 获取上年最后一个快照（用于计算年初基准）
 	var prevYearSnapshots []assetEntity.AssetSnapshots
 	_ = assetDao.AssetSnapshots.Ctx(ctx).
 		Where(assetDao.AssetSnapshots.Columns().UserId, userID).
@@ -624,14 +629,37 @@ func (s *sReport) generateAnnualReport(ctx context.Context, userID int, year str
 		OrderDesc(assetDao.AssetSnapshots.Columns().SnapshotTime).
 		Scan(&prevYearSnapshots)
 
-	var change, changePercent float64
+	// 确定年初资产值：优先用上年末快照，否则用本年最早快照
+	startValue := earliest.TotalValueUsd
 	if len(prevYearSnapshots) > 0 {
-		prevValue := prevYearSnapshots[0].TotalValueUsd
-		thisValue := latest.TotalValueUsd
-		if prevValue > 0 {
-			change = thisValue - prevValue
-			changePercent = (change / prevValue) * 100
+		startValue = prevYearSnapshots[0].TotalValueUsd
+	}
+	endValue := latest.TotalValueUsd
+
+	var change, changePercent float64
+	if startValue > 0 {
+		change = endValue - startValue
+		changePercent = (change / startValue) * 100
+	}
+
+	// 计算月度收益：按月分组快照，取每月最后一个快照的 TotalValueUsd
+	monthlyReturns := s.calcMonthlyReturns(thisYearSnapshots, startValue, yearInt)
+
+	// 计算最佳/最差月份
+	var bestMonth, worstMonth *reportModel.BestWorstMonth
+	if len(monthlyReturns) > 0 {
+		best := monthlyReturns[0]
+		worst := monthlyReturns[0]
+		for _, mr := range monthlyReturns[1:] {
+			if mr.Return > best.Return {
+				best = mr
+			}
+			if mr.Return < worst.Return {
+				worst = mr
+			}
 		}
+		bestMonth = &reportModel.BestWorstMonth{Month: best.Month, Return: best.Return}
+		worstMonth = &reportModel.BestWorstMonth{Month: worst.Month, Return: worst.Return}
 	}
 
 	// 计算 TopGainers/TopLosers
@@ -639,18 +667,23 @@ func (s *sReport) generateAnnualReport(ctx context.Context, userID int, year str
 	gainersJSON, _ := json.Marshal(gainers)
 	losersJSON, _ := json.Marshal(losers)
 
-	// 构建年报内容
-	content := reportModel.ReportContent{
-		Type:          reportModel.ReportTypeAnnual,
-		TotalValue:    float64(latest.TotalValueUsd),
-		Change:        float64(change),
-		ChangePercent: float64(changePercent),
-		SnapshotCount: len(thisYearSnapshots),
-		TopGainers:    gainers,
-		TopLosers:     losers,
-		Summary:       fmt.Sprintf("年度资产总值 $%.2f，年度收益率 %.2f%%", latest.TotalValueUsd, changePercent),
+	// 构建年报完整内容（前端期望的结构）
+	annualContent := reportModel.AnnualReportContent{
+		Year: yearInt,
+		Summary: reportModel.AnnualSummary{
+			TotalReturn:      math.Round(changePercent*100) / 100,
+			TotalReturnValue: math.Round(change*100) / 100,
+			StartValue:       math.Round(startValue*100) / 100,
+			EndValue:         math.Round(endValue*100) / 100,
+			BestMonth:        bestMonth,
+			WorstMonth:       worstMonth,
+		},
+		MonthlyReturns: monthlyReturns,
+		Benchmarks:     reportModel.AnnualBenchmarks{},
+		TopGainers:     gainers,
+		TopLosers:      losers,
 	}
-	contentJSON, _ := json.Marshal(content)
+	contentJSON, _ := json.Marshal(annualContent)
 
 	report := &reportEntity.Reports{
 		UserId:        userID,
@@ -685,6 +718,45 @@ func (s *sReport) generateAnnualReport(ctx context.Context, userID int, year str
 
 	g.Log().Info(ctx, "年报已生成", "period", year)
 	return report, nil
+}
+
+// calcMonthlyReturns 从快照数据中计算每月收益率
+// 按月分组，取每月最后一个快照的 TotalValueUsd，与上月末对比计算收益率
+func (s *sReport) calcMonthlyReturns(snapshots []assetEntity.AssetSnapshots, startValue float64, _ int) []reportModel.MonthReturn {
+	if len(snapshots) == 0 {
+		return nil
+	}
+
+	// 按月分组，取每月最后一个快照
+	monthEndValues := make(map[int]float64) // month -> 月末资产值
+	for _, snap := range snapshots {
+		m := int(snap.SnapshotTime.Month())
+		// 快照按时间升序，后面的覆盖前面的，最终保留每月最后一个
+		monthEndValues[m] = snap.TotalValueUsd
+	}
+
+	var results []reportModel.MonthReturn
+	prevValue := startValue
+
+	// 遍历 1-12 月，只输出有数据的月份
+	for month := 1; month <= 12; month++ {
+		endVal, ok := monthEndValues[month]
+		if !ok {
+			continue
+		}
+		var ret float64
+		if prevValue > 0 {
+			ret = math.Round(((endVal-prevValue)/prevValue)*10000) / 100
+		}
+		results = append(results, reportModel.MonthReturn{
+			Month:  month,
+			Return: ret,
+			Value:  math.Round(endVal*100) / 100,
+		})
+		prevValue = endVal
+	}
+
+	return results
 }
 
 // getTopGainersLosers 获取涨跌幅 Top 资产

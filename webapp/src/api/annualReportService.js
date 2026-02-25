@@ -19,7 +19,9 @@ export const annualReportService = {
   async getAnnualReport(year) {
     if (USE_MOCK) {
       await simulateDelay(400);
-      return mockData.getAnnualReport(year);
+      // Mock 数据需要包装成 { report: {...} } 格式
+      const mockReport = mockData.getAnnualReport(year);
+      return { report: mockReport };
     }
     const response = await get(`/reports/annual/${year}`);
     // 后端返回 { report: {...} } 或 { report: null }
