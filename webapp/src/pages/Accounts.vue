@@ -102,6 +102,12 @@ const showWalletConnect = ref(false)
 const isRefreshing = ref(false)
 const isDeleting = ref(false)
 
+// 展开的钱包 ID（用于显示 holdings 明细）
+const expandedWalletId = ref(null)
+const toggleWalletExpand = (walletId) => {
+  expandedWalletId.value = expandedWalletId.value === walletId ? null : walletId
+}
+
 // 从 Store 获取数据
 const cexAccounts = computed(() => accountStore.cexAccounts)
 const walletAddresses = computed(() => accountStore.walletAddresses)
@@ -116,12 +122,12 @@ const exchangeConfig = {
 
 // 区块链配置
 const blockchainConfig = {
-  ethereum: { color: '#627EEA', name: 'Ethereum', symbol: 'ETH' },
-  bsc: { color: '#F3BA2F', name: 'BNB Chain', symbol: 'BSC' },
-  polygon: { color: '#8247E5', name: 'Polygon', symbol: 'MATIC' },
-  arbitrum: { color: '#28A0F0', name: 'Arbitrum', symbol: 'ARB' },
-  optimism: { color: '#FF0420', name: 'Optimism', symbol: 'OP' },
-  base: { color: '#0052FF', name: 'Base', symbol: 'BASE' }
+  ethereum: { color: '#627EEA', name: 'Ethereum', symbol: 'ETH', nativeSymbol: 'ETH' },
+  bsc: { color: '#F3BA2F', name: 'BNB Chain', symbol: 'BNB', nativeSymbol: 'BNB' },
+  polygon: { color: '#8247E5', name: 'Polygon', symbol: 'MATIC', nativeSymbol: 'MATIC' },
+  arbitrum: { color: '#28A0F0', name: 'Arbitrum', symbol: 'ARB', nativeSymbol: 'ETH' },
+  optimism: { color: '#FF0420', name: 'Optimism', symbol: 'OP', nativeSymbol: 'ETH' },
+  base: { color: '#0052FF', name: 'Base', symbol: 'BASE', nativeSymbol: 'ETH' }
 }
 
 // 资产类型配置
@@ -265,6 +271,21 @@ const handleWalletConnected = async (walletData) => {
 
 onMounted(async () => {
   await accountStore.loadAll()
+
+  // 自动刷新没有 holdings 数据的钱包（避免每次都要手动点刷新）
+  const walletsNeedRefresh = accountStore.walletAddresses.filter(
+    w => !w.holdings || w.holdings.length === 0
+  )
+  if (walletsNeedRefresh.length > 0) {
+    for (const wallet of walletsNeedRefresh) {
+      try {
+        await accountStore.refreshAccount('blockchain', wallet.id)
+      } catch (err) {
+        console.warn('自动刷新钱包失败:', wallet.id, err)
+      }
+    }
+  }
+
   // 加载 DeFi 仓位数据
   if (assetStore.defiPositions.length === 0) {
     assetStore.loadDefiPositions()
@@ -467,7 +488,8 @@ onMounted(async () => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="wallet in walletAddresses" :key="wallet.id">
+            <template v-for="wallet in walletAddresses" :key="wallet.id">
+              <tr class="wallet-row" :class="{ expanded: expandedWalletId === wallet.id }" @click="toggleWalletExpand(wallet.id)">
               <td>
                 <div class="name-cell">
                   <div
@@ -483,7 +505,7 @@ onMounted(async () => {
                   <span class="font-mono">{{ shortenAddress(wallet.address, 6) }}</span>
                   <button
                     class="copy-btn"
-                    @click="copyAddress(wallet.address)"
+                    @click.stop="copyAddress(wallet.address)"
                   >
                     <PhCheck v-if="copiedAddress === wallet.address" :size="12" weight="bold" />
                     <PhCopy v-else :size="12" />
@@ -500,18 +522,36 @@ onMounted(async () => {
               <td class="text-muted">{{ formatRelativeTime(wallet.lastSync) }}</td>
               <td class="col-actions">
                 <div class="action-btns">
-                  <button class="icon-btn" :title="t('accounts.refresh')" @click="refreshAccount(wallet)">
+                  <button class="icon-btn" :title="t('accounts.refresh')" @click.stop="refreshAccount(wallet)">
                     <PhArrowsClockwise :size="14" />
                   </button>
-                  <button class="icon-btn" :title="t('accounts.edit')" @click="editAccount(wallet)">
+                  <button class="icon-btn" :title="t('accounts.edit')" @click.stop="editAccount(wallet)">
                     <PhPencilSimple :size="14" />
                   </button>
-                  <button class="icon-btn danger" :title="t('accounts.delete')" @click="confirmDelete(wallet)">
+                  <button class="icon-btn danger" :title="t('accounts.delete')" @click.stop="confirmDelete(wallet)">
                     <PhTrash :size="14" />
                   </button>
                 </div>
               </td>
             </tr>
+            <!-- 展开的 holdings 明细行 -->
+            <tr v-if="expandedWalletId === wallet.id" class="holdings-row">
+              <td colspan="7">
+                <div class="holdings-detail">
+                  <div v-if="wallet.holdings && wallet.holdings.length > 0" class="holdings-list">
+                    <div v-for="h in wallet.holdings" :key="h.symbol" class="holding-item">
+                      <span class="holding-symbol">{{ h.symbol }}</span>
+                      <span class="holding-balance font-mono">{{ formatNumber(h.balance, 6) }}</span>
+                      <span class="holding-value font-mono text-muted">${{ formatNumber(h.value) }}</span>
+                    </div>
+                  </div>
+                  <div v-else class="holdings-empty text-muted">
+                    {{ t('accounts.noHoldings') || '暂无资产数据，请点击刷新' }}
+                  </div>
+                </div>
+              </td>
+            </tr>
+            </template>
             <tr v-if="walletAddresses.length === 0">
               <td colspan="7" class="empty-row">{{ t('accounts.noWallet') }}</td>
             </tr>
@@ -525,6 +565,8 @@ onMounted(async () => {
           v-for="wallet in walletAddresses"
           :key="wallet.id"
           class="glass-card account-card"
+          :class="{ 'card-expanded': expandedWalletId === wallet.id }"
+          @click="toggleWalletExpand(wallet.id)"
         >
           <div class="card-header">
             <div class="card-identity">
@@ -534,7 +576,16 @@ onMounted(async () => {
               >{{ blockchainConfig[wallet.blockchain]?.symbol || wallet.blockchain.substring(0,3).toUpperCase() }}</div>
               <div class="card-name-group">
                 <span class="card-name">{{ wallet.name }}</span>
-                <span class="card-sub">{{ blockchainConfig[wallet.blockchain]?.name || wallet.blockchain }}</span>
+                <div class="card-address-row">
+                  <span class="card-sub font-mono">{{ shortenAddress(wallet.address, 6) }}</span>
+                  <button
+                    class="copy-btn"
+                    @click.stop="copyAddress(wallet.address)"
+                  >
+                    <PhCheck v-if="copiedAddress === wallet.address" :size="12" weight="bold" />
+                    <PhCopy v-else :size="12" />
+                  </button>
+                </div>
               </div>
             </div>
             <span class="status-dot" :class="wallet.status" />
@@ -543,27 +594,29 @@ onMounted(async () => {
             <span class="card-label">{{ t('accounts.walletBalance') }}</span>
             <span class="card-value font-mono">${{ formatNumber(wallet.balance) }}</span>
           </div>
-          <div class="card-meta">
-            <div class="address-cell">
-              <span class="font-mono">{{ shortenAddress(wallet.address, 6) }}</span>
-              <button
-                class="copy-btn"
-                @click="copyAddress(wallet.address)"
-              >
-                <PhCheck v-if="copiedAddress === wallet.address" :size="12" weight="bold" />
-                <PhCopy v-else :size="12" />
-              </button>
+          <!-- 展开的 holdings 明细 -->
+          <div v-if="expandedWalletId === wallet.id && wallet.holdings && wallet.holdings.length > 0" class="card-holdings">
+            <div v-for="h in wallet.holdings" :key="h.symbol" class="holding-item">
+              <span class="holding-symbol">{{ h.symbol }}</span>
+              <span class="holding-balance font-mono">{{ formatNumber(h.balance, 6) }}</span>
+              <span class="holding-value font-mono text-muted">${{ formatNumber(h.value) }}</span>
             </div>
+          </div>
+          <div v-else-if="expandedWalletId === wallet.id" class="card-holdings">
+            <span class="holdings-empty text-muted">{{ t('accounts.noHoldings') || '暂无资产数据，请点击刷新' }}</span>
+          </div>
+          <div class="card-meta">
+            <span class="text-muted">{{ blockchainConfig[wallet.blockchain]?.name || wallet.blockchain }}</span>
             <span class="text-muted">{{ formatRelativeTime(wallet.lastSync) }}</span>
           </div>
           <div class="card-actions">
-            <button class="icon-btn" :title="t('accounts.refresh')" @click="refreshAccount(wallet)">
+            <button class="icon-btn" :title="t('accounts.refresh')" @click.stop="refreshAccount(wallet)">
               <PhArrowsClockwise :size="14" />
             </button>
-            <button class="icon-btn" :title="t('accounts.edit')" @click="editAccount(wallet)">
+            <button class="icon-btn" :title="t('accounts.edit')" @click.stop="editAccount(wallet)">
               <PhPencilSimple :size="14" />
             </button>
-            <button class="icon-btn danger" :title="t('accounts.delete')" @click="confirmDelete(wallet)">
+            <button class="icon-btn danger" :title="t('accounts.delete')" @click.stop="confirmDelete(wallet)">
               <PhTrash :size="14" />
             </button>
           </div>
@@ -1093,6 +1146,17 @@ tr:hover .action-btns {
   min-width: 0;
 }
 
+.card-address-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.card-address-row .card-sub {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+}
+
 .card-name {
   font-size: 0.875rem;
   font-weight: 600;
@@ -1528,5 +1592,83 @@ tr:hover .action-btns {
   .card-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* 钱包 holdings 明细样式 */
+.wallet-row {
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.wallet-row:hover {
+  background-color: var(--bg-hover, rgba(255, 255, 255, 0.03));
+}
+.wallet-row.expanded {
+  background-color: var(--bg-hover, rgba(255, 255, 255, 0.03));
+}
+
+.holdings-row td {
+  padding: 0 !important;
+  border-top: none !important;
+}
+
+.holdings-detail {
+  padding: 8px 16px 12px 48px;
+  background: var(--bg-subtle, rgba(255, 255, 255, 0.02));
+}
+
+.holdings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.holding-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.holding-symbol {
+  font-weight: 600;
+  min-width: 60px;
+  color: var(--text-primary);
+}
+
+.holding-balance {
+  min-width: 120px;
+  text-align: right;
+}
+
+.holding-value {
+  min-width: 100px;
+  text-align: right;
+}
+
+.holdings-empty {
+  font-size: 13px;
+  padding: 4px 0;
+}
+
+/* 卡片视图 holdings */
+.card-expanded {
+  border-color: var(--border-active, rgba(255, 255, 255, 0.15));
+}
+
+.card-holdings {
+  padding: 8px 0;
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.card-holdings .holding-item {
+  font-size: 12px;
+}
+
+.account-card {
+  cursor: pointer;
 }
 </style>

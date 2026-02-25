@@ -84,15 +84,21 @@ export const assetService = {
       return mockData.getAssetSummary();
     }
     // 并发请求多个接口，聚合为 Store 期望的格式
-    const [summaryData, accountsData, walletsData, manualsData, ratesData, detailsData] =
-      await Promise.all([
-        get("/assets/summary"),
-        get("/exchanges/accounts").catch(() => ({ accounts: [] })),
-        get("/wallets/addresses").catch(() => ({ addresses: [] })),
-        get("/manual/assets").catch(() => ({ assets: [] })),
-        get("/rates/current").catch(() => ({ rates: {} })),
-        get("/assets/details").catch(() => ({ assets: [] })),
-      ]);
+    const [
+      summaryData,
+      accountsData,
+      walletsData,
+      manualsData,
+      ratesData,
+      detailsData,
+    ] = await Promise.all([
+      get("/assets/summary"),
+      get("/exchanges/accounts").catch(() => ({ accounts: [] })),
+      get("/wallets/addresses").catch(() => ({ addresses: [] })),
+      get("/manual/assets").catch(() => ({ assets: [] })),
+      get("/rates/current").catch(() => ({ rates: {} })),
+      get("/assets/details").catch(() => ({ assets: [] })),
+    ]);
 
     // 解析资产明细（用于回填各来源的 balance 和 holdings）
     const allDetails = detailsData.assets || detailsData || [];
@@ -113,7 +119,10 @@ export const assetService = {
           value: d.value,
           change24h: 0,
         }));
-      const totalBalance = accountHoldings.reduce((s, h) => s + (h.value || 0), 0);
+      const totalBalance = accountHoldings.reduce(
+        (s, h) => s + (h.value || 0),
+        0,
+      );
 
       return {
         id: a.id,
@@ -136,7 +145,9 @@ export const assetService = {
       // asset_details 中钱包数据的 source (asset_name) 格式为 "blockchain:address"
       const walletLabel = `${w.blockchain}:${w.address}`;
       const walletHoldings = allDetails
-        .filter((d) => d.source_type === "blockchain" && d.source === walletLabel)
+        .filter(
+          (d) => d.source_type === "blockchain" && d.source === walletLabel,
+        )
         .map((d) => ({
           symbol: d.symbol,
           name: d.symbol,
@@ -145,7 +156,10 @@ export const assetService = {
           value: d.value,
           change24h: 0,
         }));
-      const totalBalance = walletHoldings.reduce((s, h) => s + (h.value || 0), 0);
+      const totalBalance = walletHoldings.reduce(
+        (s, h) => s + (h.value || 0),
+        0,
+      );
 
       return {
         id: w.id,
@@ -544,6 +558,20 @@ export const cexService = {
 
 // ========== 钱包地址服务 ==========
 
+// 链名映射（用于钱包默认名称）
+const blockchainNames = {
+  ethereum: "Ethereum",
+  bsc: "BNB Chain",
+  polygon: "Polygon",
+  arbitrum: "Arbitrum",
+  optimism: "Optimism",
+  base: "Base",
+};
+
+// 获取钱包显示名称
+const getWalletName = (w) =>
+  w.label || blockchainNames[w.blockchain] || w.blockchain;
+
 export const walletService = {
   /**
    * 获取所有钱包地址
@@ -554,18 +582,58 @@ export const walletService = {
       await simulateDelay(200);
       return mockData.getWalletAddresses();
     }
-    const result = await get("/wallets/addresses");
+    // 并发获取钱包列表、资产明细和汇率，用于回填 holdings
+    const [result, detailsData, ratesData] = await Promise.all([
+      get("/wallets/addresses"),
+      get("/assets/details").catch(() => ({ assets: [] })),
+      get("/rates/current").catch(() => ({ rates: {} })),
+    ]);
     const addresses = Array.isArray(result) ? result : result.addresses || [];
-    return addresses.map((w) => ({
-      id: w.id,
-      name: w.label || `${w.address?.slice(0, 6)}...${w.address?.slice(-4)}`,
-      address: w.address,
-      blockchain: w.blockchain,
-      balance: 0,
-      lastSync: w.updated_at,
-      status: "active",
-      holdings: [],
-    }));
+    const allDetails = detailsData.assets || detailsData || [];
+    const rates = ratesData.rates || ratesData || {};
+
+    return addresses.map((w) => {
+      // 从 asset_details 中查找该钱包的持仓明细
+      const walletLabel = `${w.blockchain}:${w.address}`;
+      const walletHoldings = allDetails
+        .filter(
+          (d) => d.source_type === "blockchain" && d.source === walletLabel,
+        )
+        .filter((d) => d.amount > 0)
+        .map((d) => {
+          // 如果后端价格为 0，使用汇率表补充
+          let price = d.price || 0;
+          let value = d.value || 0;
+          if (price === 0 && d.amount > 0) {
+            const sym = (d.symbol || "").toUpperCase();
+            price = rates[sym] || 0;
+            value = d.amount * price;
+          }
+          return {
+            symbol: d.symbol,
+            name: d.symbol,
+            balance: d.amount,
+            price,
+            value,
+            change24h: 0,
+          };
+        });
+      const totalBalance = walletHoldings.reduce(
+        (s, h) => s + (h.value || 0),
+        0,
+      );
+
+      return {
+        id: w.id,
+        name: getWalletName(w),
+        address: w.address,
+        blockchain: w.blockchain,
+        balance: totalBalance,
+        lastSync: w.updated_at,
+        status: "active",
+        holdings: walletHoldings,
+      };
+    });
   },
 
   /**
@@ -584,7 +652,7 @@ export const walletService = {
     const w = result.address || result;
     return {
       id: w.id,
-      name: w.label || `${w.address?.slice(0, 6)}...${w.address?.slice(-4)}`,
+      name: getWalletName(w),
       address: w.address,
       blockchain: w.blockchain,
       balance: 0,
@@ -604,11 +672,13 @@ export const walletService = {
       await simulateDelay(500);
       return mockData.addWalletAddress(data);
     }
-    const result = await post("/wallets/addresses", data);
+    // 前端表单用 name，后端 API 用 label
+    const payload = { ...data, label: data.name || data.label };
+    const result = await post("/wallets/addresses", payload);
     const w = result.address || result;
     return {
       id: w.id,
-      name: w.label || `${w.address?.slice(0, 6)}...${w.address?.slice(-4)}`,
+      name: getWalletName(w),
       address: w.address,
       blockchain: w.blockchain,
       balance: 0,
@@ -631,11 +701,12 @@ export const walletService = {
       if (!wallet) throw new ApiError(40401, "钱包不存在");
       return wallet;
     }
-    const result = await put(`/wallets/addresses/${id}`, data);
+    const payload = { ...data, label: data.name || data.label };
+    const result = await put(`/wallets/addresses/${id}`, payload);
     const w = result.address || result;
     return {
       id: w.id,
-      name: w.label || `${w.address?.slice(0, 6)}...${w.address?.slice(-4)}`,
+      name: getWalletName(w),
       address: w.address,
       blockchain: w.blockchain,
       balance: 0,
@@ -671,22 +742,33 @@ export const walletService = {
       return wallet;
     }
     await post(`/wallets/addresses/${id}/sync`);
-    const [wallet, balances] = await Promise.all([
+    const [wallet, balances, ratesData] = await Promise.all([
       this.getAddress(id),
       get(`/wallets/addresses/${id}/balances`).catch(() => null),
+      get("/rates/current").catch(() => ({ rates: {} })),
     ]);
+    const rates = ratesData.rates || ratesData || {};
+    // 链名到原生代币符号的映射
+    const nativeSymbolMap = {
+      ethereum: "ETH",
+      bsc: "BNB",
+      polygon: "MATIC",
+      arbitrum: "ETH",
+      optimism: "ETH",
+      base: "ETH",
+    };
     if (balances) {
-      wallet.balance = balances.total_value_usd || 0;
       wallet.holdings = [];
+      const nativeSym =
+        nativeSymbolMap[wallet.blockchain] || wallet.blockchain.toUpperCase();
       if (balances.native_balance > 0) {
+        const nativePrice = rates[nativeSym] || 0;
         wallet.holdings.push({
-          symbol:
-            wallet.blockchain === "ethereum"
-              ? "ETH"
-              : wallet.blockchain.toUpperCase(),
-          name: wallet.blockchain,
+          symbol: nativeSym,
+          name: nativeSym,
           balance: balances.native_balance,
-          value: 0,
+          price: nativePrice,
+          value: balances.native_balance * nativePrice,
           change24h: 0,
         });
       }
@@ -694,15 +776,24 @@ export const walletService = {
         for (const [symbol, amount] of Object.entries(
           balances.token_balances,
         )) {
+          if (amount <= 0) continue;
+          // 跳过原生代币，避免与 native_balance 重复
+          if (symbol.toUpperCase() === nativeSym) continue;
+          const tokenPrice = rates[symbol.toUpperCase()] || 0;
           wallet.holdings.push({
             symbol,
             name: symbol,
             balance: amount,
-            value: 0,
+            price: tokenPrice,
+            value: amount * tokenPrice,
             change24h: 0,
           });
         }
       }
+      // 计算总价值
+      wallet.balance =
+        balances.total_value_usd ||
+        wallet.holdings.reduce((s, h) => s + (h.value || 0), 0);
     }
     return wallet;
   },
