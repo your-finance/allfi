@@ -76,9 +76,19 @@ func UpdateDynamicRPCs(ctx context.Context) {
 				!strings.Contains(urlLower, "blastapi.io") &&
 				!strings.Contains(urlLower, "nodereal.io") &&
 				!strings.Contains(urlLower, "getblock.io") &&
-				!strings.Contains(urlLower, "tenderly.co") {
-				newMap[entry.ChainId] = rpc.URL
-				break // 选第一个合适的
+				!strings.Contains(urlLower, "tenderly.co") &&
+				!strings.Contains(urlLower, "quiknode.pro") &&
+				!strings.Contains(urlLower, "rpcfast.com") &&
+				!strings.Contains(urlLower, "gateway.fm") {
+
+				// 优先选择 tracking == "none" 的优质公益节点
+				if rpc.Tracking == "none" || newMap[entry.ChainId] == "" {
+					newMap[entry.ChainId] = rpc.URL
+				}
+				// 一旦找到最优质的公益节点，直接确定并跳出
+				if rpc.Tracking == "none" {
+					break
+				}
 			}
 		}
 	}
