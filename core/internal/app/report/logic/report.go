@@ -204,11 +204,12 @@ func (s *sReport) GetMonthlyReport(ctx context.Context, month string) (*reportAp
 	return &reportApi.GetMonthlyRes{Report: content}, nil
 }
 
-// GetAnnualReport 获取/生成年度报告
+// GetAnnualReport 获取年度报告（仅查询，不自动生成）
+// 年度报告只在年末定时任务时自动生成，前端查询时不触发生成
 func (s *sReport) GetAnnualReport(ctx context.Context, year string) (*reportApi.GetAnnualRes, error) {
 	userID := consts.GetUserID(ctx)
 
-	// 先查找已有报告
+	// 查找已有报告
 	var existing reportEntity.Reports
 	err := dao.Reports.Ctx(ctx).
 		Where(dao.Reports.Columns().UserId, userID).
@@ -236,12 +237,42 @@ func (s *sReport) GetAnnualReport(ctx context.Context, year string) (*reportApi.
 		return &reportApi.GetAnnualRes{Report: content}, nil
 	}
 
+	// 未找到报告，返回 nil（不自动生成）
+	g.Log().Debugf(ctx, "年度报告不存在: %s", year)
+	return &reportApi.GetAnnualRes{Report: nil}, nil
+}
+
+// GenerateAnnualReport 生成年度报告（仅供定时任务调用）
+// 如果报告已存在则跳过，避免重复生成
+func (s *sReport) GenerateAnnualReport(ctx context.Context, year string) (*reportApi.GetAnnualRes, error) {
+	userID := consts.GetUserID(ctx)
+
+	// 先检查是否已存在
+	var existing reportEntity.Reports
+	err := dao.Reports.Ctx(ctx).
+		Where(dao.Reports.Columns().UserId, userID).
+		Where(dao.Reports.Columns().Type, reportModel.ReportTypeAnnual).
+		Where(dao.Reports.Columns().Period, year).
+		Scan(&existing)
+	if err == nil && existing.Id > 0 {
+		g.Log().Infof(ctx, "年度报告已存在，跳过生成: %s", year)
+		var content interface{}
+		if existing.Content != "" {
+			var parsed map[string]interface{}
+			if json.Unmarshal([]byte(existing.Content), &parsed) == nil {
+				content = parsed
+			}
+		}
+		if content == nil {
+			content = toReportSummary(&existing)
+		}
+		return &reportApi.GetAnnualRes{Report: content}, nil
+	}
+
 	// 生成年报
 	report, err := s.generateAnnualReport(ctx, userID, year)
 	if err != nil {
-		// 如果是没有数据的错误，返回 nil 而不是错误
-		g.Log().Info(ctx, "无法生成年度报告", "year", year, "error", err.Error())
-		return &reportApi.GetAnnualRes{Report: nil}, nil
+		return nil, gerror.Wrapf(err, "生成年度报告失败: %s", year)
 	}
 
 	var content interface{}
@@ -255,6 +286,7 @@ func (s *sReport) GetAnnualReport(ctx context.Context, year string) (*reportApi.
 		content = toReportSummary(report)
 	}
 
+	g.Log().Infof(ctx, "年度报告生成成功: %s", year)
 	return &reportApi.GetAnnualRes{Report: content}, nil
 }
 

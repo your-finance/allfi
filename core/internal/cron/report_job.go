@@ -140,7 +140,7 @@ func (j *ReportJob) execute() {
 	// 年报：每年 1 月 1 日 08:00-09:00 生成上年报告
 	if now.Month() == time.January && now.Day() == 1 && now.Hour() >= 8 && now.Hour() < 9 {
 		lastYear := now.AddDate(-1, 0, 0).Format("2006")
-		if _, err := reportService.Report().GetAnnualReport(ctx, lastYear); err != nil {
+		if _, err := reportService.Report().GenerateAnnualReport(ctx, lastYear); err != nil {
 			g.Log().Errorf(ctx, "[Cron] 生成年报失败 (%s): %v", lastYear, err)
 		} else {
 			g.Log().Infof(ctx, "[Cron] 年报生成成功 (%s)", lastYear)

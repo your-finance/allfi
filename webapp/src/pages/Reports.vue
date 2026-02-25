@@ -232,11 +232,32 @@ const formatDate = (dateStr) => {
 }
 
 const formatPeriod = (report) => {
+  if (!report.period) return '-'
+
+  // 周报直接返回 period（如 "2024-W08"）
   if (report.type === 'weekly') {
     return report.period
   }
-  const d = new Date(report.period)
-  return d.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })
+
+  // 日报格式：2024-02-25 → 2月25日
+  if (report.type === 'daily') {
+    const [year, month, day] = report.period.split('-')
+    return `${parseInt(month)}月${parseInt(day)}日`
+  }
+
+  // 月报格式：2024-02 → 2月
+  if (report.type === 'monthly') {
+    const [year, month] = report.period.split('-')
+    return `${parseInt(month)}月`
+  }
+
+  // 年报格式：2024 → 2024年
+  if (report.type === 'annual') {
+    return `${report.period}年`
+  }
+
+  // 默认直接返回 period
+  return report.period
 }
 
 // 月份标签

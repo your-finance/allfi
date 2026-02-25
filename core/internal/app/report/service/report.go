@@ -22,8 +22,11 @@ type IReport interface {
 	// GetMonthlyReport 获取/生成月度报告
 	GetMonthlyReport(ctx context.Context, month string) (*reportApi.GetMonthlyRes, error)
 
-	// GetAnnualReport 获取/生成年度报告
+	// GetAnnualReport 获取年度报告（仅查询，不自动生成）
 	GetAnnualReport(ctx context.Context, year string) (*reportApi.GetAnnualRes, error)
+
+	// GenerateAnnualReport 生成年度报告（仅供定时任务调用）
+	GenerateAnnualReport(ctx context.Context, year string) (*reportApi.GetAnnualRes, error)
 
 	// Compare 对比两份报告
 	Compare(ctx context.Context, reportID1, reportID2 int) (*reportApi.CompareRes, error)
