@@ -301,7 +301,7 @@ func (s *sWallet) SyncAddress(ctx context.Context, walletID int) error {
 
 	// 删除该钱包在 asset_details 中的旧记录
 	_, err = assetDao.AssetDetails.Ctx(ctx).
-		Where(assetDao.AssetDetails.Columns().SourceType, "wallet").
+		Where(assetDao.AssetDetails.Columns().SourceType, "blockchain").
 		Where(assetDao.AssetDetails.Columns().AssetName, walletLabel).
 		Where(assetDao.AssetDetails.Columns().UserId, consts.GetUserID(ctx)).
 		Delete()
@@ -345,7 +345,7 @@ func (s *sWallet) SyncAddress(ctx context.Context, walletID int) error {
 			assetDao.AssetDetails.Columns().Balance:     balance,
 			assetDao.AssetDetails.Columns().PriceUsd:    priceUSD,
 			assetDao.AssetDetails.Columns().ValueUsd:    valueUSD,
-			assetDao.AssetDetails.Columns().SourceType:  "wallet",
+			assetDao.AssetDetails.Columns().SourceType:  "blockchain",
 			assetDao.AssetDetails.Columns().LastUpdated: now,
 			assetDao.AssetDetails.Columns().CreatedAt:   now,
 			assetDao.AssetDetails.Columns().UpdatedAt:   now,

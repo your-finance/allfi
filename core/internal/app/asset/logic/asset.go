@@ -13,13 +13,13 @@ import (
 	assetApi "your-finance/allfi/api/v1/asset"
 	"your-finance/allfi/internal/app/asset/dao"
 	"your-finance/allfi/internal/app/asset/service"
-	"your-finance/allfi/internal/consts"
 	exchangeDao "your-finance/allfi/internal/app/exchange/dao"
 	exchangeService "your-finance/allfi/internal/app/exchange/service"
+	exchangeRateDao "your-finance/allfi/internal/app/exchange_rate/dao"
 	manualAssetDao "your-finance/allfi/internal/app/manual_asset/dao"
 	walletDao "your-finance/allfi/internal/app/wallet/dao"
 	walletService "your-finance/allfi/internal/app/wallet/service"
-	exchangeRateDao "your-finance/allfi/internal/app/exchange_rate/dao"
+	"your-finance/allfi/internal/consts"
 	"your-finance/allfi/internal/integrations/coingecko"
 	"your-finance/allfi/internal/model/entity"
 )
@@ -284,7 +284,7 @@ func (s *sAsset) RefreshAll(ctx context.Context) (*assetApi.RefreshRes, error) {
 			walletLabel := addr.Blockchain + ":" + addr.Address
 			count, countErr := dao.AssetDetails.Ctx(ctx).
 				Where(dao.AssetDetails.Columns().UserId, userID).
-				Where(dao.AssetDetails.Columns().SourceType, "wallet").
+				Where(dao.AssetDetails.Columns().SourceType, "blockchain").
 				Where(dao.AssetDetails.Columns().AssetName, walletLabel).
 				Count()
 			if countErr == nil {

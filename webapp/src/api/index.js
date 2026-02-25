@@ -84,44 +84,80 @@ export const assetService = {
       return mockData.getAssetSummary();
     }
     // 并发请求多个接口，聚合为 Store 期望的格式
-    const [summaryData, accountsData, walletsData, manualsData, ratesData] =
+    const [summaryData, accountsData, walletsData, manualsData, ratesData, detailsData] =
       await Promise.all([
         get("/assets/summary"),
         get("/exchanges/accounts").catch(() => ({ accounts: [] })),
         get("/wallets/addresses").catch(() => ({ addresses: [] })),
         get("/manual/assets").catch(() => ({ assets: [] })),
         get("/rates/current").catch(() => ({ rates: {} })),
+        get("/assets/details").catch(() => ({ assets: [] })),
       ]);
+
+    // 解析资产明细（用于回填各来源的 balance 和 holdings）
+    const allDetails = detailsData.assets || detailsData || [];
 
     // 适配 CEX 账户列表（后端可能返回数组或 {accounts: []}）
     const rawAccounts = Array.isArray(accountsData)
       ? accountsData
       : accountsData.accounts || [];
-    const cexAccounts = rawAccounts.map((a) => ({
-      id: a.id,
-      exchange: a.exchange_name,
-      name: a.label || a.exchange_name,
-      balance: 0,
-      lastSync: a.updated_at,
-      status: a.status || "connected",
-      apiKeyMasked: "",
-      holdings: [],
-    }));
+    const cexAccounts = rawAccounts.map((a) => {
+      // 从 asset_details 中查找该 CEX 账户的持仓明细
+      const accountHoldings = allDetails
+        .filter((d) => d.source_type === "cex" && d.source === a.exchange_name)
+        .map((d) => ({
+          symbol: d.symbol,
+          name: d.symbol,
+          balance: d.amount,
+          price: d.price,
+          value: d.value,
+          change24h: 0,
+        }));
+      const totalBalance = accountHoldings.reduce((s, h) => s + (h.value || 0), 0);
+
+      return {
+        id: a.id,
+        exchange: a.exchange_name,
+        name: a.label || a.exchange_name,
+        balance: totalBalance,
+        lastSync: a.updated_at,
+        status: a.status || "connected",
+        apiKeyMasked: "",
+        holdings: accountHoldings,
+      };
+    });
 
     // 适配钱包地址列表（后端可能返回数组或 {addresses: []}）
     const rawWallets = Array.isArray(walletsData)
       ? walletsData
       : walletsData.addresses || [];
-    const walletAddresses = rawWallets.map((w) => ({
-      id: w.id,
-      name: w.label || w.address?.slice(0, 10),
-      address: w.address,
-      blockchain: w.blockchain,
-      balance: 0,
-      lastSync: w.updated_at,
-      status: "active",
-      holdings: [],
-    }));
+    const walletAddresses = rawWallets.map((w) => {
+      // 从 asset_details 中查找该钱包的持仓明细
+      // asset_details 中钱包数据的 source (asset_name) 格式为 "blockchain:address"
+      const walletLabel = `${w.blockchain}:${w.address}`;
+      const walletHoldings = allDetails
+        .filter((d) => d.source_type === "blockchain" && d.source === walletLabel)
+        .map((d) => ({
+          symbol: d.symbol,
+          name: d.symbol,
+          balance: d.amount,
+          price: d.price,
+          value: d.value,
+          change24h: 0,
+        }));
+      const totalBalance = walletHoldings.reduce((s, h) => s + (h.value || 0), 0);
+
+      return {
+        id: w.id,
+        name: w.label || w.address?.slice(0, 10),
+        address: w.address,
+        blockchain: w.blockchain,
+        balance: totalBalance,
+        lastSync: w.updated_at,
+        status: "active",
+        holdings: walletHoldings,
+      };
+    });
 
     // 适配手动资产列表（后端可能返回数组或 {assets: []}）
     const rawManuals = Array.isArray(manualsData)
