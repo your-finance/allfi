@@ -84,6 +84,10 @@ const calendarHoveredDate = ref(null)
 const showExchangeRate = computed(() => pricingCurrency.value !== 'USDC')
 const exchangeRates = computed(() => assetStore.exchangeRates)
 
+const isExchangeRateMissing = computed(() => {
+  return showExchangeRate.value && (!exchangeRates.value || !exchangeRates.value[pricingCurrency.value])
+})
+
 // 计价货币符号和精度
 const pricingCurrencySymbol = computed(() => {
   const symbols = { USDC: '$', BTC: '₿', ETH: 'Ξ', CNY: '¥' }
@@ -578,15 +582,22 @@ onMounted(() => {
               </div>
             </div>
 
-            <span class="current-value">{{ t('history.currentValue') }}: {{ formatCurrency(assetStore.totalValue) }}</span>
-            <span v-if="showExchangeRate" class="rate-indicator">
+            <span class="current-value">
+              {{ t('history.currentValue') }}: 
+              <template v-if="isExchangeRateMissing">--</template>
+              <template v-else>{{ formatCurrency(assetStore.convertValue(assetStore.totalValue, pricingCurrency), { decimals: pricingCurrencyDecimals }) }}</template>
+            </span>
+            <span v-if="showExchangeRate && !isExchangeRateMissing" class="rate-indicator">
               <span class="rate-dot" />
-              {{ pricingCurrency }}/USDC
+              {{ pricingCurrency }}/USDC: {{ exchangeRates[pricingCurrency] ? exchangeRates[pricingCurrency].toFixed(4) : '--' }}
             </span>
           </div>
         </div>
         <div class="chart-container" @mouseleave="hoveredDate = null">
-          <Line ref="chartRef" :data="lineChartData" :options="lineChartOptions" :plugins="[verticalLinePlugin]" :key="selectedTimeRange + pricingCurrency + (showExchangeRate ? 'rate' : '')" />
+          <div v-if="isExchangeRateMissing" class="empty-state" style="height: 100%; display: flex; align-items: center; justify-content: center; color: var(--color-text-muted);">
+            <span>{{ t('history.noExchangeRateData') || '暂无汇率数据，无法显示图表' }}</span>
+          </div>
+          <Line v-else ref="chartRef" :data="lineChartData" :options="lineChartOptions" :plugins="[verticalLinePlugin]" :key="selectedTimeRange + pricingCurrency + (showExchangeRate ? 'rate' : '')" />
         </div>
       </section>
     </div>

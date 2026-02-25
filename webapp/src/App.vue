@@ -63,6 +63,20 @@ const isAuthPage = computed(() => {
   return ['/login', '/register', '/2fa'].includes(route.path)
 })
 
+// 资产计价逻辑
+const showExchangeRate = computed(() => pricingCurrency.value !== 'USDC')
+const isExchangeRateMissing = computed(() => {
+  return showExchangeRate.value && (!assetStore.exchangeRates || !assetStore.exchangeRates[pricingCurrency.value])
+})
+
+const pricingCurrencyDecimals = computed(() => {
+  switch (pricingCurrency.value) {
+    case 'BTC': return 5
+    case 'ETH': return 4
+    default: return 2
+  }
+})
+
 // Gas 价格状态（多链）
 const gasData = ref(null)
 const gasChainIndex = ref(0)
@@ -377,7 +391,10 @@ watch(() => route.path, updateDocumentTitle, { immediate: true })
         <!-- 总资产 -->
         <div class="total-assets">
           <span class="assets-label">{{ t('topBar.totalAssets') }}</span>
-          <span class="assets-value font-mono">{{ formatCurrency(assetStore.totalValue) }}</span>
+          <span class="assets-value font-mono">
+            <template v-if="isExchangeRateMissing">--</template>
+            <template v-else>{{ formatCurrency(assetStore.convertValue(assetStore.totalValue, pricingCurrency), { decimals: pricingCurrencyDecimals }) }}</template>
+          </span>
 
           <div class="currency-dropdown">
             <button class="currency-btn" @click="toggleCurrencyDropdown">

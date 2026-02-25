@@ -73,7 +73,8 @@ const {
   currencySymbol,
   formatNumber,
   formatPercent,
-  currencies
+  currencies,
+  setPricingCurrency
 } = useFormatters()
 
 const themeStore = useThemeStore()
@@ -95,14 +96,13 @@ const selectedTimeRange = ref('30D')
 const timeRanges = ['7D', '30D', '90D', '1Y', 'ALL']
 
 // 计价货币
-const selectedPricingCurrency = ref('USDC')
+const selectedPricingCurrency = currentCurrency
 const showExchangeRate = computed(() => selectedPricingCurrency.value !== 'USDC')
 const exchangeRates = computed(() => assetStore.exchangeRates)
 
-const setPricingCurrency = (currency) => {
-  selectedPricingCurrency.value = currency
-  currentCurrency.value = currency
-}
+const isExchangeRateMissing = computed(() => {
+  return showExchangeRate.value && (!exchangeRates.value || !exchangeRates.value[selectedPricingCurrency.value])
+})
 
 const pricingCurrencySymbol = computed(() => {
   const currency = currencies.find(c => c.code === selectedPricingCurrency.value)
@@ -188,6 +188,10 @@ const sortOrder = ref('desc')
 const totalAssets = computed(() => assetStore.totalValue)
 const totalChange24h = computed(() => assetStore.change24h)
 const totalChangeValue = computed(() => assetStore.changeValue)
+
+// Convert values to selected pricing currency
+const convertedTotalAssets = computed(() => assetStore.convertValue(totalAssets.value, selectedPricingCurrency.value))
+const convertedTotalChangeValue = computed(() => assetStore.convertValue(totalChangeValue.value, selectedPricingCurrency.value))
 
 // CEX / 链上 / 手动资产
 const cexAccounts = computed(() => assetStore.cexAccounts)
@@ -704,13 +708,20 @@ watch(selectedTimeRange, async (newRange) => {
             <span class="label-text">{{ t('dashboard.totalAssets') }}</span>
             <div class="balance-row">
               <h1 class="total-balance font-mono">
-                {{ currencySymbol }}{{ formatNumber(totalAssets) }}
+                <template v-if="isExchangeRateMissing">--</template>
+                <template v-else>{{ currencySymbol }}{{ formatNumber(convertedTotalAssets, pricingCurrencyDecimals) }}</template>
               </h1>
               <div class="pnl-badge" :class="totalChange24h >= 0 ? 'positive' : 'negative'">
-                <PhCaretUp v-if="totalChange24h >= 0" :size="12" weight="bold" />
-                <PhCaretDown v-else :size="12" weight="bold" />
-                <span class="font-mono">{{ formatPercent(totalChange24h) }}</span>
-                <span class="pnl-value font-mono">({{ currencySymbol }}{{ formatNumber(totalChangeValue) }})</span>
+                <template v-if="isExchangeRateMissing">
+                  <span class="font-mono">--%</span>
+                  <span class="pnl-value font-mono">(--)</span>
+                </template>
+                <template v-else>
+                  <PhCaretUp v-if="totalChange24h >= 0" :size="12" weight="bold" />
+                  <PhCaretDown v-else :size="12" weight="bold" />
+                  <span class="font-mono">{{ formatPercent(totalChange24h) }}</span>
+                  <span class="pnl-value font-mono">({{ currencySymbol }}{{ formatNumber(convertedTotalChangeValue, pricingCurrencyDecimals) }})</span>
+                </template>
               </div>
             </div>
             <div class="hero-actions">
@@ -730,7 +741,10 @@ watch(selectedTimeRange, async (newRange) => {
               <div class="stat-icon" :style="{ backgroundColor: cat.fixedColor || themeStore.currentTheme.colors[cat.colorKey] }"></div>
               <div class="stat-info">
                 <span class="stat-label">{{ t(cat.labelKey) }}</span>
-                <span class="stat-num font-mono">{{ currencySymbol }}{{ formatNumber(cat.totalValue, 0) }}</span>
+                <span class="stat-num font-mono">
+                  <template v-if="isExchangeRateMissing">--</template>
+                  <template v-else>{{ currencySymbol }}{{ formatNumber(assetStore.convertValue(cat.totalValue, selectedPricingCurrency), pricingCurrencyDecimals) }}</template>
+                </span>
               </div>
             </div>
           </div>
@@ -772,7 +786,11 @@ watch(selectedTimeRange, async (newRange) => {
           </div>
         </div>
         <div class="chart-wrapper">
+          <div v-if="isExchangeRateMissing" class="empty-state" style="height: 100%; display: flex; align-items: center; justify-content: center; color: var(--color-text-muted);">
+            <span>{{ t('dashboard.noExchangeRateData') || '暂无汇率数据，无法显示图表' }}</span>
+          </div>
           <Line
+            v-else
             :data="lineChartData"
             :options="lineChartOptions"
             :key="selectedPricingCurrency + selectedTimeRange + selectedBenchmark"
