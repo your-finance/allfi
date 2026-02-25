@@ -34,9 +34,12 @@ import { useToast } from '../composables/useToast.js'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler)
 
-const { currencySymbol, formatNumber, formatPercent } = useFormatters()
+const { formatNumber, formatPercent } = useFormatters()
 const { t } = useI18n()
 const { showToast } = useToast()
+
+// 报告使用固定计价货币：USDC
+const REPORT_CURRENCY_SYMBOL = '$'
 
 // 当前标签页
 const activeTab = ref('timeline') // timeline | monthly | compare
@@ -413,7 +416,7 @@ onMounted(async () => {
               <div class="stat-row">
                 <span class="stat-label">{{ t('reports.totalValue') }}</span>
                 <span class="stat-value font-mono">
-                  {{ currencySymbol }}{{ formatNumber(report.total_value) }}
+                  {{ REPORT_CURRENCY_SYMBOL }}{{ formatNumber(report.total_value) }}
                 </span>
               </div>
 
@@ -425,7 +428,7 @@ onMounted(async () => {
                 >
                   <PhCaretUp v-if="report.change >= 0" :size="12" weight="bold" />
                   <PhCaretDown v-else :size="12" weight="bold" />
-                  {{ report.change >= 0 ? '+' : '' }}{{ currencySymbol }}{{ formatNumber(Math.abs(report.change)) }}
+                  {{ report.change >= 0 ? '+' : '' }}{{ REPORT_CURRENCY_SYMBOL }}{{ formatNumber(Math.abs(report.change)) }}
                   ({{ report.change_percent >= 0 ? '+' : '' }}{{ formatPercent(report.change_percent) }})
                 </span>
               </div>
@@ -483,11 +486,11 @@ onMounted(async () => {
           <div class="overview-grid">
             <div class="overview-item">
               <span class="ov-label">{{ t('reports.startValue') }}</span>
-              <span class="ov-value font-mono">{{ currencySymbol }}{{ formatNumber(monthlyReport.startValue) }}</span>
+              <span class="ov-value font-mono">{{ REPORT_CURRENCY_SYMBOL }}{{ formatNumber(monthlyReport.startValue) }}</span>
             </div>
             <div class="overview-item">
               <span class="ov-label">{{ t('reports.endValue') }}</span>
-              <span class="ov-value font-mono">{{ currencySymbol }}{{ formatNumber(monthlyReport.endValue) }}</span>
+              <span class="ov-value font-mono">{{ REPORT_CURRENCY_SYMBOL }}{{ formatNumber(monthlyReport.endValue) }}</span>
             </div>
             <div class="overview-item" v-if="monthlyReport.btcBenchmark != null">
               <span class="ov-label">BTC</span>
@@ -559,19 +562,19 @@ onMounted(async () => {
           <div class="fee-grid">
             <div class="fee-item">
               <span class="fee-label">{{ t('reports.totalFee') }}</span>
-              <span class="fee-value font-mono">{{ currencySymbol }}{{ formatNumber(monthlyReport.feeSummary.totalFee) }}</span>
+              <span class="fee-value font-mono">{{ REPORT_CURRENCY_SYMBOL }}{{ formatNumber(monthlyReport.feeSummary.totalFee) }}</span>
             </div>
             <div class="fee-item">
               <span class="fee-label">{{ t('reports.tradingFee') }}</span>
-              <span class="fee-value font-mono">{{ currencySymbol }}{{ formatNumber(monthlyReport.feeSummary.tradingFee) }}</span>
+              <span class="fee-value font-mono">{{ REPORT_CURRENCY_SYMBOL }}{{ formatNumber(monthlyReport.feeSummary.tradingFee) }}</span>
             </div>
             <div class="fee-item">
               <span class="fee-label">{{ t('reports.gasFee') }}</span>
-              <span class="fee-value font-mono">{{ currencySymbol }}{{ formatNumber(monthlyReport.feeSummary.gasFee) }}</span>
+              <span class="fee-value font-mono">{{ REPORT_CURRENCY_SYMBOL }}{{ formatNumber(monthlyReport.feeSummary.gasFee) }}</span>
             </div>
             <div class="fee-item">
               <span class="fee-label">{{ t('reports.withdrawFee') }}</span>
-              <span class="fee-value font-mono">{{ currencySymbol }}{{ formatNumber(monthlyReport.feeSummary.withdrawFee) }}</span>
+              <span class="fee-value font-mono">{{ REPORT_CURRENCY_SYMBOL }}{{ formatNumber(monthlyReport.feeSummary.withdrawFee) }}</span>
             </div>
           </div>
         </div>
@@ -619,8 +622,8 @@ onMounted(async () => {
 
           <div class="compare-row">
             <div class="compare-cell label-cell">{{ t('reports.totalValue') }}</div>
-            <div class="compare-cell font-mono">{{ currencySymbol }}{{ formatNumber(compareData.report_1?.total_value) }}</div>
-            <div class="compare-cell font-mono">{{ currencySymbol }}{{ formatNumber(compareData.report_2?.total_value) }}</div>
+            <div class="compare-cell font-mono">{{ REPORT_CURRENCY_SYMBOL }}{{ formatNumber(compareData.report_1?.total_value) }}</div>
+            <div class="compare-cell font-mono">{{ REPORT_CURRENCY_SYMBOL }}{{ formatNumber(compareData.report_2?.total_value) }}</div>
           </div>
 
           <div class="compare-row">
@@ -630,7 +633,7 @@ onMounted(async () => {
                 class="font-mono"
                 :class="(compareData.report_1?.change || 0) >= 0 ? 'change-positive' : 'change-negative'"
               >
-                {{ (compareData.report_1?.change || 0) >= 0 ? '+' : '' }}{{ currencySymbol }}{{ formatNumber(compareData.report_1?.change) }}
+                {{ (compareData.report_1?.change || 0) >= 0 ? '+' : '' }}{{ REPORT_CURRENCY_SYMBOL }}{{ formatNumber(compareData.report_1?.change) }}
               </span>
             </div>
             <div class="compare-cell">
@@ -638,7 +641,7 @@ onMounted(async () => {
                 class="font-mono"
                 :class="(compareData.report_2?.change || 0) >= 0 ? 'change-positive' : 'change-negative'"
               >
-                {{ (compareData.report_2?.change || 0) >= 0 ? '+' : '' }}{{ currencySymbol }}{{ formatNumber(compareData.report_2?.change) }}
+                {{ (compareData.report_2?.change || 0) >= 0 ? '+' : '' }}{{ REPORT_CURRENCY_SYMBOL }}{{ formatNumber(compareData.report_2?.change) }}
               </span>
             </div>
           </div>
@@ -667,7 +670,7 @@ onMounted(async () => {
             <div class="compare-cell label-cell">{{ t('reports.valueDiff') }}</div>
             <div class="compare-cell font-mono" colspan="2">
               <span :class="(compareData.value_diff || 0) >= 0 ? 'change-positive' : 'change-negative'">
-                {{ (compareData.value_diff || 0) >= 0 ? '+' : '' }}{{ currencySymbol }}{{ formatNumber(compareData.value_diff) }}
+                {{ (compareData.value_diff || 0) >= 0 ? '+' : '' }}{{ REPORT_CURRENCY_SYMBOL }}{{ formatNumber(compareData.value_diff) }}
               </span>
             </div>
           </div>
