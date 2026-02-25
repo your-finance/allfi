@@ -12,6 +12,7 @@ import (
 	"github.com/gogf/gf/v2/os/gtime"
 
 	exchangeRateApi "your-finance/allfi/api/v1/exchange_rate"
+	assetDao "your-finance/allfi/internal/app/asset/dao"
 	"your-finance/allfi/internal/app/exchange_rate/dao"
 	erModel "your-finance/allfi/internal/app/exchange_rate/model"
 	"your-finance/allfi/internal/app/exchange_rate/model/entity"
@@ -179,9 +180,13 @@ func (s *sExchangeRate) RefreshRates(ctx context.Context) (*exchangeRateApi.Refr
 	// 2. 默认的法币列表 (CNY)
 	symbols = append(symbols, "CNY")
 
-	// 3. (可选) 从数据库查询曾经获取过的符号
+	// 3. 从数据库查询曾经获取过的符号
 	var existingCurrencies []string
 	dao.ExchangeRates.Ctx(ctx).Distinct().Fields(dao.ExchangeRates.Columns().FromCurrency).Scan(&existingCurrencies)
+
+	// 4. 从 asset_details 表提取用户实际持有的资产符号，动态添加到刷新列表
+	var assetSymbols []string
+	assetDao.AssetDetails.Ctx(ctx).Distinct().Fields(assetDao.AssetDetails.Columns().AssetSymbol).Scan(&assetSymbols)
 
 	// 合并并去重
 	symbolSet := make(map[string]bool)
@@ -192,6 +197,12 @@ func (s *sExchangeRate) RefreshRates(ctx context.Context) (*exchangeRateApi.Refr
 		// 避免将 USD 当作从货币
 		if sym != "USD" {
 			symbolSet[sym] = true
+		}
+	}
+	for _, sym := range assetSymbols {
+		upper := strings.ToUpper(sym)
+		if upper != "" && upper != "USD" {
+			symbolSet[upper] = true
 		}
 	}
 
