@@ -14,9 +14,10 @@ import (
 	exchangeRateApi "your-finance/allfi/api/v1/exchange_rate"
 	"your-finance/allfi/internal/app/exchange_rate/dao"
 	erModel "your-finance/allfi/internal/app/exchange_rate/model"
+	"your-finance/allfi/internal/app/exchange_rate/model/entity"
+	"your-finance/allfi/internal/app/exchange_rate/provider"
 	"your-finance/allfi/internal/app/exchange_rate/service"
 	"your-finance/allfi/internal/integrations/coingecko"
-	"your-finance/allfi/internal/app/exchange_rate/model/entity"
 )
 
 // sExchangeRate 汇率服务实现
@@ -46,6 +47,11 @@ func (s *sExchangeRate) GetRates(ctx context.Context, currencies string) (*excha
 	var source string
 
 	for _, symbol := range symbols {
+		if symbol == "USDC" || symbol == "USDT" || symbol == "DAI" || symbol == "USD" {
+			rates[symbol] = 1.0
+			continue
+		}
+
 		var rate entity.ExchangeRates
 		err := dao.ExchangeRates.Ctx(ctx).
 			Where(dao.ExchangeRates.Columns().FromCurrency, symbol).
@@ -130,6 +136,16 @@ func (s *sExchangeRate) GetPrices(ctx context.Context, symbols string) (*exchang
 	prices := make([]exchangeRateApi.PriceItem, 0, len(symbolList))
 
 	for _, symbol := range symbolList {
+		if symbol == "USDC" || symbol == "USDT" || symbol == "DAI" || symbol == "USD" {
+			prices = append(prices, exchangeRateApi.PriceItem{
+				Symbol:      symbol,
+				PriceUSD:    1.0,
+				Change24h:   0,
+				LastUpdated: gtime.Now().UnixMilli(),
+			})
+			continue
+		}
+
 		var rate entity.ExchangeRates
 		err := dao.ExchangeRates.Ctx(ctx).
 			Where(dao.ExchangeRates.Columns().FromCurrency, symbol).
@@ -157,37 +173,82 @@ func (s *sExchangeRate) GetPrices(ctx context.Context, symbols string) (*exchang
 // 1. 从 Provider（Binance/Gate.io/Frankfurter）获取最新汇率
 // 2. 更新 exchange_rates 表
 func (s *sExchangeRate) RefreshRates(ctx context.Context) (*exchangeRateApi.RefreshRes, error) {
-	// 获取所有需要刷新的货币对
-	var existingRates []entity.ExchangeRates
-	err := dao.ExchangeRates.Ctx(ctx).
-		OrderDesc(dao.ExchangeRates.Columns().FetchedAt).
-		Scan(&existingRates)
-	if err != nil {
-		return nil, gerror.Wrap(err, "查询已有汇率失败")
+	// 获取我们需要刷新的货币对
+	// 1. 默认的加密货币列表
+	symbols := append([]string{}, erModel.DefaultCryptoSymbols...)
+	// 2. 默认的法币列表 (CNY)
+	symbols = append(symbols, "CNY")
+
+	// 3. (可选) 从数据库查询曾经获取过的符号
+	var existingCurrencies []string
+	dao.ExchangeRates.Ctx(ctx).Distinct().Fields(dao.ExchangeRates.Columns().FromCurrency).Scan(&existingCurrencies)
+
+	// 合并并去重
+	symbolSet := make(map[string]bool)
+	for _, sym := range symbols {
+		symbolSet[sym] = true
+	}
+	for _, sym := range existingCurrencies {
+		// 避免将 USD 当作从货币
+		if sym != "USD" {
+			symbolSet[sym] = true
+		}
 	}
 
-	// 更新 fetched_at 为当前时间（标记为已刷新）
+	uniqueSymbols := make([]string, 0, len(symbolSet))
+	for sym := range symbolSet {
+		uniqueSymbols = append(uniqueSymbols, sym)
+	}
+
+	// 从 ProviderManager 并发获取最新汇率
+	pm := provider.GetProviderManager()
+	rates, _, err := pm.FetchRates(ctx, uniqueSymbols)
+	if err != nil && len(rates) == 0 {
+		g.Log().Warning(ctx, "获取部分或全部最新汇率失败，但将继续处理稳定币", "error", err)
+		if rates == nil {
+			rates = make(map[string]*provider.RateInfo)
+		}
+	}
+
+	// usdc=usd 确保稳定币永远有数据，无论 Provider 是否正常
+	for _, sym := range uniqueSymbols {
+		if sym == "USDC" || sym == "USDT" || sym == "DAI" || sym == "USD" {
+			rates[sym] = &provider.RateInfo{
+				Symbol:   sym,
+				PriceUSD: 1.0,
+				Source:   "System",
+			}
+		}
+	}
+
+	// 插入 exchange_rates 表（保留历史记录，只新增）
 	now := gtime.Now().Time
-	updatedCount := 0
-	for _, rate := range existingRates {
-		_, err := dao.ExchangeRates.Ctx(ctx).
-			Where(dao.ExchangeRates.Columns().Id, rate.Id).
-			Data(g.Map{
-				dao.ExchangeRates.Columns().FetchedAt: now,
-			}).
-			Update()
-		if err != nil {
-			g.Log().Warning(ctx, "更新汇率失败",
-				"from", rate.FromCurrency,
-				"to", rate.ToCurrency,
-				"error", err,
+	insertedCount := 0
+	for sym, rate := range rates {
+		if rate == nil || rate.PriceUSD <= 0 {
+			continue
+		}
+
+		_, dbErr := dao.ExchangeRates.Ctx(ctx).Data(g.Map{
+			dao.ExchangeRates.Columns().FromCurrency: sym,
+			dao.ExchangeRates.Columns().ToCurrency:   "USD",
+			dao.ExchangeRates.Columns().Rate:         rate.PriceUSD,
+			dao.ExchangeRates.Columns().Source:       rate.Source,
+			dao.ExchangeRates.Columns().FetchedAt:    now,
+			// createdAt 和 updatedAt 由 ORM 处理
+		}).Insert()
+
+		if dbErr != nil {
+			g.Log().Warning(ctx, "插入汇率历史记录失败",
+				"from", sym,
+				"error", dbErr,
 			)
 			continue
 		}
-		updatedCount++
+		insertedCount++
 	}
 
-	g.Log().Info(ctx, "刷新汇率完成", "updatedCount", updatedCount)
+	g.Log().Info(ctx, "刷新汇率完成", "insertedCount", insertedCount, "totalSymbols", len(uniqueSymbols))
 
 	return &exchangeRateApi.RefreshRes{
 		Message: "汇率刷新完成",

@@ -119,6 +119,7 @@ type CronManager struct {
 	reportJob       *ReportJob
 	strategyJob     *StrategyJob
 	riskAlertJob    *RiskAlertJob
+	exchangeRateJob *ExchangeRateJob
 }
 
 // NewCronManager 创建定时任务管理器
@@ -131,6 +132,7 @@ func NewCronManager() *CronManager {
 		reportJob:       NewReportJob(time.Hour),
 		strategyJob:     NewStrategyJob(30 * time.Minute),
 		riskAlertJob:    NewRiskAlertJob(time.Hour),
+		exchangeRateJob: NewExchangeRateJob(time.Hour),
 	}
 }
 
@@ -153,6 +155,9 @@ func (m *CronManager) Start() {
 	}
 	if m.riskAlertJob != nil {
 		m.riskAlertJob.Start()
+	}
+	if m.exchangeRateJob != nil {
+		m.exchangeRateJob.Start()
 	}
 
 	g.Log().Info(context.Background(), "[Cron] 所有定时任务已启动")
@@ -177,6 +182,9 @@ func (m *CronManager) Stop() {
 	}
 	if m.riskAlertJob != nil {
 		m.riskAlertJob.Stop()
+	}
+	if m.exchangeRateJob != nil {
+		m.exchangeRateJob.Stop()
 	}
 
 	g.Log().Info(context.Background(), "[Cron] 所有定时任务已停止")

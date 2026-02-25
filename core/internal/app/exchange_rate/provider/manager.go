@@ -41,10 +41,11 @@ func NewProviderManager() *ProviderManager {
 	}
 
 	// 注册所有 Provider（按优先级排序）
-	pm.RegisterProvider(NewBinanceProvider())      // Priority: 1（加密货币）
-	pm.RegisterProvider(NewGateioProvider())       // Priority: 2（Binance 降级）
-	pm.RegisterProvider(NewFrankfurterProvider())  // Priority: 3（法币 CNY）
-	pm.RegisterProvider(NewLocalProvider())        // Priority: 999（兜底）
+	pm.RegisterProvider(NewBinanceProvider())     // Priority: 1（加密货币）
+	pm.RegisterProvider(NewGateioProvider())      // Priority: 2（Binance 降级）
+	pm.RegisterProvider(NewYahooProvider())       // Priority: 3 (法币 CNY)
+	pm.RegisterProvider(NewFrankfurterProvider()) // Priority: 4（法币次选）
+	pm.RegisterProvider(NewLocalProvider())       // Priority: 999（兜底）
 
 	return pm
 }
