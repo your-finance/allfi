@@ -447,20 +447,42 @@ const generateTrendData = () => {
   }
 
   const labels = historyData.labels
-  const baseRate = exchangeRates.value[selectedPricingCurrency.value] || 1
+  const currency = selectedPricingCurrency.value
+  const currentRate = exchangeRates.value[currency] || 1
+  const ratesHistory = historyData.exchangeRatesHistory || []
 
   let assetData
-  if (selectedPricingCurrency.value === 'USDC') {
+  if (currency === 'USDC') {
     assetData = historyData.values
   } else {
-    assetData = historyData.values.map(v => v / baseRate)
+    // 使用每个快照时间点的真实汇率转换，而非当前汇率
+    assetData = historyData.values.map((v, i) => {
+      const snapshotRates = ratesHistory[i]
+      // 对于 BTC/ETH 等加密货币，快照中存的是 USD 价格，需除以价格
+      // 对于 CNY 等法币，快照中存的是 USD->CNY 的汇率，需乘以汇率
+      const rate = snapshotRates?.[currency]
+      if (rate && rate > 0) {
+        if (currency === 'CNY') {
+          return v * rate // USD * CNY_rate = CNY
+        }
+        return v / rate // USD / BTC_price = BTC
+      }
+      // 没有历史汇率数据时降级使用当前汇率
+      if (currency === 'CNY') {
+        return v * currentRate
+      }
+      return v / currentRate
+    })
   }
 
+  // 汇率趋势线：使用快照中的真实历史价格
   const rateData = []
   if (showExchangeRate.value) {
     for (let i = 0; i < labels.length; i++) {
-      const rateVariation = baseRate * (0.92 + Math.random() * 0.16)
-      rateData.push(rateVariation)
+      const snapshotRates = ratesHistory[i]
+      const rate = snapshotRates?.[currency]
+      // 对于 BTC/ETH 显示其 USD 价格；对于 CNY 显示 1 USD = X CNY
+      rateData.push(rate && rate > 0 ? rate : currentRate)
     }
   }
 

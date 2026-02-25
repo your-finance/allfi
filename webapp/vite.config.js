@@ -98,16 +98,16 @@ export default defineConfig({
     proxy: {
       // 代理后端 API 请求
       "/api": {
-        target: "http://localhost:8080",
+        target: "http://127.0.0.1:8080",
         changeOrigin: true,
       },
       // 代理 Swagger UI 和 OpenAPI 文档
       "/swagger": {
-        target: "http://localhost:8080",
+        target: "http://127.0.0.1:8080",
         changeOrigin: true,
       },
       "/api.json": {
-        target: "http://localhost:8080",
+        target: "http://127.0.0.1:8080",
         changeOrigin: true,
       },
     },

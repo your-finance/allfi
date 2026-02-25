@@ -51,9 +51,10 @@ type GetHistoryReq struct {
 
 // SnapshotItem 资产快照条目
 type SnapshotItem struct {
-	Date       string  `json:"date" dc:"日期"`
-	TotalValue float64 `json:"total_value" dc:"总资产价值"`
-	Currency   string  `json:"currency" dc:"计价货币"`
+	Date          string             `json:"date" dc:"日期"`
+	TotalValue    float64            `json:"total_value" dc:"总资产价值"`
+	Currency      string             `json:"currency" dc:"计价货币"`
+	ExchangeRates map[string]float64 `json:"exchange_rates,omitempty" dc:"快照时的汇率（BTC/ETH/CNY 对 USD）"`
 }
 
 // GetHistoryRes 获取资产历史响应

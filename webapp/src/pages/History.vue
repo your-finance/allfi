@@ -117,10 +117,20 @@ const lineChartData = computed(() => {
 
   const labels = historyData.value.labels
 
-  // 根据当前计价货币转换数据
-  const convertedValues = historyData.value.values.map(val =>
-    assetStore.convertValue(val, pricingCurrency.value)
-  )
+  // 根据当前计价货币转换数据（使用快照时的真实汇率）
+  const currency = pricingCurrency.value
+  const currentRate = exchangeRates.value[currency] || 1
+  const ratesHistory = historyData.value.exchangeRatesHistory || []
+  const convertedValues = historyData.value.values.map((val, i) => {
+    if (currency === 'USDC') return val
+    const snapshotRates = ratesHistory[i]
+    const rate = snapshotRates?.[currency]
+    if (rate && rate > 0) {
+      return currency === 'CNY' ? val * rate : val / rate
+    }
+    // 降级使用当前汇率
+    return currency === 'CNY' ? val * currentRate : val / currentRate
+  })
 
   // 选中 / hover 日期对应的索引（选中优先：相同日期时 hover 让位）
   const selectedIdx = selectedDate.value ? labels.indexOf(selectedDate.value) : -1
@@ -166,9 +176,14 @@ const lineChartData = computed(() => {
 
   // 第二条数据集：汇率变化线（仅在非 USDC 计价时显示）
   if (showExchangeRate.value) {
-    const baseRate = exchangeRates.value[pricingCurrency.value] || 1
-    // 生成汇率波动数据（模拟）
-    const rateData = labels.map(() => baseRate * (0.92 + Math.random() * 0.16))
+    const currentRate = exchangeRates.value[pricingCurrency.value] || 1
+    const ratesHistory = historyData.value.exchangeRatesHistory || []
+    // 使用快照中的真实历史汇率，无数据时降级显示当前汇率
+    const rateData = labels.map((_, i) => {
+      const snapshotRates = ratesHistory[i]
+      const rate = snapshotRates?.[pricingCurrency.value]
+      return rate && rate > 0 ? rate : currentRate
+    })
 
     datasets.push({
       label: `${pricingCurrency.value}/USDC`,

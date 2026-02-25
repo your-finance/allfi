@@ -227,12 +227,16 @@ export const assetService = {
     const daysMap = { "7D": 7, "30D": 30, "90D": 90, "1Y": 365 };
     const days = daysMap[timeRange] || 30;
     const result = await get("/assets/history", { days });
-    // 后端返回 { snapshots: [{date, total_value, currency}] }
-    // 转换为前端使用的 { labels, values } 格式
+    // 后端返回 { snapshots: [{date, total_value, currency, exchange_rates}] }
+    // 转换为前端使用的 { labels, values, exchangeRatesHistory } 格式
     if (result.snapshots) {
       return {
         labels: result.snapshots.map((s) => s.date),
         values: result.snapshots.map((s) => s.total_value),
+        // 每个快照时间点的汇率数据（如 {BTC: 65000, ETH: 3200, CNY: 7.2}）
+        exchangeRatesHistory: result.snapshots.map(
+          (s) => s.exchange_rates || null,
+        ),
       };
     }
     return result;

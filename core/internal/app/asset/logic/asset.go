@@ -4,6 +4,7 @@ package logic
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/gogf/gf/v2/errors/gerror"
@@ -12,20 +13,20 @@ import (
 
 	assetApi "your-finance/allfi/api/v1/asset"
 	"your-finance/allfi/internal/app/asset/dao"
+	assetEntity "your-finance/allfi/internal/app/asset/model/entity"
 	"your-finance/allfi/internal/app/asset/service"
 	exchangeDao "your-finance/allfi/internal/app/exchange/dao"
+	exchangeEntity "your-finance/allfi/internal/app/exchange/model/entity"
 	exchangeService "your-finance/allfi/internal/app/exchange/service"
 	exchangeRateDao "your-finance/allfi/internal/app/exchange_rate/dao"
+	exchangeRateEntity "your-finance/allfi/internal/app/exchange_rate/model/entity"
 	manualAssetDao "your-finance/allfi/internal/app/manual_asset/dao"
+	manualAssetEntity "your-finance/allfi/internal/app/manual_asset/model/entity"
 	walletDao "your-finance/allfi/internal/app/wallet/dao"
+	walletEntity "your-finance/allfi/internal/app/wallet/model/entity"
 	walletService "your-finance/allfi/internal/app/wallet/service"
 	"your-finance/allfi/internal/consts"
 	"your-finance/allfi/internal/integrations/coingecko"
-	assetEntity "your-finance/allfi/internal/app/asset/model/entity"
-	exchangeEntity "your-finance/allfi/internal/app/exchange/model/entity"
-	exchangeRateEntity "your-finance/allfi/internal/app/exchange_rate/model/entity"
-	manualAssetEntity "your-finance/allfi/internal/app/manual_asset/model/entity"
-	walletEntity "your-finance/allfi/internal/app/wallet/model/entity"
 )
 
 // sAsset 资产服务实现
@@ -173,11 +174,19 @@ func (s *sAsset) GetHistory(ctx context.Context, days int, currency string) (*as
 	// 转换为 API 响应格式
 	items := make([]assetApi.SnapshotItem, 0, len(snapshots))
 	for _, snap := range snapshots {
-		items = append(items, assetApi.SnapshotItem{
+		item := assetApi.SnapshotItem{
 			Date:       snap.SnapshotTime.Format("2006-01-02"),
 			TotalValue: snap.TotalValueUsd,
 			Currency:   currency,
-		})
+		}
+		// 解析快照中保存的汇率 JSON
+		if snap.ExchangeRatesJson != "" {
+			var rates map[string]float64
+			if jsonErr := json.Unmarshal([]byte(snap.ExchangeRatesJson), &rates); jsonErr == nil {
+				item.ExchangeRates = rates
+			}
+		}
+		items = append(items, item)
 	}
 
 	g.Log().Info(ctx, "获取资产历史成功",
@@ -340,6 +349,7 @@ func (s *sAsset) RefreshAll(ctx context.Context) (*assetApi.RefreshRes, error) {
 }
 
 // createAssetSnapshot 创建资产快照
+// 同时获取当前 BTC/ETH/CNY 汇率，保存到 exchange_rates_json 字段
 func (s *sAsset) createAssetSnapshot(ctx context.Context, userID int) error {
 	// 计算当前总资产价值
 	totalValueUSD, err := dao.AssetDetails.Ctx(ctx).
@@ -370,17 +380,58 @@ func (s *sAsset) createAssetSnapshot(ctx context.Context, userID int) error {
 		Where(dao.AssetDetails.Columns().SourceType, "manual").
 		Sum(dao.AssetDetails.Columns().ValueUsd)
 
+	// 获取当前 BTC/ETH 价格（USD），用于快照中保存汇率
+	ratesMap := make(map[string]float64)
+	cgClient := coingecko.NewClient("")
+	cryptoPrices, cgErr := cgClient.GetPrices(ctx, []string{"BTC", "ETH"})
+	if cgErr != nil {
+		g.Log().Warning(ctx, "快照获取加密货币价格失败，跳过汇率记录", "error", cgErr)
+	} else {
+		for symbol, price := range cryptoPrices {
+			if price > 0 {
+				ratesMap[symbol] = price
+			}
+		}
+	}
+
+	// 尝试从 exchange_rates 表获取 CNY 汇率
+	var cnyRate exchangeRateEntity.ExchangeRates
+	cnyErr := exchangeRateDao.ExchangeRates.Ctx(ctx).
+		Where(exchangeRateDao.ExchangeRates.Columns().FromCurrency, "USD").
+		Where(exchangeRateDao.ExchangeRates.Columns().ToCurrency, "CNY").
+		OrderDesc(exchangeRateDao.ExchangeRates.Columns().FetchedAt).
+		Scan(&cnyRate)
+	if cnyErr == nil && cnyRate.Rate > 0 {
+		ratesMap["CNY"] = cnyRate.Rate
+	}
+
+	// 序列化汇率 JSON
+	ratesJSON := ""
+	if len(ratesMap) > 0 {
+		if jsonBytes, jsonErr := json.Marshal(ratesMap); jsonErr == nil {
+			ratesJSON = string(jsonBytes)
+		}
+	}
+
+	// 计算 BTC 计价总值
+	totalValueBTC := 0.0
+	if btcPrice, ok := ratesMap["BTC"]; ok && btcPrice > 0 {
+		totalValueBTC = totalValueUSD / btcPrice
+	}
+
 	// 创建快照记录
 	snapshot := assetEntity.AssetSnapshots{
 		UserId:             userID,
 		TotalValueUsd:      totalValueUSD,
+		TotalValueBtc:      totalValueBTC,
 		CexValueUsd:        cexValue,
 		BlockchainValueUsd: blockchainValue,
 		ManualValueUsd:     manualValue,
+		ExchangeRatesJson:  ratesJSON,
 		SnapshotTime:       gtime.Now().Time,
 	}
 
-	_, err = dao.AssetSnapshots.Ctx(ctx).OmitEmpty().Insert(snapshot)
+	_, err = dao.AssetSnapshots.Ctx(ctx).Insert(snapshot)
 	if err != nil {
 		return gerror.Wrap(err, "保存资产快照失败")
 	}
@@ -388,6 +439,8 @@ func (s *sAsset) createAssetSnapshot(ctx context.Context, userID int) error {
 	g.Log().Info(ctx, "创建资产快照成功",
 		"userId", userID,
 		"totalValueUSD", totalValueUSD,
+		"totalValueBTC", totalValueBTC,
+		"exchangeRates", ratesMap,
 	)
 
 	return nil

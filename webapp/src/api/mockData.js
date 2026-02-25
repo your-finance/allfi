@@ -481,14 +481,15 @@ export function getAssetSummary() {
 export function generateHistoryData(timeRange = '30D') {
   // LAST_YEAR 和 1Y 统一按 365 天处理（日粒度）
   const points = timeRange === '7D' ? 7 :
-                 timeRange === '30D' ? 30 :
-                 timeRange === '90D' ? 90 :
-                 (timeRange === 'LAST_YEAR' || timeRange === '1Y') ? 365 : 730
+    timeRange === '30D' ? 30 :
+      timeRange === '90D' ? 90 :
+        (timeRange === 'LAST_YEAR' || timeRange === '1Y') ? 365 : 730
 
   const summary = getAssetSummary()
   const baseValue = summary.totalValue
   const labels = []
   const values = []
+  const exchangeRatesHistory = []
 
   // 使用固定种子让同一天数据保持一致
   let seed = baseValue
@@ -496,6 +497,11 @@ export function generateHistoryData(timeRange = '30D') {
     seed = (seed * 9301 + 49297) % 233280
     return seed / 233280
   }
+
+  // 模拟基准价格（随时间有趋势性波动）
+  const baseBTC = 42500
+  const baseETH = 2280
+  const baseCNY = 7.2
 
   for (let i = points; i >= 0; i--) {
     const date = new Date()
@@ -507,9 +513,15 @@ export function generateHistoryData(timeRange = '30D') {
     labels.push(`${y}-${m}-${d}`)
     // 模拟历史数据：基于当前值的随机波动
     values.push(baseValue * (0.85 + seededRandom() * 0.3))
+    // 模拟汇率历史：价格有小幅波动
+    exchangeRatesHistory.push({
+      BTC: baseBTC * (0.9 + seededRandom() * 0.2),
+      ETH: baseETH * (0.9 + seededRandom() * 0.2),
+      CNY: baseCNY * (0.98 + seededRandom() * 0.04)
+    })
   }
 
-  return { labels, values }
+  return { labels, values, exchangeRatesHistory }
 }
 
 // ========== 用户设置 ==========
