@@ -13,6 +13,7 @@ import (
 
 	walletApi "your-finance/allfi/api/v1/wallet"
 	assetDao "your-finance/allfi/internal/app/asset/dao"
+	rateDao "your-finance/allfi/internal/app/exchange_rate/dao"
 	"your-finance/allfi/internal/app/wallet/dao"
 	"your-finance/allfi/internal/app/wallet/service"
 	"your-finance/allfi/internal/consts"
@@ -206,7 +207,7 @@ func (s *sWallet) GetBalances(ctx context.Context, walletID int) (float64, map[s
 	tokenBalances := make(map[string]float64)
 
 	if apiKey == "" {
-		g.Log().Infof(ctx, "%s API Key 未配置（配置项: %s），使用公共 RPC 获取原生余额", wallet.Blockchain, configKey)
+		g.Log().Infof(ctx, "%s API Key 未配置（配置项: %s），使用公共 RPC 获取余额", wallet.Blockchain, configKey)
 
 		nativeBalance, err = etherscan.GetNativeBalanceViaRPC(ctx, wallet.Blockchain, wallet.Address)
 		if err != nil {
@@ -214,7 +215,16 @@ func (s *sWallet) GetBalances(ctx context.Context, walletID int) (float64, map[s
 		}
 
 		tokenBalances[chainConfig.NativeSymbol] = nativeBalance
-		// 注意: API Key 未配置时无法自动查询钱包内的所有 ERC20 代币余额
+
+		// 通过 RPC eth_call 查询主流 ERC20 代币余额
+		erc20Balances, erc20Err := etherscan.GetERC20BalancesViaRPC(ctx, wallet.Blockchain, wallet.Address)
+		if erc20Err != nil {
+			g.Log().Warning(ctx, "通过 RPC 查询 ERC20 代币余额失败", "error", erc20Err)
+		} else {
+			for sym, bal := range erc20Balances {
+				tokenBalances[sym] = bal
+			}
+		}
 	} else {
 		client, err := etherscan.NewChainClient(wallet.Blockchain, apiKey)
 		if err != nil {
@@ -325,6 +335,27 @@ func (s *sWallet) SyncAddress(ctx context.Context, walletID int) error {
 		}
 	} else {
 		prices = make(map[string]float64)
+	}
+
+	// CoinGecko 价格缺失时，从 exchange_rates 表获取 fallback 价格
+	for _, sym := range symbols {
+		upper := strings.ToUpper(sym)
+		if prices[upper] > 0 {
+			continue
+		}
+		var rate float64
+		err := rateDao.ExchangeRates.Ctx(ctx).
+			Where(rateDao.ExchangeRates.Columns().FromCurrency, upper).
+			Where(rateDao.ExchangeRates.Columns().ToCurrency, "USD").
+			OrderDesc(rateDao.ExchangeRates.Columns().FetchedAt).
+			Limit(1).
+			Fields(rateDao.ExchangeRates.Columns().Rate).
+			Scan(&rate)
+		if err == nil && rate > 0 {
+			prices[upper] = rate
+			g.Log().Debug(ctx, "使用 exchange_rates 表的价格作为 fallback",
+				"symbol", upper, "rate", rate)
+		}
 	}
 
 	// 遍历余额列表，插入新的 asset_details 记录
