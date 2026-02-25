@@ -201,32 +201,43 @@ func (s *sWallet) GetBalances(ctx context.Context, walletID int) (float64, map[s
 
 	configKey := "external." + chainConfig.RateLimitKey + "ApiKey"
 	apiKey := g.Cfg().MustGet(ctx, configKey).String()
-	if apiKey == "" {
-		return 0, nil, 0, gerror.Newf("%s API Key 未配置（配置项: %s）", wallet.Blockchain, configKey)
-	}
 
-	client, err := etherscan.NewChainClient(wallet.Blockchain, apiKey)
-	if err != nil {
-		return 0, nil, 0, gerror.Wrap(err, "创建区块链客户端失败")
-	}
-
-	// 查询原生代币余额
-	nativeBalance, err := client.GetNativeBalance(ctx, wallet.Address)
-	if err != nil {
-		return 0, nil, 0, gerror.Wrap(err, "获取原生代币余额失败")
-	}
-
-	// 查询 Token 余额
+	var nativeBalance float64
 	tokenBalances := make(map[string]float64)
-	tokenBalances[chainConfig.NativeSymbol] = nativeBalance
 
-	tokens, err := client.GetTokenBalances(ctx, wallet.Address)
-	if err != nil {
-		g.Log().Warning(ctx, "获取代币余额失败", "walletId", walletID, "error", err)
+	if apiKey == "" {
+		g.Log().Warningf(ctx, "%s API Key 未配置（配置项: %s），将尝试使用公共 RPC 获取原生余额", wallet.Blockchain, configKey)
+
+		nativeBalance, err = etherscan.GetNativeBalanceViaRPC(ctx, wallet.Blockchain, wallet.Address)
+		if err != nil {
+			return 0, nil, 0, gerror.Wrap(err, "通过公共 RPC 获取原生代币余额失败")
+		}
+
+		tokenBalances[chainConfig.NativeSymbol] = nativeBalance
+		// 注意: API Key 未配置时无法自动查询钱包内的所有 ERC20 代币余额
 	} else {
-		for _, token := range tokens {
-			// Token 余额已由 etherscan 客户端根据 decimal 转换，直接使用
-			tokenBalances[token.Symbol] = token.Total
+		client, err := etherscan.NewChainClient(wallet.Blockchain, apiKey)
+		if err != nil {
+			return 0, nil, 0, gerror.Wrap(err, "创建区块链客户端失败")
+		}
+
+		// 查询原生代币余额
+		nativeBalance, err = client.GetNativeBalance(ctx, wallet.Address)
+		if err != nil {
+			return 0, nil, 0, gerror.Wrap(err, "获取原生代币余额失败")
+		}
+
+		// 查询 Token 余额
+		tokenBalances[chainConfig.NativeSymbol] = nativeBalance
+
+		tokens, err := client.GetTokenBalances(ctx, wallet.Address)
+		if err != nil {
+			g.Log().Warning(ctx, "获取代币余额失败", "walletId", walletID, "error", err)
+		} else {
+			for _, token := range tokens {
+				// Token 余额已由 etherscan 客户端根据 decimal 转换，直接使用
+				tokenBalances[token.Symbol] = token.Total
+			}
 		}
 	}
 

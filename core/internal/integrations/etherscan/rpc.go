@@ -10,6 +10,7 @@ import (
 	"math"
 	"math/big"
 	"net/http"
+	"strings"
 	"time"
 
 	"your-finance/allfi/internal/utils"
@@ -131,4 +132,78 @@ func GetGasPriceViaRPC(ctx context.Context, chainName string) (*GasPrice, error)
 		Fast:    normalGwei * 1.3,
 		BaseFee: 0, // RPC 不直接返回 BaseFee
 	}, nil
+}
+
+// GetNativeBalanceViaRPC 通过公共 RPC 节点获取原生代币（ETH/BNB等）余额
+func GetNativeBalanceViaRPC(ctx context.Context, chainName string, address string) (float64, error) {
+	config, ok := SupportedChains[chainName]
+	if !ok {
+		return 0, fmt.Errorf("不支持的链: %s", chainName)
+	}
+	rpcUrl := GetRPCURL(ctx, chainName)
+	if rpcUrl == "" {
+		return 0, fmt.Errorf("链 %s 未配置公共 RPC 端点", chainName)
+	}
+
+	// 限流
+	if err := utils.WaitForAPI(ctx, config.RateLimitKey+"_rpc"); err != nil {
+		return 0, err
+	}
+
+	// 构造 JSON-RPC 请求
+	reqBody, _ := json.Marshal(rpcRequest{
+		JSONRPC: "2.0",
+		Method:  "eth_getBalance",
+		Params:  []interface{}{address, "latest"},
+		ID:      1,
+	})
+
+	httpClient := &http.Client{Timeout: 15 * time.Second}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, rpcUrl, bytes.NewReader(reqBody))
+	if err != nil {
+		return 0, fmt.Errorf("构造 RPC 请求失败: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("RPC 请求失败: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return 0, fmt.Errorf("RPC HTTP 错误: 状态码 %d", resp.StatusCode)
+	}
+
+	var rpcResp rpcResponse
+	if err := json.NewDecoder(resp.Body).Decode(&rpcResp); err != nil {
+		return 0, fmt.Errorf("解析 RPC 响应失败: %v", err)
+	}
+	if rpcResp.Error != nil {
+		return 0, fmt.Errorf("RPC 错误: %s", rpcResp.Error.Message)
+	}
+
+	// 解析十六进制余额
+	var hexBalance string
+	if err := json.Unmarshal(rpcResp.Result, &hexBalance); err != nil {
+		return 0, fmt.Errorf("解析余额结果失败: %v", err)
+	}
+
+	if hexBalance == "0x" {
+		return 0, nil
+	}
+
+	balanceWei, ok := new(big.Int).SetString(strings.TrimPrefix(hexBalance, "0x"), 16)
+	if !ok {
+		return 0, fmt.Errorf("解析十六进制余额失败: %s", hexBalance)
+	}
+
+	// Wei → ETH (1e18)
+	balanceEth := new(big.Float).Quo(
+		new(big.Float).SetInt(balanceWei),
+		new(big.Float).SetInt(big.NewInt(1e18)),
+	)
+	balance, _ := balanceEth.Float64()
+
+	return balance, nil
 }
