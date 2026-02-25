@@ -18,13 +18,13 @@ const _currentChainId = ref(null)
 const _isConnecting = ref(false)
 const _error = ref(null)
 
-// 链 ID 映射
 const CHAIN_MAP = {
-  1: { id: 'ETH', name: 'Ethereum' },
-  56: { id: 'BSC', name: 'BNB Chain' },
-  137: { id: 'MATIC', name: 'Polygon' },
-  42161: { id: 'ARB', name: 'Arbitrum' },
-  10: { id: 'OP', name: 'Optimism' },
+  1: { id: 'ethereum', name: 'Ethereum' },
+  56: { id: 'bsc', name: 'BNB Chain' },
+  137: { id: 'polygon', name: 'Polygon' },
+  42161: { id: 'arbitrum', name: 'Arbitrum' },
+  10: { id: 'optimism', name: 'Optimism' },
+  8453: { id: 'base', name: 'Base' },
 }
 
 /**

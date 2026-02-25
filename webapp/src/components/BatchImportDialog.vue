@@ -26,7 +26,10 @@ const result = ref(null)
 const blockchains = [
   { value: 'ethereum', label: 'Ethereum' },
   { value: 'bsc', label: 'BNB Chain' },
-  { value: 'polygon', label: 'Polygon' }
+  { value: 'polygon', label: 'Polygon' },
+  { value: 'arbitrum', label: 'Arbitrum' },
+  { value: 'optimism', label: 'Optimism' },
+  { value: 'base', label: 'Base' }
 ]
 
 // 解析地址列表

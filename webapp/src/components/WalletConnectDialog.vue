@@ -65,12 +65,11 @@ const handleMethodSelect = async (method) => {
   }
 }
 
-// 确认添加钱包
 const confirmAdd = () => {
   const chain = CHAIN_MAP[connectedChainId.value]
   emit('connected', {
     address: connectedAddress.value,
-    blockchain: chain?.id || 'ETH',
+    blockchain: chain?.id || 'ethereum',
     name: walletName.value || `${chain?.name || 'Web3'} Wallet`,
     chainId: connectedChainId.value
   })

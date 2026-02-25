@@ -116,10 +116,12 @@ const exchangeConfig = {
 
 // 区块链配置
 const blockchainConfig = {
-  ETH: { color: '#627EEA', name: 'Ethereum' },
-  BSC: { color: '#F3BA2F', name: 'BNB Chain' },
-  SOL: { color: '#9945FF', name: 'Solana' },
-  MATIC: { color: '#8247E5', name: 'Polygon' }
+  ethereum: { color: '#627EEA', name: 'Ethereum', symbol: 'ETH' },
+  bsc: { color: '#F3BA2F', name: 'BNB Chain', symbol: 'BSC' },
+  polygon: { color: '#8247E5', name: 'Polygon', symbol: 'MATIC' },
+  arbitrum: { color: '#28A0F0', name: 'Arbitrum', symbol: 'ARB' },
+  optimism: { color: '#FF0420', name: 'Optimism', symbol: 'OP' },
+  base: { color: '#0052FF', name: 'Base', symbol: 'BASE' }
 }
 
 // 资产类型配置
@@ -471,7 +473,7 @@ onMounted(async () => {
                   <div
                     class="logo-badge"
                     :style="{ backgroundColor: blockchainConfig[wallet.blockchain]?.color }"
-                  >{{ wallet.blockchain }}</div>
+                  >{{ blockchainConfig[wallet.blockchain]?.symbol || wallet.blockchain.substring(0,3).toUpperCase() }}</div>
                   <span class="name-text">{{ wallet.name }}</span>
                 </div>
               </td>
@@ -529,7 +531,7 @@ onMounted(async () => {
               <div
                 class="logo-badge card-logo"
                 :style="{ backgroundColor: blockchainConfig[wallet.blockchain]?.color }"
-              >{{ wallet.blockchain }}</div>
+              >{{ blockchainConfig[wallet.blockchain]?.symbol || wallet.blockchain.substring(0,3).toUpperCase() }}</div>
               <div class="card-name-group">
                 <span class="card-name">{{ wallet.name }}</span>
                 <span class="card-sub">{{ blockchainConfig[wallet.blockchain]?.name || wallet.blockchain }}</span>

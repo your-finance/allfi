@@ -418,10 +418,12 @@ const availableExchanges = ref([
 ])
 
 const availableBlockchains = ref([
-  { id: 'ETH', name: 'Ethereum' },
-  { id: 'BSC', name: 'BNB Chain' },
-  { id: 'SOL', name: 'Solana' },
-  { id: 'MATIC', name: 'Polygon' }
+  { id: 'ethereum', name: 'Ethereum' },
+  { id: 'bsc', name: 'BNB Chain' },
+  { id: 'polygon', name: 'Polygon' },
+  { id: 'arbitrum', name: 'Arbitrum' },
+  { id: 'optimism', name: 'Optimism' },
+  { id: 'base', name: 'Base' }
 ])
 
 // 资产类型（去掉 other，加入图标）
@@ -692,10 +694,12 @@ const handleSubmit = async () => {
 
 .input-field[type="number"] {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 .input-field::-webkit-outer-spin-button,
 .input-field::-webkit-inner-spin-button {
   -webkit-appearance: none;
+  appearance: none;
   margin: 0;
 }
 
