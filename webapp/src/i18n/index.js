@@ -265,8 +265,10 @@ export const translations = {
       groupStablecoin: "弹药库（稳定币）",
       groupBluechip: "核心持仓（蓝筹）",
       groupRisk: "风险资产",
-    },
 
+      // 汇率缺失提示
+      noExchangeRateData: "暂无汇率数据，无法显示图表",
+    },
     // Accounts 页面
     accounts: {
       title: "账户管理",
@@ -610,6 +612,7 @@ export const translations = {
       totalValue: "总价值",
       fundChanges: "资金变化记录",
       noRecordsFound: "暂无历史记录",
+      noExchangeRateData: "暂无汇率数据，无法显示图表",
       trendTab: "资产趋势",
       transactionsTab: "交易记录",
     },
@@ -1289,6 +1292,9 @@ export const translations = {
       groupStablecoin: "彈藥庫（穩定幣）",
       groupBluechip: "核心持倉（藍籌）",
       groupRisk: "風險資產",
+
+      // 匯率缺失提示
+      noExchangeRateData: "暫無匯率數據，無法顯示圖表",
     },
 
     accounts: {
@@ -1624,6 +1630,7 @@ export const translations = {
       totalValue: "總價值",
       fundChanges: "資金變化記錄",
       noRecordsFound: "暫無歷史記錄",
+      noExchangeRateData: "暫無匯率數據，無法顯示圖表",
       trendTab: "資產趨勢",
       transactionsTab: "交易記錄",
     },
@@ -2303,6 +2310,9 @@ export const translations = {
       groupStablecoin: "Dry Powder (Stablecoins)",
       groupBluechip: "Core Holdings (Blue Chips)",
       groupRisk: "Risk Assets",
+
+      // Exchange rate missing
+      noExchangeRateData: "No exchange rate data available",
     },
 
     accounts: {
@@ -2641,6 +2651,7 @@ export const translations = {
       totalValue: "Total Value",
       fundChanges: "Fund Changes",
       noRecordsFound: "No records found",
+      noExchangeRateData: "No exchange rate data available",
       trendTab: "Asset Trend",
       transactionsTab: "Transactions",
     },

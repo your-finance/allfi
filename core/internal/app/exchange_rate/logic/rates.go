@@ -47,6 +47,13 @@ func (s *sExchangeRate) GetRates(ctx context.Context, currencies string) (*excha
 	var lastUpdated int64
 	var source string
 
+	// 法币列表：这些货币在 DB 中存储为 from=CNY/to=USD（即 1 CNY = 0.14 USD），
+	// 但前端期望的是 USD→法币 的汇率（即 1 USD = 7.2 CNY），需要取倒数
+	fiatSet := map[string]bool{
+		"CNY": true, "EUR": true, "GBP": true, "JPY": true,
+		"SGD": true, "HKD": true, "AUD": true, "CAD": true,
+	}
+
 	for _, symbol := range symbols {
 		if symbol == "USDC" || symbol == "USDT" || symbol == "DAI" || symbol == "USD" {
 			rates[symbol] = 1.0
@@ -75,7 +82,12 @@ func (s *sExchangeRate) GetRates(ctx context.Context, currencies string) (*excha
 				rates[symbol] = 1.0 / rate.Rate
 			}
 		} else {
-			rates[symbol] = rate.Rate
+			// 法币需要取倒数：DB 存的是 CNY→USD（0.14），前端需要 USD→CNY（7.2）
+			if fiatSet[symbol] && rate.Rate > 0 {
+				rates[symbol] = 1.0 / rate.Rate
+			} else {
+				rates[symbol] = rate.Rate
+			}
 		}
 
 		// 记录最后更新时间

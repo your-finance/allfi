@@ -395,7 +395,7 @@ func (s *sAsset) createAssetSnapshot(ctx context.Context, userID int) error {
 		}
 	}
 
-	// 尝试从 exchange_rates 表获取 CNY 汇率
+	// 尝试从 exchange_rates 表获取 CNY 汇率（USD→CNY）
 	var cnyRate exchangeRateEntity.ExchangeRates
 	cnyErr := exchangeRateDao.ExchangeRates.Ctx(ctx).
 		Where(exchangeRateDao.ExchangeRates.Columns().FromCurrency, "USD").
@@ -404,6 +404,16 @@ func (s *sAsset) createAssetSnapshot(ctx context.Context, userID int) error {
 		Scan(&cnyRate)
 	if cnyErr == nil && cnyRate.Rate > 0 {
 		ratesMap["CNY"] = cnyRate.Rate
+	} else {
+		// 反向查询：DB 中存储的是 CNY→USD（如 0.1455），取倒数得到 USD→CNY（如 6.87）
+		cnyErr = exchangeRateDao.ExchangeRates.Ctx(ctx).
+			Where(exchangeRateDao.ExchangeRates.Columns().FromCurrency, "CNY").
+			Where(exchangeRateDao.ExchangeRates.Columns().ToCurrency, "USD").
+			OrderDesc(exchangeRateDao.ExchangeRates.Columns().FetchedAt).
+			Scan(&cnyRate)
+		if cnyErr == nil && cnyRate.Rate > 0 {
+			ratesMap["CNY"] = 1.0 / cnyRate.Rate
+		}
 	}
 
 	// 序列化汇率 JSON
