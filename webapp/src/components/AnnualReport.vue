@@ -40,6 +40,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 const props = defineProps({
   visible: { type: Boolean, default: false },
   year: { type: Number, default: 2025 },
+  reportData: { type: Object, default: null },
 })
 
 const emit = defineEmits(['close', 'share'])
@@ -209,22 +210,28 @@ const monthlyChartOptions = computed(() => ({
 
 onMounted(async () => {
   document.addEventListener('keydown', handleKeydown)
-  isLoading.value = true
-  try {
-    const data = await annualReportService.getAnnualReport(props.year)
-    // 如果后端返回 null 或空数据，说明没有报告
-    if (data && data.report) {
-      report.value = normalizeReport(data.report)
-    } else {
+  // 如果传入了 reportData，直接使用它
+  if (props.reportData) {
+    report.value = normalizeReport(props.reportData)
+  } else {
+    // 否则向后端请求（兼容旧的使用方式）
+    isLoading.value = true
+    try {
+      const data = await annualReportService.getAnnualReport(props.year)
+      // 如果后端返回 null 或空数据，说明没有报告
+      if (data && data.report) {
+        report.value = normalizeReport(data.report)
+      } else {
+        report.value = null
+        emit('close') // 自动关闭弹窗
+      }
+    } catch (e) {
+      console.error('加载年度报告失败:', e)
       report.value = null
-      emit('close') // 自动关闭弹窗
+      emit('close') // 出错时也关闭弹窗
+    } finally {
+      isLoading.value = false
     }
-  } catch (e) {
-    console.error('加载年度报告失败:', e)
-    report.value = null
-    emit('close') // 出错时也关闭弹窗
-  } finally {
-    isLoading.value = false
   }
 })
 

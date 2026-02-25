@@ -51,15 +51,19 @@ const filterType = ref('')
 const showAnnualReport = ref(false)
 const showAnnualShare = ref(false)
 const annualReportData = ref(null)
+const annualReports = ref([]) // 年报列表
 const selectedYear = ref(new Date().getFullYear() - 1)
 const hasAnnualReport = ref(false) // 是否有年度报告数据
 
+// 打开年度报告（选择年份后）
 const openAnnualReport = async () => {
   showAnnualReport.value = true
-  try {
-    annualReportData.value = await annualReportService.getAnnualReport(selectedYear.value)
-  } catch (e) {
-    console.error('加载年度报告失败:', e)
+  if (!annualReportData.value) {
+    try {
+      annualReportData.value = await annualReportService.getAnnualReport(selectedYear.value)
+    } catch (e) {
+      console.error('加载年度报告失败:', e)
+    }
   }
 }
 
@@ -269,11 +273,17 @@ const monthLabel = (val) => {
 onMounted(async () => {
   loadReports()
   initCompareMonths()
-  // 检查是否有年度报告数据
+  // 获取年报列表，检查是否有年度报告数据
   try {
-    const data = await annualReportService.getAnnualReport(selectedYear.value)
-    hasAnnualReport.value = !!(data && data.report)
+    const result = await reportService.getReports('annual')
+    annualReports.value = Array.isArray(result) ? result : (result.reports || [])
+    hasAnnualReport.value = annualReports.value.length > 0
+    // 如果有年报，默认选择最新的年份
+    if (hasAnnualReport.value) {
+      selectedYear.value = annualReports.value[0].period
+    }
   } catch (e) {
+    console.error('获取年报列表失败:', e)
     hasAnnualReport.value = false
   }
 })
@@ -673,7 +683,8 @@ onMounted(async () => {
     <AnnualReport
       :visible="showAnnualReport"
       :year="selectedYear"
-      @close="showAnnualReport = false"
+      :reportData="annualReportData?.report"
+      @close="showAnnualReport = false; annualReportData = null"
       @share="openAnnualShare"
     />
 

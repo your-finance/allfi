@@ -295,19 +295,93 @@ func (s *sReport) generateDailyReport(ctx context.Context, userID int) (*reportE
 	now := time.Now()
 	period := now.Format("2006-01-02")
 
+	// 定义时间变量
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	yesterdayStart := todayStart.AddDate(0, 0, -1)
+
 	// 检查是否已存在
 	var existing reportEntity.Reports
-	err := dao.Reports.Ctx(ctx).
+	var err error
+	err = dao.Reports.Ctx(ctx).
 		Where(dao.Reports.Columns().UserId, userID).
 		Where(dao.Reports.Columns().Type, reportModel.ReportTypeDaily).
 		Where(dao.Reports.Columns().Period, period).
 		Scan(&existing)
 	if err == nil && existing.Id > 0 {
+		// 如果已有今日报告，获取最新快照数据来更新报告
+		g.Log().Info(ctx, "今日报告已存在，使用最新快照数据更新", "reportId", existing.Id)
+
+		// 获取最新的快照数据
+		var latest assetEntity.AssetSnapshots
+		var todaySnapshots []assetEntity.AssetSnapshots
+		err = assetDao.AssetSnapshots.Ctx(ctx).
+			Where(assetDao.AssetSnapshots.Columns().UserId, userID).
+			WhereGTE(assetDao.AssetSnapshots.Columns().SnapshotTime, todayStart).
+			OrderDesc(assetDao.AssetSnapshots.Columns().SnapshotTime).
+			Limit(1).
+			Scan(&todaySnapshots)
+
+		if err != nil || len(todaySnapshots) == 0 {
+			// 没有今日快照，获取最新可用快照
+			g.Log().Info(ctx, "未找到今日快照，使用最新可用快照")
+			var allSnapshots []assetEntity.AssetSnapshots
+			err = assetDao.AssetSnapshots.Ctx(ctx).
+				Where(assetDao.AssetSnapshots.Columns().UserId, userID).
+				OrderDesc(assetDao.AssetSnapshots.Columns().SnapshotTime).
+				Limit(1).
+				Scan(&allSnapshots)
+			if err != nil || len(allSnapshots) == 0 {
+				return nil, gerror.New("未找到任何快照数据，请先添加资产并等待快照生成")
+			}
+			latest = allSnapshots[0]
+		} else {
+			latest = todaySnapshots[0]
+		}
+
+		// 获取昨日快照
+		var yesterdaySnapshots []assetEntity.AssetSnapshots
+		err = assetDao.AssetSnapshots.Ctx(ctx).
+			Where(assetDao.AssetSnapshots.Columns().UserId, userID).
+			WhereGTE(assetDao.AssetSnapshots.Columns().SnapshotTime, yesterdayStart).
+			WhereLT(assetDao.AssetSnapshots.Columns().SnapshotTime, todayStart).
+			OrderDesc(assetDao.AssetSnapshots.Columns().SnapshotTime).
+			Limit(1).
+			Scan(&yesterdaySnapshots)
+
+		var change, changePercent float64
+		if len(yesterdaySnapshots) > 0 {
+			yesterdayValue := yesterdaySnapshots[0].TotalValueUsd
+			todayValue := latest.TotalValueUsd
+			if yesterdayValue > 0 {
+				change = todayValue - yesterdayValue
+				changePercent = (change / yesterdayValue) * 100
+			}
+		}
+
+		// 更新现有报告
+		existing.TotalValue = latest.TotalValueUsd
+		existing.Change = change
+		existing.ChangePercent = changePercent
+		existing.GeneratedAt = gtime.Now().Time
+
+		_, err = dao.Reports.Ctx(ctx).
+			Data(g.Map{
+				dao.Reports.Columns().TotalValue:    existing.TotalValue,
+				dao.Reports.Columns().Change:        existing.Change,
+				dao.Reports.Columns().ChangePercent: existing.ChangePercent,
+				dao.Reports.Columns().GeneratedAt:   existing.GeneratedAt,
+			}).
+			Where(dao.Reports.Columns().Id, existing.Id).
+			Update()
+		if err != nil {
+			return nil, gerror.Wrap(err, "更新日报失败")
+		}
+
+		g.Log().Info(ctx, "日报已更新", "period", period, "totalValue", latest.TotalValueUsd)
 		return &existing, nil
 	}
 
 	// 获取今日快照，如果没有则获取最新快照
-	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	var todaySnapshots []assetEntity.AssetSnapshots
 	err = assetDao.AssetSnapshots.Ctx(ctx).
 		Where(assetDao.AssetSnapshots.Columns().UserId, userID).
@@ -334,7 +408,6 @@ func (s *sReport) generateDailyReport(ctx context.Context, userID int) (*reportE
 	}
 
 	// 获取昨日快照
-	yesterdayStart := todayStart.AddDate(0, 0, -1)
 	var yesterdaySnapshots []assetEntity.AssetSnapshots
 	err = assetDao.AssetSnapshots.Ctx(ctx).
 		Where(assetDao.AssetSnapshots.Columns().UserId, userID).
@@ -945,6 +1018,7 @@ func toReportSummary(r *reportEntity.Reports) reportApi.ReportSummary {
 	return reportApi.ReportSummary{
 		ID:         uint(r.Id),
 		Type:       r.Type,
+		Period:     r.Period,
 		Title:      title,
 		TotalValue: float64(r.TotalValue),
 		PnL:        float64(r.Change),

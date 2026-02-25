@@ -15,6 +15,7 @@ type ListReq struct {
 type ReportSummary struct {
 	ID         uint    `json:"id" dc:"报告 ID"`
 	Type       string  `json:"type" dc:"报告类型"`
+	Period     string  `json:"period" dc:"报告周期"`
 	Title      string  `json:"title" dc:"报告标题"`
 	TotalValue float64 `json:"total_value" dc:"总资产价值"`
 	PnL        float64 `json:"pnl" dc:"盈亏"`
