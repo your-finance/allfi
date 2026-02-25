@@ -36,10 +36,10 @@ func New() service.IExchangeRate {
 // 2. 从 exchange_rates 表查询以 USD 为基准的汇率
 // 3. 如果数据过期（>5分钟），尝试刷新
 func (s *sExchangeRate) GetRates(ctx context.Context, currencies string) (*exchangeRateApi.GetCurrentRes, error) {
-	// 解析货币列表
+	// 解析货币列表；未指定时默认查询加密货币 + 法币
 	symbols := parseCurrencyList(currencies)
 	if len(symbols) == 0 {
-		symbols = erModel.DefaultCryptoSymbols
+		symbols = append(append([]string{}, erModel.DefaultCryptoSymbols...), erModel.DefaultFiatSymbols...)
 	}
 
 	// 从数据库查询汇率

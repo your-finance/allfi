@@ -19,5 +19,8 @@ type RefreshRatesInput struct {
 // 默认查询的加密货币列表
 var DefaultCryptoSymbols = []string{"BTC", "ETH", "USDT", "USDC", "BNB", "SOL"}
 
+// 默认查询的法币列表
+var DefaultFiatSymbols = []string{"CNY", "EUR", "GBP", "JPY", "SGD", "HKD", "AUD", "CAD"}
+
 // 缓存过期时间（秒）
 const CacheTTLSeconds = 300 // 5 分钟

@@ -859,9 +859,9 @@ watch(selectedTimeRange, async (newRange) => {
       </div>
 
       <!-- 费用分析 -->
-      <div v-if="dashboardStore.widgetConfig.feeAnalytics" class="grid-item fee-card">
-        <FeeAnalytics />
-      </div>
+      <!-- <div v-if="dashboardStore.widgetConfig.feeAnalytics" class="grid-item fee-card"> -->
+        <!-- <FeeAnalytics /> -->
+      <!-- </div> -->
 
       <!-- 6. 持仓明细 (Full Width) -->
       <div v-if="dashboardStore.widgetConfig.holdings" class="grid-item holdings-card">
