@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"your-finance/allfi/internal/integrations"
@@ -203,17 +204,27 @@ func (c *Client) GetTokenBalances(ctx context.Context, address string) ([]integr
 		return nil, fmt.Errorf("解析 Etherscan 响应失败: %v", err)
 	}
 
-	// 收集唯一的代币合约
+	// 收集唯一的代币合约（只保留已知白名单中的合约，过滤欺诈代币）
 	tokenContracts := make(map[string]struct {
 		Name     string
 		Symbol   string
 		Decimals int
 	})
 
+	// 构建当前链的白名单合约地址集合
+	whitelistContracts := buildContractWhitelist(c.chainName)
+
 	for _, tx := range txResult.Result {
-		if _, exists := tokenContracts[tx.ContractAddress]; !exists {
+		contractAddr := strings.ToLower(tx.ContractAddress)
+		if _, exists := tokenContracts[contractAddr]; !exists {
+			// 只保留白名单中的合约地址
+			if len(whitelistContracts) > 0 {
+				if _, isWhitelisted := whitelistContracts[contractAddr]; !isWhitelisted {
+					continue
+				}
+			}
 			decimals, _ := strconv.Atoi(tx.TokenDecimal)
-			tokenContracts[tx.ContractAddress] = struct {
+			tokenContracts[contractAddr] = struct {
 				Name     string
 				Symbol   string
 				Decimals int
@@ -380,6 +391,20 @@ func (c *Client) GetGasPrice(ctx context.Context) (*GasPrice, error) {
 		Fast:    fast,
 		BaseFee: baseFee,
 	}, nil
+}
+
+// buildContractWhitelist 构建指定链的白名单合约地址集合
+// 基于 WellKnownTokens（rpc.go 中定义的主流代币合约地址）
+func buildContractWhitelist(chainName string) map[string]bool {
+	tokens, ok := WellKnownTokens[chainName]
+	if !ok {
+		return nil
+	}
+	whitelist := make(map[string]bool, len(tokens))
+	for _, t := range tokens {
+		whitelist[strings.ToLower(t.Contract)] = true
+	}
+	return whitelist
 }
 
 // 确保实现接口
