@@ -13,6 +13,7 @@ import (
 
 	assetApi "your-finance/allfi/api/v1/asset"
 	"your-finance/allfi/internal/app/asset/dao"
+	assetDo "your-finance/allfi/internal/app/asset/model/do"
 	assetEntity "your-finance/allfi/internal/app/asset/model/entity"
 	"your-finance/allfi/internal/app/asset/service"
 	exchangeDao "your-finance/allfi/internal/app/exchange/dao"
@@ -251,7 +252,7 @@ func (s *sAsset) RefreshAll(ctx context.Context) (*assetApi.RefreshRes, error) {
 			if bal.Total > 0 {
 				priceUsd = bal.ValueUSD / bal.Total
 			}
-			detail := assetEntity.AssetDetails{
+			detail := assetDo.AssetDetails{
 				UserId:      userID,
 				SourceType:  "cex",
 				SourceId:    account.Id,
@@ -262,7 +263,7 @@ func (s *sAsset) RefreshAll(ctx context.Context) (*assetApi.RefreshRes, error) {
 				ValueUsd:    bal.ValueUSD,
 				LastUpdated: gtime.Now().Time,
 			}
-			_, insertErr := dao.AssetDetails.Ctx(ctx).Insert(detail)
+			_, insertErr := dao.AssetDetails.Ctx(ctx).Data(detail).Insert()
 			if insertErr != nil {
 				g.Log().Error(ctx, "保存交易所资产失败", "error", insertErr)
 				continue
@@ -314,7 +315,7 @@ func (s *sAsset) RefreshAll(ctx context.Context) (*assetApi.RefreshRes, error) {
 		Scan(&manualAssets)
 	if err == nil {
 		for _, ma := range manualAssets {
-			detail := assetEntity.AssetDetails{
+			detail := assetDo.AssetDetails{
 				UserId:      userID,
 				SourceType:  "manual",
 				SourceId:    ma.Id,
@@ -325,7 +326,7 @@ func (s *sAsset) RefreshAll(ctx context.Context) (*assetApi.RefreshRes, error) {
 				ValueUsd:    ma.AmountUsd,
 				LastUpdated: gtime.Now().Time,
 			}
-			_, insertErr := dao.AssetDetails.Ctx(ctx).Insert(detail)
+			_, insertErr := dao.AssetDetails.Ctx(ctx).Data(detail).Insert()
 			if insertErr != nil {
 				g.Log().Error(ctx, "保存手动资产失败", "error", insertErr)
 				continue
@@ -420,7 +421,7 @@ func (s *sAsset) createAssetSnapshot(ctx context.Context, userID int) error {
 	}
 
 	// 创建快照记录
-	snapshot := assetEntity.AssetSnapshots{
+	snapshot := assetDo.AssetSnapshots{
 		UserId:             userID,
 		TotalValueUsd:      totalValueUSD,
 		TotalValueBtc:      totalValueBTC,
@@ -431,7 +432,7 @@ func (s *sAsset) createAssetSnapshot(ctx context.Context, userID int) error {
 		SnapshotTime:       gtime.Now().Time,
 	}
 
-	_, err = dao.AssetSnapshots.Ctx(ctx).Insert(snapshot)
+	_, err = dao.AssetSnapshots.Ctx(ctx).Data(snapshot).Insert()
 	if err != nil {
 		return gerror.Wrap(err, "保存资产快照失败")
 	}
