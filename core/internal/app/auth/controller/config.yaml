@@ -1,0 +1,4 @@
+database:
+  default:
+    link: "sqlite::@file(test.db)"
+    debug: false
