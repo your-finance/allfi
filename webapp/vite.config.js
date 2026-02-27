@@ -55,6 +55,7 @@ export default defineConfig({
       workbox: {
         // 预缓存 HTML、JS、CSS 资源
         globPatterns: ["**/*.{js,css,html,svg,png,ico,woff2}"],
+        importScripts: ["/push-sw.js"],
         // API 响应运行时缓存
         runtimeCaching: [
           {
