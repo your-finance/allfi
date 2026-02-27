@@ -1,6 +1,6 @@
 # AllFi 后端需求规格文档
 
-> 版本：v2.0 | 更新时间：2026-02-11 | 状态：与代码实现对齐
+> 版本：v2.1 | 更新时间：2026-02-27 | 状态：与代码实现对齐
 
 ---
 
@@ -25,7 +25,6 @@
 | 认证 | PIN + JWT | 单用户 PIN 锁 + Bearer Token |
 | JSON | json-iterator | 高性能 JSON 序列化 |
 | 精确计算 | shopspring/decimal | 金额使用 Decimal 类型 |
-| 监控 | Prometheus | `/metrics` 端点 |
 | 推送 | webpush-go | Web Push 通知 |
 | 密码学 | golang.org/x/crypto (bcrypt) | PIN 码哈希 |
 
@@ -37,7 +36,6 @@ github.com/ccxt/ccxt/go/v4          # CCXT 多交易所统一 SDK
 github.com/gogf/gf/v2               # GoFrame（仅用于配置管理）
 github.com/golang-jwt/jwt/v5        # JWT Token
 github.com/json-iterator/go         # 高性能 JSON
-github.com/prometheus/client_golang  # Prometheus 监控
 github.com/shopspring/decimal        # 精确数值计算
 github.com/stretchr/testify          # 测试断言
 golang.org/x/crypto                  # bcrypt 密码哈希
@@ -58,98 +56,37 @@ core/
 │   ├── config.yaml                   # 配置文件
 │   └── config.example.yaml           # 配置模板
 ├── internal/
-│   ├── api/
-│   │   ├── router.go                 # 路由定义（75 条路由）
-│   │   ├── handlers/                 # HTTP 处理器（24 个文件）
-│   │   │   ├── common.go            # 通用工具函数
-│   │   │   ├── auth.go              # 认证处理器
-│   │   │   ├── asset.go             # 资产处理器
-│   │   │   ├── exchange.go          # 交易所处理器
-│   │   │   ├── wallet.go            # 钱包处理器
-│   │   │   ├── rate.go              # 汇率处理器
-│   │   │   ├── notification.go      # 通知处理器
-│   │   │   ├── price_alert.go       # 价格预警处理器
-│   │   │   ├── report.go            # 报告处理器
-│   │   │   ├── defi.go              # DeFi 处理器
-│   │   │   ├── nft.go               # NFT 处理器
-│   │   │   ├── transaction.go       # 交易记录处理器
-│   │   │   ├── webpush.go           # WebPush 处理器
-│   │   │   ├── fee.go               # 费用分析处理器
-
-│   │   │   ├── achievement.go       # 成就处理器
-│   │   │   ├── benchmark.go         # 基准对比处理器
-│   │   │   ├── market.go            # 市场数据处理器
-│   │   │   ├── goal.go              # 目标追踪处理器
-│   │   │   ├── health.go            # 健康检查处理器
-│   │   │   ├── health_score.go      # 健康评分处理器
-│   │   │   ├── pnl.go               # 盈亏分析处理器
-│   │   │   ├── attribution.go       # 归因分析处理器
-│   │   │   └── forecast.go          # 趋势预测处理器
-│   │   └── middleware/               # 中间件（4 个）
-│   │       ├── cors.go              # CORS 跨域
-│   │       ├── logger.go            # 请求日志
-│   │       ├── recovery.go          # Panic 恢复
-│   │       └── auth.go              # JWT 认证
-│   ├── service/                      # 业务服务层（20+ 服务）
-│   │   ├── interfaces.go            # 服务接口定义
-│   │   ├── container.go             # 依赖注入容器
-│   │   ├── auth_service.go          # 认证服务
-│   │   ├── asset_service.go         # 资产聚合服务
-│   │   ├── exchange_service.go      # 交易所服务
-│   │   ├── blockchain_service.go    # 区块链服务
-│   │   ├── price_service.go         # 价格服务
-│   │   ├── snapshot_service.go      # 快照服务
-│   │   ├── notification_service.go  # 通知服务
-│   │   ├── price_alert_service.go   # 价格预警服务
-│   │   ├── report_service.go        # 报告服务
-│   │   ├── defi_service.go          # DeFi 服务
-│   │   ├── nft_service.go           # NFT 服务
-│   │   ├── transaction_service.go   # 交易记录服务
-│   │   ├── fee_service.go           # 费用分析服务
-
-│   │   ├── achievement_service.go   # 成就系统服务
-│   │   ├── benchmark_service.go     # 基准对比服务
-│   │   ├── goal_service.go          # 目标追踪服务
-│   │   ├── health_score_service.go  # 健康评分服务
-│   │   ├── risk_alert_service.go    # 风险预警服务
-│   │   └── webpush.go               # WebPush 推送服务
-│   ├── repository/                   # 数据访问层（18 个）
-│   │   ├── base_repository.go       # 基础仓库
-│   │   ├── exchange_account_repo.go
-│   │   ├── wallet_address_repo.go
-│   │   ├── manual_asset_repo.go
-│   │   ├── asset_detail_repo.go
-│   │   ├── asset_snapshot_repo.go
-│   │   ├── exchange_rate_repo.go
-│   │   ├── system_config_repo.go
-│   │   ├── notification_repo.go
-│   │   ├── price_alert_repo.go
-│   │   ├── report_repo.go
-│   │   ├── nft_repository.go
-│   │   ├── strategy_repository.go
-│   │   ├── achievement_repository.go
-│   │   ├── transaction_repository.go
-│   │   ├── daily_summary_repository.go
-│   │   ├── sync_metadata_repository.go
-│   │   └── goal_repo.go
-│   ├── models/                       # 数据模型（18 个表）
-│   │   ├── base.go                  # BaseModel + 常量定义
-│   │   ├── exchange_account.go
-│   │   ├── wallet_address.go
-│   │   ├── manual_asset.go
-│   │   ├── asset_detail.go
-│   │   ├── asset_snapshot.go
-│   │   ├── exchange_rate.go
-│   │   ├── system_config.go
-│   │   ├── notification.go
-│   │   ├── price_alert.go
-│   │   ├── report.go
-│   │   ├── nft.go
-│   │   ├── strategy.go
-│   │   ├── achievement.go
-│   │   ├── transaction.go
-│   │   ├── sync_metadata.go
-│   │   └── goal.go
+│   ├── app/                          # 模块化业务拆分（26 个模块）
+│   │   ├── auth/                    # 认证模块 (controller/logic/service/model)
+│   │   ├── asset/                   # 资产总览模块
+│   │   ├── exchange/                # 交易所账户模块
+│   │   ├── wallet/                  # 链上钱包模块
+│   │   ├── manual_asset/            # 手动记账资产模块
+│   │   ├── defi/                    # DeFi 仓位模块
+│   │   ├── nft/                     # NFT 资产模块
+│   │   ├── transaction/             # 统一交易记录模块
+│   │   ├── exchange_rate/           # 汇率与价格服务模块
+│   │   ├── notification/            # 通知与聚合模块
+│   │   ├── pnl/                     # 盈亏分析模块
+│   │   ├── report/                  # 定期报告生成模块
+│   │   ├── health/                  # 系统健康检查模块
+│   │   └── ... (共26个模块)
+│   ├── cron/                         # 定时任务（7 个）
+│   │   ├── snapshot_job.go          # 资产快照
+│   │   ├── notification_job.go      # 通知摘要
+│   │   ├── price_alert_job.go       # 价格预警检查
+│   │   ├── report_job.go            # 自动报告生成
+│   │   ├── risk_alert_job.go        # 风险预警
+│   │   ├── strategy_job.go          # 投资策略检查
+│   │   └── exchange_rate_job.go     # 汇率定时刷新
+│   ├── database/                     # 数据库初始化
+│   ├── middleware/                   # HTTP 中间件（7 个）
+│   │   ├── auth.go                  # JWT 认证
+│   │   ├── cors.go                  # 跨域控制
+│   │   ├── ctx.go                   # 上下文注入
+│   │   ├── error_handler.go         # 全局错误处理
+│   │   └── ...
+│   ├── consts/                       # 全局常量
 │   ├── integrations/                 # 第三方集成（8 个模块）
 │   │   ├── base_client.go           # HTTP 基础客户端
 │   │   ├── binance/                 # Binance API（go-binance SDK）
@@ -170,12 +107,13 @@ core/
 │   │       ├── uniswap_v2.go        # Uniswap V2（DEX）
 │   │       ├── uniswap_v3.go        # Uniswap V3（DEX）
 │   │       └── curve.go             # Curve（稳定币 DEX）
-│   ├── cron/                         # 定时任务（6 个）
+│   ├── cron/                         # 定时任务（7 个）
 │   │   ├── snapshot_job.go          # 资产快照 + CronManager
 │   │   ├── notification_job.go      # 通知摘要
 │   │   ├── price_alert_job.go       # 价格预警检查
 │   │   ├── report_job.go            # 自动报告生成
-
+│   │   ├── strategy_job.go          # 投资策略检查
+│   │   ├── exchange_rate_job.go     # 汇率定时刷新
 │   │   └── risk_alert_job.go        # 风险预警
 │   ├── model/                        # 业务传输对象（DTO）
 │   └── utils/                        # 工具库
@@ -557,6 +495,8 @@ API Key 使用 AES-256-GCM 加密存储，添加账户时验证连接。
 | 报告生成 | `report_job.go` | — | 自动生成日报/周报/月报 |
 
 | 风险预警 | `risk_alert_job.go` | — | 检查资产集中度、波动率等风险指标 |
+| 投资策略 | `strategy_job.go` | 15 分钟 | 定期检查重平衡条件与执行策略建议 |
+| 汇率刷新 | `exchange_rate_job.go` | 60 分钟 | 刷新全局法币与数字货币基准汇率 |
 
 ---
 
@@ -621,15 +561,12 @@ Recovery → CORS → Logger → Auth → Handler
 
 | 维度 | 数量 |
 |------|------|
-| API 路由 | 75 条 |
-| Handler 文件 | 24 个 |
-| 服务接口 | 20+ 个 |
-| Repository | 18 个 |
+| API 模块路由 | 26 个独立模块 |
 | 数据模型 | 18 张表 |
 | 第三方集成 | 8 个模块 |
 | DeFi 协议 | 7 个 |
-| 定时任务 | 6 个 |
-| 中间件 | 4 个 |
+| 定时任务 | 7 个 |
+| 中间件 | 7 个 |
 | 支持交易所 | 3 个（Binance/OKX/Coinbase） |
 | 支持区块链 | 3 条（Ethereum/BSC/Polygon） |
 | Etherscan 兼容链 | 6 条（+Arbitrum/Optimism/Base） |
