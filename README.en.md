@@ -1,8 +1,6 @@
 # AllFi — All-Asset Aggregation Platform
 
-> A personal asset dashboard curated for Web3 professionals.
-> 
-> "Hitting a new ATH in BTC-margin every day feels exciting yet painful?" — Break free from the pricing illusion caused by BTC dumps! Switch seamlessly between multiple base currencies (USDC / BTC / ETH / Fiat) with a single click to pierce through the market fog and reveal the true picture of your portfolio.
+> A personal, self-hosted wealth control center curated for Web3 professionals.
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Go Version](https://img.shields.io/badge/go-%3E%3D1.24-blue.svg)](https://golang.org/)
@@ -15,17 +13,35 @@
 
 ---
 
-## About
+## Why AllFi? (The Pain We Solve)
 
-AllFi is an **open-source, self-hosted** all-asset aggregation platform that unifies your crypto and traditional assets:
+**"Hitting a new ATH in BTC-margin every day feels exciting yet painful?"**
+When Bitcoin dumps, even if your altcoins are up against BTC, your total fiat net worth might still be bleeding. Break free from the pricing illusion!
 
+As a Web3 professional or heavy participant, you likely face these daily headaches:
+
+1. **Extreme Fragmentation**: Your wealth is scattered across Binance, OKX, dozens of on-chain wallets, and DeFi protocols, not to mention your real-world bank accounts and stocks. Just answering "how much am I actually worth right now?" is a chore.
+2. **Pricing Confusion**: Did I make crypto or did I make fiat? Different platforms use different base currencies, making it incredibly hard to stay objective during bull-to-bear market swings.
+3. **Security & Privacy Anxiety**: You want an all-in-one portfolio tracker, but you would **never** trust a centralized SaaS with your exchange API keys or associate all your public wallet addresses in one cloud database.
+4. **The Excel Nightmare**: Maintaining a manual spreadsheet means constantly pulling prices and balances yourself. It's tedious and unsustainable.
+
+## The AllFi Solution
+
+AllFi is built to solve this. It's not a SaaS; it is a **100% open-source, locally self-hosted** all-asset aggregation console. Your data, API keys, and wallet addresses live exclusively on your own server or machine. 
+
+Switch seamlessly between multiple base currencies (USDC / BTC / ETH / Fiat) with a single click to pierce through the market fog and see the true picture of your portfolio.
+
+Supported asset sources:
 - **CEX Exchanges**: Binance, OKX, Coinbase
-- **On-chain Wallets**: Ethereum, BSC, Polygon (+ Arbitrum/Optimism/Base queries)
+- **On-chain Wallets**: Ethereum, BSC, Polygon (+ Arbitrum/Optimism/Base)
 - **DeFi Protocols**: Lido, RocketPool, Aave, Compound, Uniswap V2/V3, Curve
 - **NFT Collections**: Alchemy integration for browsing and valuation
 - **Traditional Assets**: Bank deposits, cash, stocks, mutual funds
 
-All data is stored locally. API keys are encrypted with AES-256-GCM and never leave your machine.
+### 🌟 Flex Your Gains, Safely
+
+With AllFi, you can activate **Privacy Mode (Ctrl+H)** with one click. It blurs out your absolute amounts (showing `$••••`) while perfectly preserving your asset distribution pie charts, PnL trends, and investment achievements. 
+**Take a screenshot and share your dashboard with your community — flex your portfolio management skills without ever exposing your real net worth!**
 
 ---
 
