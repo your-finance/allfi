@@ -104,3 +104,4 @@ core/data/
 core/bin/
 skills/
 skills-lock.json
+.lh/
