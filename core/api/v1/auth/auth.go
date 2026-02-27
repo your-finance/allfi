@@ -47,3 +47,48 @@ type ChangePinReq struct {
 type ChangePinRes struct {
 	Success bool `json:"success" dc:"是否修改成功"`
 }
+
+// Setup2FAReq 首次设置 2FA 请求
+type Setup2FAReq struct {
+	g.Meta `path:"/auth/2fa/setup" method:"post" summary:"获取 2FA 密钥配置" tags:"认证"`
+}
+
+// Setup2FARes 首次设置 2FA 响应
+type Setup2FARes struct {
+	Secret string `json:"secret" dc:"TOTP 密钥（Base32）"`
+	QrUrl  string `json:"qr_url" dc:"QR 码扫描链接"`
+}
+
+// Enable2FAReq 启用 2FA 请求
+type Enable2FAReq struct {
+	g.Meta `path:"/auth/2fa/enable" method:"post" summary:"验证并启用 2FA" tags:"认证"`
+	Code   string `json:"code" v:"required|length:6" dc:"6位 TOTP 验证码"`
+}
+
+// Enable2FARes 启用 2FA 响应
+type Enable2FARes struct {
+	Success bool `json:"success" dc:"是否启用成功"`
+}
+
+// Disable2FAReq 禁用 2FA 请求
+type Disable2FAReq struct {
+	g.Meta `path:"/auth/2fa/disable" method:"post" summary:"验证并禁用 2FA" tags:"认证"`
+	Code   string `json:"code" v:"required|length:6" dc:"6位 TOTP 验证码"`
+}
+
+// Disable2FARes 禁用 2FA 响应
+type Disable2FARes struct {
+	Success bool `json:"success" dc:"是否禁用成功"`
+}
+
+// Verify2FAReq 登录后验证 2FA 请求
+type Verify2FAReq struct {
+	g.Meta `path:"/auth/2fa/verify" method:"post" summary:"验证 2FA 码" tags:"认证"`
+	Code   string `json:"code" v:"required|length:6" dc:"6位 TOTP 验证码"`
+}
+
+// Verify2FARes 登录后验证 2FA 响应
+type Verify2FARes struct {
+	Success bool   `json:"success" dc:"是否验证成功"`
+	Token   string `json:"token" dc:"重新颁发的完全授权 JWT Token"`
+}

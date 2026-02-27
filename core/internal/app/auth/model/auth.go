@@ -11,6 +11,10 @@ const (
 	ConfigKeyFailCount = "auth.fail_count"
 	// ConfigKeyLockUntil 锁定截止时间存储键
 	ConfigKeyLockUntil = "auth.lock_until"
+	// ConfigKey2faSecret 2FA 密钥存储键
+	ConfigKey2faSecret = "auth.2fa_secret"
+	// ConfigKey2faEnabled 2FA 启用状态存储键
+	ConfigKey2faEnabled = "auth.2fa_enabled"
 
 	// PINMinLength PIN 最小长度
 	PINMinLength = 4
@@ -22,4 +26,23 @@ const (
 	LockDurationMinutes = 15
 	// TokenExpireHours JWT Token 有效期（小时）
 	TokenExpireHours = 24
+	// TwoFATokenExpireMinutes 2FA 临时 Token 有效期（分钟）
+	TwoFATokenExpireMinutes = 15
 )
+
+// Setup2FAOutput 设置 2FA 输出
+type Setup2FAOutput struct {
+	Secret string
+	QrUrl  string
+}
+
+// StandardOutput 标准布尔输出
+type StandardOutput struct {
+	Success bool
+}
+
+// Verify2FAOutput 验证 2FA 输出
+type Verify2FAOutput struct {
+	Success bool
+	Token   string
+}

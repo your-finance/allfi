@@ -63,11 +63,63 @@ export const authService = {
    */
   async changePIN(oldPin, newPin) {
     if (USE_MOCK) {
-      await simulateDelay(600);
-      return {};
+      await simulateDelay(400);
+      return { success: true };
     }
     return post("/auth/change", { current_pin: oldPin, new_pin: newPin });
   },
+
+  /**
+   * 首次设置 2FA
+   * @returns {Promise<{secret: string, qr_url: string}>}
+   */
+  async setup2FA() {
+    if (USE_MOCK) {
+      await simulateDelay(400);
+      return { secret: "MOCKSECRET123", qr_url: "otpauth://totp/AllFi?secret=MOCKSECRET123&issuer=AllFi" };
+    }
+    return post("/auth/2fa/setup");
+  },
+
+  /**
+   * 验证并启用 2FA
+   * @param {string} code - 6位数字验证码
+   * @returns {Promise<{success: boolean}>}
+   */
+  async enable2FA(code) {
+    if (USE_MOCK) {
+      await simulateDelay(400);
+      return { success: code === "123456" };
+    }
+    return post("/auth/2fa/enable", { code });
+  },
+
+  /**
+   * 禁用 2FA
+   * @param {string} code - 6位数字验证码
+   * @returns {Promise<{success: boolean}>}
+   */
+  async disable2FA(code) {
+    if (USE_MOCK) {
+      await simulateDelay(400);
+      return { success: code === "123456" };
+    }
+    return post("/auth/2fa/disable", { code });
+  },
+
+  /**
+   * 验证 2FA 发放完整 Token
+   * @param {string} code - 6位数字验证码
+   * @returns {Promise<{success: boolean, token: string}>}
+   */
+  async verify2FA(code) {
+    if (USE_MOCK) {
+      await simulateDelay(400);
+      if (code !== "123456") throw new ApiError(401, "验证码错误");
+      return { success: true, token: "mock-jwt-token-2fa-" + Date.now() };
+    }
+    return post("/auth/2fa/verify", { code });
+  }
 };
 
 // ========== 资产服务 ==========

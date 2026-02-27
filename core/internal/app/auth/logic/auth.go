@@ -21,6 +21,8 @@ import (
 	"your-finance/allfi/internal/app/auth/service"
 	systemDao "your-finance/allfi/internal/app/system/dao"
 	systemEntity "your-finance/allfi/internal/app/system/model/entity"
+
+	"github.com/pquerna/otp/totp"
 )
 
 // pinPattern PIN 格式正则：4-20 位数字
@@ -140,7 +142,21 @@ func (s *sAuth) Login(ctx context.Context, pin string) (*authApi.LoginRes, error
 	// 验证成功，清除失败计数
 	s.clearFailures(ctx)
 
-	// 生成 JWT Token
+	// 检查是否启用了 2FA
+	twoFaEnabled := s.getConfigValue(ctx, model.ConfigKey2faEnabled)
+	if twoFaEnabled == "true" {
+		// 生成临时 JWT Token，附带 2fa_pending 声明
+		token, err := s.generate2FAPendingToken()
+		if err != nil {
+			return nil, gerror.Wrap(err, "生成 2FA 临时 Token 失败")
+		}
+		g.Log().Info(ctx, "PIN 校验成功，等待 2FA 验证")
+		// 前端收到 login res 后，如果有临时 token 可能需要特殊状态处理
+		// 我们直接把 token 给前端，前端调用受限于中间件的实际授权（见 middleware 调整）
+		return &authApi.LoginRes{Token: token}, nil
+	}
+
+	// 生成完全授权 JWT Token
 	token, err := s.generateToken()
 	if err != nil {
 		return nil, gerror.Wrap(err, "生成 Token 失败")
@@ -190,7 +206,7 @@ func (s *sAuth) ChangePin(ctx context.Context, currentPin string, newPin string)
 	return &authApi.ChangePinRes{Success: true}, nil
 }
 
-// generateToken 生成 JWT Token
+// generateToken 生成完全授权 JWT Token
 func (s *sAuth) generateToken() (string, error) {
 	claims := jwt.MapClaims{
 		"sub": "allfi-user",
@@ -199,6 +215,139 @@ func (s *sAuth) generateToken() (string, error) {
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(s.jwtSecret)
+}
+
+// generate2FAPendingToken 生成 2FA 临时 JWT Token，仅用于发起 Verify2FA 请求
+func (s *sAuth) generate2FAPendingToken() (string, error) {
+	claims := jwt.MapClaims{
+		"sub":         "allfi-user",
+		"2fa_pending": true,
+		"iat":         time.Now().Unix(),
+		"exp":         time.Now().Add(time.Duration(model.TwoFATokenExpireMinutes) * time.Minute).Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(s.jwtSecret)
+}
+
+// Setup2FA 获取 2FA 配置（密钥与 QR Url）
+func (s *sAuth) Setup2FA(ctx context.Context) (*authApi.Setup2FARes, error) {
+	// 如果已启用，则不允许重新 setup，需要先 disable
+	if s.getConfigValue(ctx, model.ConfigKey2faEnabled) == "true" {
+		return nil, gerror.New("2FA 已启用，请先禁用后再重新配置")
+	}
+
+	// 生成新的 TOTP 密钥
+	key, err := totp.Generate(totp.GenerateOpts{
+		Issuer:      "AllFi",
+		AccountName: "admin",
+		SecretSize:  20,
+	})
+	if err != nil {
+		return nil, gerror.Wrap(err, "生成 2FA 密钥失败")
+	}
+
+	// 将密钥临时存入 DB 供 Enable2FA 验证（此时状态尚未启用）
+	secret := key.Secret()
+	if err := s.setConfigValue(ctx, model.ConfigKey2faSecret, secret); err != nil {
+		return nil, gerror.Wrap(err, "临时保存 2FA 密钥失败")
+	}
+
+	g.Log().Info(ctx, "生成 2FA TOTP 密钥成功")
+
+	return &authApi.Setup2FARes{
+		Secret: secret,
+		QrUrl:  key.URL(),
+	}, nil
+}
+
+// Enable2FA 验证并启用 2FA
+func (s *sAuth) Enable2FA(ctx context.Context, code string) (*authApi.Enable2FARes, error) {
+	secret := s.getConfigValue(ctx, model.ConfigKey2faSecret)
+	if secret == "" {
+		return nil, gerror.New("尚未配置 2FA，请先调用 Setup")
+	}
+
+	// 验证 TOTP Code
+	valid := totp.Validate(code, secret)
+	if !valid {
+		return nil, gerror.New("2FA 验证码错误")
+	}
+
+	// 验证成功，将其标记为启用
+	if err := s.setConfigValue(ctx, model.ConfigKey2faEnabled, "true"); err != nil {
+		return nil, gerror.Wrap(err, "启用 2FA 失败")
+	}
+
+	g.Log().Info(ctx, "2FA 启用成功")
+	return &authApi.Enable2FARes{Success: true}, nil
+}
+
+// Disable2FA 验证并禁用 2FA
+func (s *sAuth) Disable2FA(ctx context.Context, code string) (*authApi.Disable2FARes, error) {
+	if s.getConfigValue(ctx, model.ConfigKey2faEnabled) != "true" {
+		return nil, gerror.New("未启用 2FA，无需禁用")
+	}
+
+	secret := s.getConfigValue(ctx, model.ConfigKey2faSecret)
+	if secret == "" {
+		return nil, gerror.New("未找到 2FA 密钥")
+	}
+
+	// 验证 TOTP Code
+	valid := totp.Validate(code, secret)
+	if !valid {
+		s.recordFailure(ctx) // 防爆破记录
+		return nil, gerror.New("2FA 验证码错误")
+	}
+
+	// 验证成功，清除启用标记和密钥
+	_ = s.setConfigValue(ctx, model.ConfigKey2faEnabled, "false")
+	_ = s.setConfigValue(ctx, model.ConfigKey2faSecret, "")
+
+	g.Log().Info(ctx, "2FA 禁用成功")
+	return &authApi.Disable2FARes{Success: true}, nil
+}
+
+// Verify2FA 登录流程中的 2FA 验证
+func (s *sAuth) Verify2FA(ctx context.Context, code string) (*authApi.Verify2FARes, error) {
+	// （通常在前置中间件中会验证是否有 token，或者在这里我们可以假设调用此接口表示正在登录过程中）
+	// 注意：因为是两步验证，可能只有 2fa_pending 的 token 时才允许调这个接口。在 middleware 里处理比较好，
+	// 此处仅进行 Code 校验和签发新 Token。
+
+	if s.getConfigValue(ctx, model.ConfigKey2faEnabled) != "true" {
+		return nil, gerror.New("2FA 未启用，无需验证")
+	}
+
+	if s.isLocked(ctx) {
+		return nil, gerror.New("账户已锁定，请稍后再试")
+	}
+
+	secret := s.getConfigValue(ctx, model.ConfigKey2faSecret)
+	if secret == "" {
+		return nil, gerror.New("未找到 2FA 密钥，配置异常")
+	}
+
+	// 验证 TOTP Code
+	valid := totp.Validate(code, secret)
+	if !valid {
+		s.recordFailure(ctx) // 输错也算认证失败，纳入冷却机制
+		return nil, gerror.New("2FA 验证码错误")
+	}
+
+	// 验证成功，清除错误计数
+	s.clearFailures(ctx)
+
+	// 签发完全授权的 JWT Token
+	token, err := s.generateToken()
+	if err != nil {
+		return nil, gerror.Wrap(err, "生成授权 Token 失败")
+	}
+
+	g.Log().Info(ctx, "2FA 验证成功，登录完成")
+	return &authApi.Verify2FARes{
+		Success: true,
+		Token:   token,
+	}, nil
 }
 
 // isLocked 检查账户是否被锁定

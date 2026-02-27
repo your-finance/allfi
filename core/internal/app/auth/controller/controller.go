@@ -33,6 +33,26 @@ func (c *Controller) ChangePin(ctx context.Context, req *authApi.ChangePinReq) (
 	return service.Auth().ChangePin(ctx, req.CurrentPin, req.NewPin)
 }
 
+// Setup2FA 获取 2FA 密钥与二维码
+func (c *Controller) Setup2FA(ctx context.Context, req *authApi.Setup2FAReq) (res *authApi.Setup2FARes, err error) {
+	return service.Auth().Setup2FA(ctx)
+}
+
+// Enable2FA 启用 2FA
+func (c *Controller) Enable2FA(ctx context.Context, req *authApi.Enable2FAReq) (res *authApi.Enable2FARes, err error) {
+	return service.Auth().Enable2FA(ctx, req.Code)
+}
+
+// Disable2FA 禁用 2FA
+func (c *Controller) Disable2FA(ctx context.Context, req *authApi.Disable2FAReq) (res *authApi.Disable2FARes, err error) {
+	return service.Auth().Disable2FA(ctx, req.Code)
+}
+
+// Verify2FA 验证 2FA 发放完整 Token
+func (c *Controller) Verify2FA(ctx context.Context, req *authApi.Verify2FAReq) (res *authApi.Verify2FARes, err error) {
+	return service.Auth().Verify2FA(ctx, req.Code)
+}
+
 // Register 注册认证模块路由（公开接口，无需认证）
 func Register(group *ghttp.RouterGroup) {
 	group.Bind(&Controller{})

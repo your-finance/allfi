@@ -83,6 +83,22 @@ func Auth(r *ghttp.Request) {
 		return
 	}
 
+	// 检查 2FA 挂起状态
+	if claims, ok := token.Claims.(jwt.MapClaims); ok {
+		if pending, exists := claims["2fa_pending"]; exists && pending == true {
+			// 如果当前请求不是 2FA 验证接口，则拦截
+			path := r.URL.Path
+			if !strings.HasSuffix(path, "/auth/2fa/verify") && !strings.HasSuffix(path, "/auth/2fa/setup") && !strings.HasSuffix(path, "/auth/2fa/enable") && !strings.HasSuffix(path, "/auth/2fa/disable") {
+				g.Log().Warning(r.Context(), "等待 2FA 验证中，拒绝访问其他接口", "path", path)
+				r.Response.WriteJsonExit(g.Map{
+					"code":    403, // 返回 403 Forbidden 或自定义 2FA 需要状态码
+					"message": "需要完成 2FA 二步验证",
+				})
+				return
+			}
+		}
+	}
+
 	// 单用户模式：设置默认用户参数
 	r.SetParam("user_id", 1)
 	r.SetParam("username", "allfi-user")

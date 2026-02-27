@@ -21,6 +21,18 @@ type IAuth interface {
 
 	// ChangePin 修改 PIN（需验证旧 PIN）
 	ChangePin(ctx context.Context, currentPin string, newPin string) (*authApi.ChangePinRes, error)
+
+	// Setup2FA 获取 2FA 密钥与二维码
+	Setup2FA(ctx context.Context) (*authApi.Setup2FARes, error)
+
+	// Enable2FA 启用 2FA
+	Enable2FA(ctx context.Context, code string) (*authApi.Enable2FARes, error)
+
+	// Disable2FA 禁用 2FA
+	Disable2FA(ctx context.Context, code string) (*authApi.Disable2FARes, error)
+
+	// Verify2FA 验证 2FA 发放完整 Token
+	Verify2FA(ctx context.Context, code string) (*authApi.Verify2FARes, error)
 }
 
 var localAuth IAuth
