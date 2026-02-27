@@ -29,7 +29,7 @@
 17. [交易记录接口](#17-交易记录接口)
 18. [费用分析接口](#18-费用分析接口)
 19. [分析接口（盈亏/归因/预测）](#19-分析接口盈亏归因预测)
-20. [策略引擎接口](#20-策略引擎接口)
+
 21. [成就系统接口](#21-成就系统接口)
 22. [基准对比接口](#22-基准对比接口)
 23. [目标追踪接口](#23-目标追踪接口)
@@ -78,7 +78,7 @@
 | 交易记录 | 5 | 列表 + 同步 + 统计 + 设置 |
 | 费用分析 | 1 | 费用统计 |
 | 分析 | 4 | 盈亏/摘要/归因/预测 |
-| 策略引擎 | 6 | CRUD + 分析 + 再平衡 |
+
 | 成就系统 | 2 | 列表 + 检查 |
 | 基准对比 | 1 | 收益率对比 |
 | 目标追踪 | 4 | CRUD |
@@ -1607,127 +1607,7 @@ GET /api/v1/analytics/forecast?days=30
 
 ---
 
-## 20. 策略引擎接口
 
-### 20.1 获取策略列表
-
-```
-GET /api/v1/strategies
-```
-
-**响应**：
-```json
-{
-  "code": 0,
-  "data": {
-    "strategies": [
-      {
-        "id": 1,
-        "name": "BTC/ETH 7:3 策略",
-        "type": "rebalance",
-        "config": {
-          "targets": [
-            { "symbol": "BTC", "percentage": 70 },
-            { "symbol": "ETH", "percentage": 30 }
-          ],
-          "rebalance_threshold": 5.0
-        },
-        "is_active": true,
-        "created_at": "2026-01-15T00:00:00Z",
-        "updated_at": "2026-02-10T10:00:00Z"
-      }
-    ]
-  }
-}
-```
-
-### 20.2 创建策略
-
-```
-POST /api/v1/strategies
-```
-
-**请求体**：
-```json
-{
-  "name": "BTC/ETH 7:3 策略",
-  "type": "rebalance",
-  "config": {
-    "targets": [
-      { "symbol": "BTC", "percentage": 70 },
-      { "symbol": "ETH", "percentage": 30 }
-    ],
-    "rebalance_threshold": 5.0
-  }
-}
-```
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| name | string | 是 | 策略名称（最大 100 字符） |
-| type | string | 是 | 策略类型（rebalance/dca/stop_limit） |
-| config | object | 是 | 策略配置（JSON 对象） |
-
-### 20.3 更新策略
-
-```
-PUT /api/v1/strategies/{id}
-```
-
-**请求体**：所有字段可选，额外支持 `is_active` (bool) 控制启用/禁用。
-
-### 20.4 删除策略
-
-```
-DELETE /api/v1/strategies/{id}
-```
-
-### 20.5 策略分析
-
-```
-GET /api/v1/strategies/{id}/analysis
-```
-
-**功能**：获取策略的偏差分析和再平衡建议
-
-**响应**：
-```json
-{
-  "code": 0,
-  "data": {
-    "analysis": {
-      "strategy_id": 1,
-      "current_alloc": { "BTC": 75, "ETH": 25 },
-      "target_alloc": { "BTC": 70, "ETH": 30 },
-      "deviation": { "BTC": 5, "ETH": -5 },
-      "recommendations": [
-        {
-          "symbol": "BTC",
-          "action": "sell",
-          "amount": 0.04,
-          "value_usd": 2750,
-          "reason": "BTC 超配 5%，建议卖出"
-        },
-        {
-          "symbol": "ETH",
-          "action": "buy",
-          "amount": 1.2,
-          "value_usd": 2750,
-          "reason": "ETH 欠配 5%，建议买入"
-        }
-      ]
-    }
-  }
-}
-```
-
-### 20.6 再平衡建议
-
-```
-GET /api/v1/strategies/{id}/rebalance
-```
-
-**功能**：获取再平衡建议（等同于策略分析接口，返回格式相同）
 
 ---
 

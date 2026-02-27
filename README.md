@@ -53,7 +53,7 @@ AllFi 为此而生。它不是一个 SaaS 服务，而是一个**完全开源、
 | 多币种计价 | USDC / BTC / ETH / CNY 自由切换 |
 | 交易记录 | CEX + 链上统一聚合，增量同步，cursor 分页 |
 | 数据分析 | 每日盈亏、费用分析、归因分析、基准对比（vs BTC/ETH/S&P500） |
-| 策略引擎 | 目标配比 + 再平衡建议 |
+
 | 资产报告 | 日报 / 周报 / 月报 / 年报自动生成 |
 | 成就系统 | 11 项投资成就解锁 |
 | 通知推送 | 价格预警 + WebPush 浏览器推送 |
@@ -104,7 +104,7 @@ AllFi 为此而生。它不是一个 SaaS 服务，而是一个**完全开源、
   <tr valign="top">
     <td width="33%"><img src="resource/03-dashboard-health-score.png" alt="健康评分"><br><b>投资组合健康评分</b> — 现金缓冲 / 集中度 / 平台分散度 / 波动性</td>
     <td width="33%"><img src="resource/04-dashboard-nft-fees.png" alt="NFT与费用"><br><b>NFT 资产 + 费用分析</b> — 收藏估值、Gas 费追踪、省钱建议</td>
-    <td width="33%"><img src="resource/05-dashboard-strategy-holdings.png" alt="策略与持仓"><br><b>策略引擎 + 持仓明细</b> — 自动化策略、再平衡、智能分组</td>
+    <td width="33%"><img src="resource/05-dashboard-strategy-holdings.png" alt="持仓明细"><br><b>持仓明细</b> — 自动化、智能分组</td>
   </tr>
 </table>
 

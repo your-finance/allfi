@@ -121,7 +121,7 @@ restoreSession()      // 恢复会话
 | 摘要栏 | summary-bar | 总资产值 + 今日 PnL + 分类芯片 + 分享/预警按钮 |
 | 图表区 | charts-row（3:2 Grid） | 左：资产趋势图（计价/基准/时间范围） 右：资产分布饼图 |
 | 洞察行 | insight-row（1:1 Grid） | 健康评分卡片 + 目标追踪面板 |
-| 可选功能行 | Widget 控制 | DeFi 概览 / NFT 概览 / 费用分析 / 策略面板 |
+| 可选功能行 | Widget 控制 | DeFi 概览 / NFT 概览 / 费用分析 |
 | 持仓明细 | holdings-panel | 平铺/分组视图 + 搜索 + 排序 + 分页 |
 
 **数据接口**：
@@ -198,7 +198,7 @@ restoreSession()      // 恢复会话
 | `useNotificationStore` | notificationStore.js | 通知列表 + 未读计数 + 偏好 |
 | `useAchievementStore` | achievementStore.js | 成就列表 + 解锁检查 |
 | `useNftStore` | nftStore.js | NFT 资产列表 |
-| `useStrategyStore` | strategyStore.js | 投资策略 CRUD + 再平衡分析 |
+
 | `useTransactionStore` | transactionStore.js | 交易记录 + 同步 + 统计 |
 | `useDashboardStore` | dashboardStore.js | Widget 配置 + 布局偏好 |
 | `useCommandStore` | commandStore.js | 命令面板状态 |
@@ -240,7 +240,7 @@ restoreSession()      // 恢复会话
 | NFT | nftService.js | `/nft/*` |
 | 交易记录 | transactionService.js | `/transactions/*` |
 | 费用 | feeService.js | `/analytics/fees` |
-| 策略 | strategyService.js | `/strategies/*` |
+
 | 成就 | achievementService.js | `/achievements/*` |
 
 ---
@@ -267,7 +267,7 @@ restoreSession()      // 恢复会话
 | PriceAlertDialog.vue | 价格预警设置 |
 | BatchImportDialog.vue | 批量导入钱包地址 |
 | AddGoalDialog.vue | 添加投资目标 |
-| AddStrategyDialog.vue | 添加投资策略 |
+
 | WalletConnectDialog.vue | WalletConnect 连接 |
 | PortfolioShareDialog.vue | 投资组合分享 |
 
@@ -304,7 +304,7 @@ restoreSession()      // 恢复会话
 | 组件 | 功能 |
 |------|------|
 | FeeAnalytics.vue | 费用分析 |
-| StrategyPanel.vue | 策略面板 |
+
 | RebalanceView.vue | 再平衡视图 |
 | DashboardCustomizer.vue | Widget 配置 |
 | CommandPalette.vue | 命令面板（Cmd+K） |

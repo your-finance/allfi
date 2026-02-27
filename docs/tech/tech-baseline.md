@@ -204,7 +204,7 @@ allfi/
 | 10 | `reports` | 资产报告 | report_type(daily/weekly/monthly/annual), content |
 | 11 | `unified_transactions` | 统一交易记录 | tx_type(buy/sell/swap/transfer), source, from_asset, to_asset |
 | 12 | `transaction_daily_summaries` | 交易日汇总 | date, buy_count, sell_count, total_fee_usd |
-| 13 | `strategies` | 投资策略 | name, target_allocations, rebalance_threshold |
+
 | 14 | `achievements` | 成就记录 | achievement_id, unlocked_at |
 | 15 | `nfts` | NFT 资产 | chain, contract_address, token_id, collection |
 | 16 | `goals` | 目标追踪 | name, target_amount, deadline |
@@ -256,7 +256,7 @@ allfi/
 | 价格预警 | 4 | CRUD |
 | 报告 | 3 | 列表/详情/生成 |
 | 交易记录 | 5 | 列表/同步/统计/设置 |
-| 策略引擎 | 5 | CRUD + 分析 |
+
 | DeFi | 2 | 仓位 + 协议列表 |
 | NFT | 1 | 资产列表 |
 | 成就 | 2 | 列表 + 检查 |
@@ -347,7 +347,7 @@ Recovery → CORS → Logger → Auth(JWT) → Handler
 | 通知摘要 | 每日 | 为启用摘要的用户生成每日通知 |
 | 价格预警 | 周期性 | 检查活跃预警条件 |
 | 报告生成 | 每日 | 自动生成日报/周报/月报 |
-| 策略监控 | 周期性 | 检查策略偏移 |
+
 | 风险预警 | 周期性 | 检查资产集中度、波动率 |
 
 ---
