@@ -37,6 +37,7 @@ import { useI18n } from '../composables/useI18n'
 import { useFormatters } from '../composables/useFormatters'
 import { useExportData } from '../composables/useExportData'
 import { useToast } from '../composables/useToast'
+import { useWebPush } from '../composables/useWebPush'
 import { settingsService } from '../api/index.js'
 import { transactionService } from '../api/transactionService.js'
 
@@ -53,6 +54,9 @@ const { setPricingCurrency } = useFormatters()
 const achStore = useAchievementStore()
 const notifSaving = ref(false)
 
+// WebPush 浏览器推送
+const { isSupported: webPushSupported, isSubscribed: webPushSubscribed, isLoading: webPushLoading, error: webPushError, subscribePush, unsubscribePush, permissionState } = useWebPush()
+
 // 成就面板
 const showAchievements = ref(false)
 
@@ -66,6 +70,21 @@ const updateNotifPreference = async (field, value) => {
     showToast(t('common.operationFailed'), 'error')
   } finally {
     notifSaving.value = false
+  }
+}
+
+// WebPush 开关处理
+const handlePushToggle = async (enabled) => {
+  if (enabled) {
+    const ok = await subscribePush()
+    if (ok) {
+      await updateNotifPreference('push_enabled', true)
+    }
+  } else {
+    const ok = await unsubscribePush()
+    if (ok) {
+      await updateNotifPreference('push_enabled', false)
+    }
   }
 }
 
@@ -850,12 +869,16 @@ onMounted(() => {
             <div class="setting-info">
               <span class="setting-label">{{ t('settings.pushEnabled') }}</span>
               <span class="setting-desc">{{ t('settings.pushEnabledDesc') }}</span>
+              <span v-if="!webPushSupported" class="setting-hint warning">当前浏览器不支持 WebPush</span>
+              <span v-else-if="permissionState === 'denied'" class="setting-hint warning">通知权限已被拒绝，请在浏览器设置中开启</span>
+              <span v-else-if="webPushError" class="setting-hint warning">{{ webPushError }}</span>
             </div>
-            <label class="toggle">
+            <label class="toggle" :class="{ disabled: !webPushSupported || webPushLoading }">
               <input
                 type="checkbox"
-                :checked="notifStore.preferences?.push_enabled"
-                @change="updateNotifPreference('push_enabled', $event.target.checked)"
+                :checked="webPushSubscribed"
+                :disabled="!webPushSupported || webPushLoading"
+                @change="handlePushToggle($event.target.checked)"
               >
               <span class="toggle-slider"></span>
             </label>
