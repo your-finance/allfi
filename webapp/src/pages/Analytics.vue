@@ -19,7 +19,7 @@ import {
   Filler
 } from 'chart.js'
 import FeeAnalytics from '../components/FeeAnalytics.vue'
-import StrategyPanel from '../components/StrategyPanel.vue'
+import AttributionPanel from '../components/AttributionPanel.vue'
 import BenchmarkPanel from '../components/BenchmarkPanel.vue'
 import PortfolioShareDialog from '../components/PortfolioShareDialog.vue'
 import { useAssetStore } from '../stores/assetStore'
@@ -436,8 +436,8 @@ const platformChartOptions = computed(() => ({
       <!-- 面板 5：费用分析 -->
       <FeeAnalytics />
 
-      <!-- 面板 6：策略面板 -->
-      <StrategyPanel />
+      <!-- 面板 6：盈亏归因 -->
+      <AttributionPanel />
 
       <!-- 面板 7：基准对比 + 导出报告 -->
       <div class="panels-row">

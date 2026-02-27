@@ -1784,7 +1784,13 @@ export const analyticsService = {
       return {
         total_return: (Math.random() - 0.3) * 3000,
         total_percent: (Math.random() - 0.3) * 5,
-        attributions: [],
+        attributions: [
+          { symbol: "BTC", source: "binance", contribution: 950, weight: 42, return: 3.5 },
+          { symbol: "ETH", source: "ethereum", contribution: 420, weight: 28, return: 2.3 },
+          { symbol: "SOL", source: "binance", contribution: -180, weight: 8, return: -3.5 },
+          { symbol: "USDC", source: "coinbase", contribution: 12, weight: 15, return: 0.1 },
+          { symbol: "MATIC", source: "polygon", contribution: -65, weight: 7, return: -1.4 },
+        ],
         days: { "7d": 7, "30d": 30, "90d": 90, "1y": 365 }[range] || 7,
         currency,
       };
