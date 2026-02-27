@@ -20,3 +20,24 @@ type DeFiProtocol interface {
 	// GetType 获取协议类型（staking/lending/lp/vault）
 	GetType() string
 }
+
+// LendingProtocol 借贷协议扩展接口
+// 支持借贷功能的协议（Aave、Compound）需要实现此接口
+type LendingProtocol interface {
+	DeFiProtocol
+
+	// GetLendingPositions 获取用户的借贷仓位（包含存款、借款、健康因子）
+	GetLendingPositions(ctx context.Context, address string, chain string) ([]Position, error)
+
+	// GetSupplyAPY 获取指定代币的存款年化收益率
+	GetSupplyAPY(ctx context.Context, token string, chain string) (float64, error)
+
+	// GetBorrowAPY 获取指定代币的借款年化利率
+	// 返回 (稳定利率, 浮动利率, error)
+	GetBorrowAPY(ctx context.Context, token string, chain string) (stable float64, variable float64, err error)
+
+	// GetHealthFactor 获取用户的健康因子
+	// 健康因子 = (抵押品价值 * 清算阈值) / 借款价值
+	// > 1: 安全；< 1: 可能被清算
+	GetHealthFactor(ctx context.Context, address string, chain string) (float64, error)
+}

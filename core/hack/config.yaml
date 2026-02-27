@@ -192,3 +192,27 @@ gfcli:
         noJsonTag: false
         noModelComment: false
         jsonCase: "Snake"
+
+      # ===== DeFi 模块 =====
+      - link: "sqlite::@file(./data/allfi.db)"
+        path: "./internal/app/defi"
+        tables: "lending_positions,lending_rate_history"
+        stdTime: true
+        withTime: true
+        overwriteDao: false
+        descriptionTag: true
+        noJsonTag: false
+        noModelComment: false
+        jsonCase: "Snake"
+
+      # ===== 风险管理模块 =====
+      - link: "sqlite::@file(./data/allfi.db)"
+        path: "./internal/app/risk"
+        tables: "risk_metrics"
+        stdTime: true
+        withTime: true
+        overwriteDao: false
+        descriptionTag: true
+        noJsonTag: false
+        noModelComment: false
+        jsonCase: "Snake"

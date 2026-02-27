@@ -1,5 +1,5 @@
 // =================================================================================
-// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT. Created at 2026-02-25 10:57:34
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT. Created at 2026-02-28 00:10:34
 // =================================================================================
 
 package entity
@@ -16,7 +16,7 @@ type ExchangeRates struct {
 	DeletedAt    time.Time `json:"deleted_at"    orm:"deleted_at"    description:""` //
 	FromCurrency string    `json:"from_currency" orm:"from_currency" description:""` //
 	ToCurrency   string    `json:"to_currency"   orm:"to_currency"   description:""` //
-	Rate         float64   `json:"rate"          orm:"rate"          description:""` //
+	Rate         float32   `json:"rate"          orm:"rate"          description:""` //
 	Source       string    `json:"source"        orm:"source"        description:""` //
 	FetchedAt    time.Time `json:"fetched_at"    orm:"fetched_at"    description:""` //
 }

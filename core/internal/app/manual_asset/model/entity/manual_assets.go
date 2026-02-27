@@ -1,5 +1,5 @@
 // =================================================================================
-// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT. Created at 2026-02-25 10:57:34
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT. Created at 2026-02-28 00:10:34
 // =================================================================================
 
 package entity
@@ -17,8 +17,8 @@ type ManualAssets struct {
 	UserId    int       `json:"user_id"    orm:"user_id"    description:""` //
 	AssetType string    `json:"asset_type" orm:"asset_type" description:""` //
 	AssetName string    `json:"asset_name" orm:"asset_name" description:""` //
-	Amount    float64   `json:"amount"     orm:"amount"     description:""` //
-	AmountUsd float64   `json:"amount_usd" orm:"amount_usd" description:""` //
+	Amount    float32   `json:"amount"     orm:"amount"     description:""` //
+	AmountUsd float32   `json:"amount_usd" orm:"amount_usd" description:""` //
 	Currency  string    `json:"currency"   orm:"currency"   description:""` //
 	Notes     string    `json:"notes"      orm:"notes"      description:""` //
 	IsActive  int       `json:"is_active"  orm:"is_active"  description:""` //

@@ -1,5 +1,5 @@
 // =================================================================================
-// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT. Created at 2026-02-25 10:57:34
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT. Created at 2026-02-28 00:10:34
 // =================================================================================
 
 package entity
@@ -19,12 +19,12 @@ type UnifiedTransactions struct {
 	Source     string    `json:"source"      orm:"source"      description:""` //
 	SourceId   string    `json:"source_id"   orm:"source_id"   description:""` //
 	FromAsset  string    `json:"from_asset"  orm:"from_asset"  description:""` //
-	FromAmount float64   `json:"from_amount" orm:"from_amount" description:""` //
+	FromAmount float32   `json:"from_amount" orm:"from_amount" description:""` //
 	ToAsset    string    `json:"to_asset"    orm:"to_asset"    description:""` //
-	ToAmount   float64   `json:"to_amount"   orm:"to_amount"   description:""` //
-	Fee        float64   `json:"fee"         orm:"fee"         description:""` //
+	ToAmount   float32   `json:"to_amount"   orm:"to_amount"   description:""` //
+	Fee        float32   `json:"fee"         orm:"fee"         description:""` //
 	FeeCoin    string    `json:"fee_coin"    orm:"fee_coin"    description:""` //
-	ValueUsd   float64   `json:"value_usd"   orm:"value_usd"   description:""` //
+	ValueUsd   float32   `json:"value_usd"   orm:"value_usd"   description:""` //
 	TxHash     string    `json:"tx_hash"     orm:"tx_hash"     description:""` //
 	Chain      string    `json:"chain"       orm:"chain"       description:""` //
 	Timestamp  time.Time `json:"timestamp"   orm:"timestamp"   description:""` //

@@ -1,5 +1,5 @@
 // =================================================================================
-// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT. Created at 2026-02-25 10:57:34
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT. Created at 2026-02-28 00:10:34
 // =================================================================================
 
 package entity
@@ -16,11 +16,11 @@ type AssetSnapshots struct {
 	DeletedAt          time.Time `json:"deleted_at"           orm:"deleted_at"           description:""` //
 	UserId             int       `json:"user_id"              orm:"user_id"              description:""` //
 	SnapshotTime       time.Time `json:"snapshot_time"        orm:"snapshot_time"        description:""` //
-	TotalValueUsd      float64   `json:"total_value_usd"      orm:"total_value_usd"      description:""` //
-	TotalValueCny      float64   `json:"total_value_cny"      orm:"total_value_cny"      description:""` //
-	TotalValueBtc      float64   `json:"total_value_btc"      orm:"total_value_btc"      description:""` //
-	CexValueUsd        float64   `json:"cex_value_usd"        orm:"cex_value_usd"        description:""` //
-	BlockchainValueUsd float64   `json:"blockchain_value_usd" orm:"blockchain_value_usd" description:""` //
-	ManualValueUsd     float64   `json:"manual_value_usd"     orm:"manual_value_usd"     description:""` //
+	TotalValueUsd      float32   `json:"total_value_usd"      orm:"total_value_usd"      description:""` //
+	TotalValueCny      float32   `json:"total_value_cny"      orm:"total_value_cny"      description:""` //
+	TotalValueBtc      float32   `json:"total_value_btc"      orm:"total_value_btc"      description:""` //
+	CexValueUsd        float32   `json:"cex_value_usd"        orm:"cex_value_usd"        description:""` //
+	BlockchainValueUsd float32   `json:"blockchain_value_usd" orm:"blockchain_value_usd" description:""` //
+	ManualValueUsd     float32   `json:"manual_value_usd"     orm:"manual_value_usd"     description:""` //
 	ExchangeRatesJson  string    `json:"exchange_rates_json"  orm:"exchange_rates_json"  description:""` //
 }

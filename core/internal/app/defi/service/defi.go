@@ -21,6 +21,21 @@ type IDefi interface {
 
 	// GetStats 获取 DeFi 统计（按协议/链/类型分组聚合）
 	GetStats(ctx context.Context) (*defiApi.GetStatsRes, error)
+
+	// GetLendingPositions 获取用户的借贷仓位（包含健康因子）
+	GetLendingPositions(ctx context.Context) ([]*model.LendingPositionItem, error)
+
+	// GetLendingRates 获取借贷利率（存款APY、借款APY）
+	GetLendingRates(ctx context.Context, protocol string, chain string) ([]*model.LendingRateItem, error)
+
+	// GetLendingRateHistory 获取借贷利率历史
+	GetLendingRateHistory(ctx context.Context, protocol string, token string, days int) ([]*model.LendingRateHistoryItem, error)
+
+	// CheckHealthFactors 检查所有借贷仓位的健康因子,返回低于阈值的仓位
+	CheckHealthFactors(ctx context.Context, threshold float64) ([]*model.LendingPositionItem, error)
+
+	// GetLendingOptimization 获取最优借贷策略推荐
+	GetLendingOptimization(ctx context.Context) (*model.LendingOptimizationResult, error)
 }
 
 var localDefi IDefi

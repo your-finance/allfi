@@ -1,5 +1,5 @@
 // =================================================================================
-// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT. Created at 2026-02-25 10:57:34
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT. Created at 2026-02-28 00:10:34
 // =================================================================================
 
 package entity
@@ -19,7 +19,7 @@ type NotificationPreferences struct {
 	DigestTime             string    `json:"digest_time"              orm:"digest_time"              description:""` //
 	EnablePriceAlert       int       `json:"enable_price_alert"       orm:"enable_price_alert"       description:""` //
 	EnableAssetAlert       int       `json:"enable_asset_alert"       orm:"enable_asset_alert"       description:""` //
-	AssetAlertThreshold    float64   `json:"asset_alert_threshold"    orm:"asset_alert_threshold"    description:""` //
+	AssetAlertThreshold    float32   `json:"asset_alert_threshold"    orm:"asset_alert_threshold"    description:""` //
 	WebhookUrl             string    `json:"webhook_url"              orm:"webhook_url"              description:""` //
 	EnablePushNotification int       `json:"enable_push_notification" orm:"enable_push_notification" description:""` //
 }

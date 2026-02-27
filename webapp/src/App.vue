@@ -29,7 +29,8 @@ import {
   PhInfo,
   PhKeyboard,
   PhShieldCheck,
-  PhGithubLogo
+  PhGithubLogo,
+  PhShieldWarning
 } from '@phosphor-icons/vue'
 import { useThemeStore } from './stores/themeStore'
 import { useAuthStore } from './stores/authStore'
@@ -144,6 +145,7 @@ const navItems = computed(() => [
   { path: '/accounts', labelKey: 'nav.accounts', icon: PhWallet },
   { path: '/history', labelKey: 'nav.history', icon: PhClockCounterClockwise },
   { path: '/analytics', labelKey: 'nav.analytics', icon: PhChartLine },
+  { path: '/risk', labelKey: 'nav.risk', icon: PhShieldWarning },
   { path: '/reports', labelKey: 'nav.reports', icon: PhNewspaper },
   { path: '/settings', labelKey: 'nav.settings', icon: PhGear }
 ])

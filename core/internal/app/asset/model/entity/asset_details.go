@@ -1,5 +1,5 @@
 // =================================================================================
-// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT. Created at 2026-02-25 10:57:34
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT. Created at 2026-02-28 00:10:34
 // =================================================================================
 
 package entity
@@ -19,8 +19,8 @@ type AssetDetails struct {
 	SourceId    int       `json:"source_id"    orm:"source_id"    description:""` //
 	AssetSymbol string    `json:"asset_symbol" orm:"asset_symbol" description:""` //
 	AssetName   string    `json:"asset_name"   orm:"asset_name"   description:""` //
-	Balance     float64   `json:"balance"      orm:"balance"      description:""` //
-	PriceUsd    float64   `json:"price_usd"    orm:"price_usd"    description:""` //
-	ValueUsd    float64   `json:"value_usd"    orm:"value_usd"    description:""` //
+	Balance     float32   `json:"balance"      orm:"balance"      description:""` //
+	PriceUsd    float32   `json:"price_usd"    orm:"price_usd"    description:""` //
+	ValueUsd    float32   `json:"value_usd"    orm:"value_usd"    description:""` //
 	LastUpdated time.Time `json:"last_updated" orm:"last_updated" description:""` //
 }

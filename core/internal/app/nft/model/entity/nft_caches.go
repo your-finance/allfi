@@ -1,5 +1,5 @@
 // =================================================================================
-// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT. Created at 2026-02-25 10:57:34
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT. Created at 2026-02-28 00:10:34
 // =================================================================================
 
 package entity
@@ -24,8 +24,8 @@ type NftCaches struct {
 	Collection      string    `json:"collection"       orm:"collection"       description:""` //
 	CollectionSlug  string    `json:"collection_slug"  orm:"collection_slug"  description:""` //
 	Chain           string    `json:"chain"            orm:"chain"            description:""` //
-	FloorPrice      float64   `json:"floor_price"      orm:"floor_price"      description:""` //
+	FloorPrice      float32   `json:"floor_price"      orm:"floor_price"      description:""` //
 	FloorCurrency   string    `json:"floor_currency"   orm:"floor_currency"   description:""` //
-	FloorPriceUsd   float64   `json:"floor_price_usd"  orm:"floor_price_usd"  description:""` //
+	FloorPriceUsd   float32   `json:"floor_price_usd"  orm:"floor_price_usd"  description:""` //
 	CachedAt        time.Time `json:"cached_at"        orm:"cached_at"        description:""` //
 }

@@ -1,5 +1,5 @@
 // =================================================================================
-// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT. Created at 2026-02-25 10:57:34
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT. Created at 2026-02-28 00:10:34
 // =================================================================================
 
 package entity
@@ -19,6 +19,6 @@ type TransactionDailySummaries struct {
 	BuyCount    int       `json:"buy_count"     orm:"buy_count"     description:""` //
 	SellCount   int       `json:"sell_count"    orm:"sell_count"    description:""` //
 	TotalCount  int       `json:"total_count"   orm:"total_count"   description:""` //
-	TotalFeeUsd float64   `json:"total_fee_usd" orm:"total_fee_usd" description:""` //
-	NetFlowUsd  float64   `json:"net_flow_usd"  orm:"net_flow_usd"  description:""` //
+	TotalFeeUsd float32   `json:"total_fee_usd" orm:"total_fee_usd" description:""` //
+	NetFlowUsd  float32   `json:"net_flow_usd"  orm:"net_flow_usd"  description:""` //
 }

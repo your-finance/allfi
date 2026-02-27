@@ -1,5 +1,5 @@
 // =================================================================================
-// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT. Created at 2026-02-25 10:57:34
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT. Created at 2026-02-28 00:10:34
 // =================================================================================
 
 package entity
@@ -17,7 +17,7 @@ type PriceAlerts struct {
 	UserId      int       `json:"user_id"      orm:"user_id"      description:""` //
 	Symbol      string    `json:"symbol"       orm:"symbol"       description:""` //
 	Condition   string    `json:"condition"    orm:"condition"    description:""` //
-	TargetPrice float64   `json:"target_price" orm:"target_price" description:""` //
+	TargetPrice float32   `json:"target_price" orm:"target_price" description:""` //
 	IsActive    int       `json:"is_active"    orm:"is_active"    description:""` //
 	Triggered   int       `json:"triggered"    orm:"triggered"    description:""` //
 	TriggeredAt time.Time `json:"triggered_at" orm:"triggered_at" description:""` //

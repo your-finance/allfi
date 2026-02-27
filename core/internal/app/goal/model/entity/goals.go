@@ -1,5 +1,5 @@
 // =================================================================================
-// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT. Created at 2026-02-25 10:57:34
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT. Created at 2026-02-28 00:10:34
 // =================================================================================
 
 package entity
@@ -16,7 +16,7 @@ type Goals struct {
 	DeletedAt   time.Time `json:"deleted_at"   orm:"deleted_at"   description:""` //
 	Title       string    `json:"title"        orm:"title"        description:""` //
 	Type        string    `json:"type"         orm:"type"         description:""` //
-	TargetValue float64   `json:"target_value" orm:"target_value" description:""` //
+	TargetValue float32   `json:"target_value" orm:"target_value" description:""` //
 	Currency    string    `json:"currency"     orm:"currency"     description:""` //
 	Deadline    time.Time `json:"deadline"     orm:"deadline"     description:""` //
 }
