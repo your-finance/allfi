@@ -28,6 +28,44 @@ import (
 // pinPattern PIN 格式正则：4-20 位数字
 var pinPattern = regexp.MustCompile(`^\d{4,20}$`)
 
+// validateComplexPassword 验证复杂密码格式
+// 要求：8-20 位，必须含大小写字母和数字，可包含特殊字符
+func validateComplexPassword(password string) bool {
+	length := len(password)
+	if length < 8 || length > 20 {
+		return false
+	}
+
+	var hasLower, hasUpper, hasDigit bool
+	for _, ch := range password {
+		switch {
+		case ch >= 'a' && ch <= 'z':
+			hasLower = true
+		case ch >= 'A' && ch <= 'Z':
+			hasUpper = true
+		case ch >= '0' && ch <= '9':
+			hasDigit = true
+		case isAllowedSpecialChar(ch):
+			// 允许的特殊字符
+		default:
+			// 非法字符
+			return false
+		}
+	}
+
+	return hasLower && hasUpper && hasDigit
+}
+
+// isAllowedSpecialChar 检查是否为允许的特殊字符
+func isAllowedSpecialChar(ch rune) bool {
+	switch ch {
+	case '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', '-', '=', '[', ']', '{', '}', '|', ';', '\'', ':', '"', ',', '.', '<', '>', '?':
+		return true
+	default:
+		return false
+	}
+}
+
 // sAuth 认证服务实现
 type sAuth struct {
 	jwtSecret []byte // JWT 签名密钥
@@ -67,40 +105,56 @@ func (s *sAuth) initJWTSecret() {
 func (s *sAuth) GetStatus(ctx context.Context) (*authApi.GetStatusRes, error) {
 	pinHash := s.getConfigValue(ctx, model.ConfigKeyPINHash)
 	twoFAEnabled := s.getConfigValue(ctx, model.ConfigKey2faEnabled)
+	passwordType := s.getConfigValue(ctx, model.ConfigKeyPasswordType)
+
+	// 默认为 pin 类型
+	if passwordType == "" {
+		passwordType = model.PasswordTypePin
+	}
+
 	return &authApi.GetStatusRes{
 		PinSet:       pinHash != "",
 		TwoFAEnabled: twoFAEnabled == "true",
+		PasswordType: passwordType,
 	}, nil
 }
 
-// Setup 首次设置 PIN
+// Setup 首次设置 PIN/密码
 //
 // 功能说明:
-// 1. 检查 PIN 是否已设置（不可重复设置）
-// 2. 验证 PIN 格式
+// 1. 检查 PIN/密码是否已设置（不可重复设置）
+// 2. 自动检测密码类型（PIN 或复杂密码）
 // 3. bcrypt 哈希存储
 // 4. 自动登录，返回 JWT Token
 func (s *sAuth) Setup(ctx context.Context, pin string) (*authApi.SetupRes, error) {
 	// 检查是否已设置
 	existingHash := s.getConfigValue(ctx, model.ConfigKeyPINHash)
 	if existingHash != "" {
-		return nil, gerror.New("PIN 已设置，请使用修改 PIN 功能")
+		return nil, gerror.New("密码已设置，请使用修改密码功能")
 	}
 
-	// 验证 PIN 格式
-	if !pinPattern.MatchString(pin) {
-		return nil, gerror.Newf("PIN 格式错误：必须为 %d-%d 位数字", model.PINMinLength, model.PINMaxLength)
+	// 自动检测密码类型
+	var passwordType string
+	if pinPattern.MatchString(pin) {
+		passwordType = model.PasswordTypePin
+	} else if validateComplexPassword(pin) {
+		passwordType = model.PasswordTypeComplex
+	} else {
+		return nil, gerror.New("密码格式错误：请输入 4-20 位数字 PIN 或 8-20 位复杂密码（含大小写字母和数字）")
 	}
 
 	// bcrypt 哈希
 	hash, err := bcrypt.GenerateFromPassword([]byte(pin), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, gerror.Wrap(err, "PIN 哈希生成失败")
+		return nil, gerror.Wrap(err, "密码哈希生成失败")
 	}
 
-	// 存储哈希
+	// 存储哈希和类型
 	if err := s.setConfigValue(ctx, model.ConfigKeyPINHash, string(hash)); err != nil {
-		return nil, gerror.Wrap(err, "保存 PIN 失败")
+		return nil, gerror.Wrap(err, "保存密码失败")
+	}
+	if err := s.setConfigValue(ctx, model.ConfigKeyPasswordType, passwordType); err != nil {
+		return nil, gerror.Wrap(err, "保存密码类型失败")
 	}
 
 	// 生成 JWT Token（设置成功后自动登录）
@@ -109,7 +163,7 @@ func (s *sAuth) Setup(ctx context.Context, pin string) (*authApi.SetupRes, error
 		return nil, gerror.Wrap(err, "生成 Token 失败")
 	}
 
-	g.Log().Info(ctx, "PIN 设置成功")
+	g.Log().Info(ctx, "密码设置成功", "type", passwordType)
 
 	return &authApi.SetupRes{Token: token}, nil
 }
@@ -433,4 +487,69 @@ func (s *sAuth) setConfigValue(ctx context.Context, key string, value string) er
 		})
 	}
 	return err
+}
+
+// validatePassword 根据类型验证密码格式
+func (s *sAuth) validatePassword(password string, passwordType string) error {
+	if passwordType == model.PasswordTypeComplex {
+		if !validateComplexPassword(password) {
+			return gerror.New("复杂密码格式错误：必须为 8-20 位，包含大小写字母和数字")
+		}
+	} else {
+		if !pinPattern.MatchString(password) {
+			return gerror.Newf("PIN 格式错误：必须为 %d-%d 位数字", model.PINMinLength, model.PINMaxLength)
+		}
+	}
+	return nil
+}
+
+// SwitchType 切换密码类型
+//
+// 功能说明:
+// 1. 验证当前密码
+// 2. 验证新密码格式
+// 3. 更新密码哈希和类型
+func (s *sAuth) SwitchType(ctx context.Context, currentPassword string, newType string, newPassword string) (*authApi.SwitchTypeRes, error) {
+	// 检查是否已设置密码
+	hash := s.getConfigValue(ctx, model.ConfigKeyPINHash)
+	if hash == "" {
+		return nil, gerror.New("密码未设置，请先设置密码")
+	}
+
+	// 检查锁定状态
+	if s.isLocked(ctx) {
+		return nil, gerror.New("账户已锁定，请稍后再试")
+	}
+
+	// 验证当前密码
+	if err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(currentPassword)); err != nil {
+		s.recordFailure(ctx)
+		return nil, gerror.New("当前密码错误")
+	}
+
+	// 验证新密码格式
+	if err := s.validatePassword(newPassword, newType); err != nil {
+		return nil, err
+	}
+
+	// 生成新哈希
+	newHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, gerror.Wrap(err, "密码哈希生成失败")
+	}
+
+	// 存储新哈希和类型
+	if err := s.setConfigValue(ctx, model.ConfigKeyPINHash, string(newHash)); err != nil {
+		return nil, gerror.Wrap(err, "保存新密码失败")
+	}
+	if err := s.setConfigValue(ctx, model.ConfigKeyPasswordType, newType); err != nil {
+		return nil, gerror.Wrap(err, "保存密码类型失败")
+	}
+
+	// 清除失败计数
+	s.clearFailures(ctx)
+
+	g.Log().Info(ctx, "密码类型切换成功", "newType", newType)
+
+	return &authApi.SwitchTypeRes{Success: true}, nil
 }
