@@ -62,7 +62,7 @@ type Setup2FARes struct {
 // Enable2FAReq 启用 2FA 请求
 type Enable2FAReq struct {
 	g.Meta `path:"/auth/2fa/enable" method:"post" summary:"验证并启用 2FA" tags:"认证"`
-	Code   string `json:"code" v:"required|length:6" dc:"6位 TOTP 验证码"`
+	Code   string `json:"code" v:"required|length:6,6" dc:"6位 TOTP 验证码"`
 }
 
 // Enable2FARes 启用 2FA 响应
@@ -73,7 +73,7 @@ type Enable2FARes struct {
 // Disable2FAReq 禁用 2FA 请求
 type Disable2FAReq struct {
 	g.Meta `path:"/auth/2fa/disable" method:"post" summary:"验证并禁用 2FA" tags:"认证"`
-	Code   string `json:"code" v:"required|length:6" dc:"6位 TOTP 验证码"`
+	Code   string `json:"code" v:"required|length:6,6" dc:"6位 TOTP 验证码"`
 }
 
 // Disable2FARes 禁用 2FA 响应
@@ -84,7 +84,7 @@ type Disable2FARes struct {
 // Verify2FAReq 登录后验证 2FA 请求
 type Verify2FAReq struct {
 	g.Meta `path:"/auth/2fa/verify" method:"post" summary:"验证 2FA 码" tags:"认证"`
-	Code   string `json:"code" v:"required|length:6" dc:"6位 TOTP 验证码"`
+	Code   string `json:"code" v:"required|length:6,6" dc:"6位 TOTP 验证码"`
 }
 
 // Verify2FARes 登录后验证 2FA 响应

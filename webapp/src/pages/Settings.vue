@@ -202,8 +202,12 @@ const verifyAndEnable2FA = async () => {
 
   try {
     // 调用 authStore 启用 2FA
-    await authStore.enable2FA(verifyCode.value)
-    show2FASetupModal.value = false
+    const success = await authStore.enable2FA(verifyCode.value)
+    if (success) {
+      show2FASetupModal.value = false
+    } else {
+      verifyError.value = authStore.error || t('settings.twoFA.verifyFailed')
+    }
   } catch (err) {
     verifyError.value = err.message || t('settings.twoFA.verifyFailed')
   } finally {
@@ -230,8 +234,12 @@ const disable2FA = async () => {
 
   try {
     // 调用 authStore 禁用 2FA
-    await authStore.disable2FA(disableCode.value)
-    show2FADisableModal.value = false
+    const success = await authStore.disable2FA(disableCode.value)
+    if (success) {
+      show2FADisableModal.value = false
+    } else {
+      disableError.value = authStore.error || t('settings.twoFA.disableFailed')
+    }
   } catch (err) {
     disableError.value = err.message || t('settings.twoFA.disableFailed')
   } finally {
