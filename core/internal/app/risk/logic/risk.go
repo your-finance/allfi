@@ -3,6 +3,7 @@ package logic
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -43,7 +44,7 @@ func (s *sRisk) GetLatestMetrics(ctx context.Context) (*model.RiskMetrics, error
 		OrderDesc(dao.RiskMetrics.Columns().MetricDate).
 		Limit(1).
 		Scan(&entity)
-	if err != nil {
+	if err != nil && err != sql.ErrNoRows {
 		return nil, gerror.Wrap(err, "查询最新风险指标失败")
 	}
 

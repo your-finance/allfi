@@ -19,6 +19,12 @@ const themeStore = useThemeStore()
 const { t } = useI18n()
 const colors = computed(() => themeStore.currentTheme.colors)
 
+// 检查是否有足够的数据点（至少 2 个）
+const hasEnoughData = computed(() => {
+  const labels = props.data?.labels
+  return Array.isArray(labels) && labels.length >= 2
+})
+
 // 图表数据
 const chartData = computed(() => ({
   labels: props.data.labels,
@@ -85,7 +91,10 @@ const chartOptions = computed(() => ({
   <div class="drawdown-chart">
     <h3 class="chart-title">{{ t('risk.drawdownCurve') }}</h3>
     <div class="chart-container">
-      <Line :data="chartData" :options="chartOptions" />
+      <Line v-if="hasEnoughData" :data="chartData" :options="chartOptions" />
+      <div v-else class="empty-chart">
+        {{ t('risk.insufficientData') }}
+      </div>
     </div>
   </div>
 </template>
@@ -107,5 +116,14 @@ const chartOptions = computed(() => ({
 
 .chart-container {
   height: 240px;
+}
+
+.empty-chart {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
 }
 </style>

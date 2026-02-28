@@ -804,6 +804,7 @@ export const translations = {
       period_30d: "30天",
       period_90d: "90天",
       period_1y: "1年",
+      insufficientData: "数据点不足，无法显示趋势图",
     },
 
     // 分享功能
@@ -1895,6 +1896,7 @@ export const translations = {
       period_30d: "30天",
       period_90d: "90天",
       period_1y: "1年",
+      insufficientData: "數據點不足，無法顯示趨勢圖",
     },
 
     // 分享功能
@@ -2991,6 +2993,7 @@ export const translations = {
       period_30d: "30D",
       period_90d: "90D",
       period_1y: "1Y",
+      insufficientData: "Insufficient data to show trend chart",
     },
 
     // Share
