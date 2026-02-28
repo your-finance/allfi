@@ -261,9 +261,15 @@ const navigateTo = (path) => {
   isMobileSidebarOpen.value = false
 }
 
-const selectPricingCurrency = (code) => {
+const selectPricingCurrency = async (code) => {
   setPricingCurrency(code)
   isCurrencyDropdownOpen.value = false
+  // 同步保存到数据库，确保 Settings 页面加载时能获取正确的值
+  try {
+    await settingsService.updateSettings({ currency: code })
+  } catch (err) {
+    console.warn('保存计价货币设置失败:', err)
+  }
 }
 
 const selectLanguage = (langCode) => {

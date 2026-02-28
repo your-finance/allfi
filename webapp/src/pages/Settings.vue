@@ -267,6 +267,18 @@ const settings = ref({
 const isSaving = ref(false)
 const saveSuccess = ref(false)
 
+// 切换计价货币并立即保存
+const changeCurrency = async (code) => {
+  settings.value.currency = code
+  setPricingCurrency(code)
+  // 立即保存到数据库
+  try {
+    await settingsService.updateSettings({ currency: code })
+  } catch (err) {
+    console.warn('保存计价货币设置失败:', err)
+  }
+}
+
 // 语言选项（从store获取）
 const languageOptions = themeStore.availableLanguages.map(lang => ({
   value: lang.code,
@@ -644,7 +656,7 @@ onMounted(() => {
                 :key="curr.value"
                 class="currency-btn"
                 :class="{ active: settings.currency === curr.value }"
-                @click="settings.currency = curr.value; setPricingCurrency(curr.value)"
+                @click="changeCurrency(curr.value)"
               >
                 <span class="currency-symbol">{{ curr.symbol }}</span>
                 <span class="currency-code">{{ curr.value }}</span>
