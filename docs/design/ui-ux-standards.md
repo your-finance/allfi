@@ -1,6 +1,6 @@
 # AllFi UI/UX 设计规范
 
-> 版本：v2.0 | 更新时间：2026-02-11
+> 版本：v2.1 | 更新时间：2026-02-28
 
 ---
 
@@ -431,23 +431,27 @@ import { PhChartPieSlice, PhWallet, PhGear } from '@phosphor-icons/vue'
 
 ## 十、组件清单
 
-### 已实现组件（39 个）
+### 已实现组件（57 个）
 
-**基础组件**：StatCard、CryptoIcon、ToastContainer、NotificationPanel、BottomNav
+**基础组件（7 个）**：StatCard、CryptoIcon、ToastContainer、NotificationPanel、BottomNav、PullToRefresh、VersionBadge
 
-**对话框/抽屉**：AddAccountDialog、PriceAlertDialog、BatchImportDialog、AddGoalDialog、AddStrategyDialog、WalletConnectDialog、AssetDetailDrawer、PortfolioShareDialog
+**对话框/抽屉（8 个）**：AddAccountDialog、PriceAlertDialog、BatchImportDialog、AddGoalDialog、AddStrategyDialog、WalletConnectDialog、AssetDetailDrawer、PortfolioShareDialog
 
-**数据展示**：GoalCard、HealthScoreCard、ShareCard、TransactionItem、TransactionTimeline、TransactionFilter、CalendarHeatmap
+**数据展示（5 个）**：GoalCard、HealthScoreCard、ShareCard、CalendarHeatmap、BenchmarkPanel
 
-**DeFi/NFT**：DeFiOverview、DeFiPositionCard、NFTOverview、NFTGallery、NFTCard
+**交易记录（3 个）**：TransactionItem、TransactionTimeline、TransactionFilter
 
-**高级功能**：StrategyPanel、RebalanceView、FeeAnalytics、DashboardCustomizer、CommandPalette、OnboardingWizard、BenchmarkPanel、AnnualReport、AnnualReportShare
+**DeFi/NFT（11 个）**：DeFiOverview、DeFiPositionCard、DeFiMiniCard、NFTOverview、NFTGallery、NFTCard、NFTMiniCard、LendingPositionCard、LendingOptimizer、LendingRateChart、HealthFactorGauge
 
-**成就系统**：AchievementPanel、AchievementBadge、AchievementUnlock
+**分析与风险（7 个）**：FeeAnalytics、AttributionPanel、DrawdownChart、ForecastPanel、RiskAlertPanel、RiskMetricsChart、RiskOverviewCard、BetaComparisonCard
 
-**其他**：WalletConnectButton、PullToRefresh
+**高级功能（8 个）**：StrategyPanel、RebalanceView、DashboardCustomizer、CommandPalette、OnboardingWizard、BenchmarkPanel、AnnualReport、AnnualReportShare、WalletConnectButton
+
+**成就系统（3 个）**：AchievementPanel、AchievementBadge、AchievementUnlock
+
+**其他（5 个）**：WalletConnectButton、PullToRefresh、AttributionPanel、DrawdownChart、ForecastPanel、RiskAlertPanel、RiskMetricsChart、RiskOverviewCard、BetaComparisonCard
 
 ---
 
 **文档维护者**: @allfi
-**最后更新**: 2026-02-11
+**最后更新**: 2026-02-28

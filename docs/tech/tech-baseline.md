@@ -1,6 +1,6 @@
 # AllFi 技术基线文档
 
-> 版本：v2.2 | 更新时间：2026-02-28 | 状态：与代码实现对齐
+> 版本：v2.3 | 更新时间：2026-02-28 | 状态：与代码实现对齐
 
 ---
 
@@ -17,8 +17,8 @@
 │                      前端层 (Frontend)                            │
 │  ┌──────────────────────────────────────────────────────────┐   │
 │  │  Vue 3 + Vite 7 + Pinia 3                                │   │
-│  │  - 13 个页面 (SPA, hash 路由)                              │   │
-│  │  - 54 个组件                                               │   │
+│  │  - 12 个页面 (SPA, hash 路由)                              │   │
+│  │  - 57 个组件                                               │   │
 │  │  - 13 个 Pinia Store                                       │   │
 │  │  - Chart.js 4 数据可视化                                    │   │
 │  │  - Tailwind CSS 4 + 4 套主题                               │   │
@@ -169,9 +169,9 @@ allfi/
 ├── webapp/
 │   ├── src/
 │   │   ├── stores/ (13 个)            # Pinia Store
-│   │   ├── api/ (16 个模块)           # API 服务
+│   │   ├── api/ (15 个模块)           # API 服务
 │   │   ├── composables/               # Vue Composables
-│   │   ├── i18n/                      # 多语言 (800+ key)
+│   │   ├── i18n/                      # 多语言 (900+ key)
 │   │   └── data/                      # Mock 数据
 │   ├── public/
 │   └── package.json
@@ -491,12 +491,12 @@ sqlite3 data/allfi.db ".backup data/backup/allfi_$(date +%Y%m%d).db"
 | 后端 Repository | 23 个 |
 | 数据库表 | 23 张 |
 | 第三方集成 | 9 个模块（含跨链桥） |
-| DeFi 协议 | 9 个（含 Aave V3、Compound V3） |
+| DeFi 协议 | 7 个（Aave/Compound/Lido/Rocket Pool/Uniswap V2/Uniswap V3/Curve） |
 | 定时任务 | 10 个 |
-| 前端页面 | 13 个 |
-| 前端组件 | 54 个 |
+| 前端页面 | 12 个 |
+| 前端组件 | 57 个 |
 | Pinia Store | 13 个 |
-| API 服务模块 | 17 个 |
+| API 服务模块 | 15 个 |
 | i18n 翻译 key | 900+ |
 | 主题 | 4 套 |
 | 支持语言 | 3 种 |

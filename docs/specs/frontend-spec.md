@@ -1,6 +1,6 @@
 # AllFi 前端需求规格
 
-> 版本：v2.0 | 更新时间：2026-02-11
+> 版本：v2.1 | 更新时间：2026-02-28
 
 ---
 
@@ -32,14 +32,19 @@ webapp/src/
 │   ├── index.js            # 基础 HTTP 客户端 + 请求封装
 │   ├── achievementService.js
 │   ├── annualReportService.js
+│   ├── benchmarkService.js
 │   ├── defiService.js
 │   ├── feeService.js
+│   ├── marketService.js
 │   ├── nftService.js
+│   ├── riskService.js
 │   ├── socialService.js
 │   ├── strategyService.js
-│   └── transactionService.js
-├── components/             # 39 个可复用组件
-├── composables/            # 8 个组合式函数
+│   ├── systemService.js
+│   ├── transactionService.js
+│   └── cross-chain.js      # 跨链交易服务
+├── components/             # 57 个可复用组件
+├── composables/            # 9 个组合式函数
 │   ├── useI18n.js          # 多语言翻译
 │   ├── useToast.js         # 消息通知
 │   ├── useFormatters.js    # 格式化（日期/数字/货币）
@@ -47,14 +52,15 @@ webapp/src/
 │   ├── useShareImage.js    # 分享图片生成
 │   ├── useExportData.js    # 数据导出
 │   ├── useWalletConnect.js # WalletConnect 集成
-│   └── usePullToRefresh.js # 下拉刷新
+│   ├── usePullToRefresh.js # 下拉刷新
+│   └── useTheme.js         # 主题切换
 ├── data/                   # Mock 数据（开发/演示用）
 ├── i18n/
-│   └── index.js            # 3 语言翻译（zh-CN/zh-TW/en-US），800+ key
-├── pages/                  # 9 个页面组件
+│   └── index.js            # 3 语言翻译（zh-CN/zh-TW/en-US），900+ key
+├── pages/                  # 12 个页面组件
 ├── router/
 │   └── index.js            # 路由配置 + 认证守卫
-├── stores/                 # 12 个 Pinia Store
+├── stores/                 # 13 个 Pinia Store
 ├── styles/
 │   └── main.css            # 全局样式 + 设计令牌
 ├── themes/
@@ -82,7 +88,12 @@ const routes = [
   { path: '/history',   name: 'History',   component: History,   meta: { requiresAuth: true, titleKey: 'nav.history' } },
   { path: '/analytics', name: 'Analytics', component: Analytics, meta: { requiresAuth: true, titleKey: 'nav.analytics' } },
   { path: '/reports',   name: 'Reports',   component: Reports,   meta: { requiresAuth: true, titleKey: 'nav.reports' } },
+  { path: '/risk',      name: 'Risk',      component: Risk,      meta: { requiresAuth: true, titleKey: 'nav.risk' } },
   { path: '/settings',  name: 'Settings',  component: Settings,  meta: { requiresAuth: true, titleKey: 'nav.settings' } },
+
+  // DeFi 和 NFT 专题页面（需登录）
+  { path: '/defi',      name: 'DeFi',      component: DeFi,      meta: { requiresAuth: true, titleKey: 'nav.defi' } },
+  { path: '/nft',       name: 'NFT',       component: NFT,       meta: { requiresAuth: true, titleKey: 'nav.nft' } },
 
   // 404 重定向
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' }
@@ -245,20 +256,21 @@ restoreSession()      // 恢复会话
 
 ---
 
-## 7. 组件清单（39 个）
+## 7. 组件清单（57 个）
 
-### 7.1 基础组件
+### 7.1 基础组件（7 个）
 
 | 组件 | 功能 |
 |------|------|
-| StatCard.vue | 统计卡片（5 种 variant） |
+| StatCard.vue | 统计卡片（多种 variant） |
 | CryptoIcon.vue | 加密资产图标 |
 | ToastContainer.vue | Toast 消息容器 |
 | NotificationPanel.vue | 通知面板 |
 | BottomNav.vue | 移动端底部导航 |
 | PullToRefresh.vue | 下拉刷新 |
+| VersionBadge.vue | 版本徽章 |
 
-### 7.2 对话框/抽屉
+### 7.2 对话框/抽屉（8 个）
 
 | 组件 | 功能 |
 |------|------|
@@ -267,11 +279,11 @@ restoreSession()      // 恢复会话
 | PriceAlertDialog.vue | 价格预警设置 |
 | BatchImportDialog.vue | 批量导入钱包地址 |
 | AddGoalDialog.vue | 添加投资目标 |
-
+| AddStrategyDialog.vue | 添加策略 |
 | WalletConnectDialog.vue | WalletConnect 连接 |
 | PortfolioShareDialog.vue | 投资组合分享 |
 
-### 7.3 数据展示
+### 7.3 数据展示（5 个）
 
 | 组件 | 功能 |
 |------|------|
@@ -281,7 +293,7 @@ restoreSession()      // 恢复会话
 | CalendarHeatmap.vue | 日历热力图 |
 | BenchmarkPanel.vue | 基准对比面板 |
 
-### 7.4 交易记录
+### 7.4 交易记录（3 个）
 
 | 组件 | 功能 |
 |------|------|
@@ -289,22 +301,39 @@ restoreSession()      // 恢复会话
 | TransactionItem.vue | 单条交易项 |
 | TransactionFilter.vue | 交易筛选器 |
 
-### 7.5 DeFi / NFT
+### 7.5 DeFi / NFT（11 个）
 
 | 组件 | 功能 |
 |------|------|
 | DeFiOverview.vue | DeFi 仓位概览 |
 | DeFiPositionCard.vue | 单个 DeFi 仓位卡片 |
+| DeFiMiniCard.vue | DeFi 迷你卡片 |
+| LendingPositionCard.vue | 借贷仓位卡片 |
+| LendingOptimizer.vue | 借贷优化器 |
+| LendingRateChart.vue | 借贷利率图表 |
+| HealthFactorGauge.vue | 健康因子仪表盘 |
 | NFTOverview.vue | NFT 资产概览 |
 | NFTGallery.vue | NFT 画廊 |
 | NFTCard.vue | 单个 NFT 卡片 |
+| NFTMiniCard.vue | NFT 迷你卡片 |
 
-### 7.6 高级功能
+### 7.6 分析与风险（7 个）
 
 | 组件 | 功能 |
 |------|------|
 | FeeAnalytics.vue | 费用分析 |
+| AttributionPanel.vue | 盈亏归因分析 |
+| DrawdownChart.vue | 回撤图表 |
+| ForecastPanel.vue | 收益预测 |
+| RiskAlertPanel.vue | 风险预警面板 |
+| RiskMetricsChart.vue | 风险指标图表 |
+| RiskOverviewCard.vue | 风险概览卡片 |
+| BetaComparisonCard.vue | Beta 对比卡片 |
 
+### 7.7 高级功能（8 个）
+
+| 组件 | 功能 |
+|------|------|
 | RebalanceView.vue | 再平衡视图 |
 | DashboardCustomizer.vue | Widget 配置 |
 | CommandPalette.vue | 命令面板（Cmd+K） |
@@ -312,14 +341,25 @@ restoreSession()      // 恢复会话
 | AnnualReport.vue | 年度报告 |
 | AnnualReportShare.vue | 年度报告分享 |
 | WalletConnectButton.vue | 钱包连接按钮 |
+| StrategyPanel.vue | 策略面板 |
 
-### 7.7 成就系统
+### 7.8 成就系统（3 个）
 
 | 组件 | 功能 |
 |------|------|
 | AchievementPanel.vue | 成就面板 |
 | AchievementBadge.vue | 成就徽章 |
 | AchievementUnlock.vue | 成就解锁动画 |
+
+### 7.9 新增组件（5 个）
+
+| 组件 | 功能 |
+|------|------|
+| AttributionPanel.vue | 盈亏归因分析面板 |
+| DrawdownChart.vue | 回撤图表 |
+| ForecastPanel.vue | 收益预测面板 |
+| RiskAlertPanel.vue | 风险预警面板 |
+| RiskMetricsChart.vue | 风险指标图表 |
 
 ---
 
@@ -362,10 +402,30 @@ VitePWA({
 ## 10. 国际化
 
 - 3 种语言：简体中文（zh-CN，默认）/ 繁體中文（zh-TW）/ English（en-US）
-- 32 个翻译分区，800+ key
+- 32 个翻译分区，900+ key
 - 使用 `useI18n()` composable，详见 [docs/design/i18n.md](../design/i18n.md)
 
 ---
 
+## 11. Store 清单（13 个）
+
+| Store | 功能 |
+|-------|------|
+| authStore | 认证状态（PIN/2FA） |
+| assetStore | 资产总览与明细 |
+| accountStore | CEX/钱包/手动资产账户 |
+| transactionStore | 统一交易记录 |
+| nftStore | NFT 资产 |
+| goalStore | 投资目标 |
+| achievementStore | 成就系统 |
+| notificationStore | 通知管理 |
+| strategyStore | 策略引擎 |
+| systemStore | 系统配置 |
+| themeStore | 主题切换 |
+| dashboardStore | Dashboard 数据聚合 |
+| commandStore | 命令面板（Cmd+K） |
+
+---
+
 **文档维护者**: @allfi
-**最后更新**: 2026-02-11
+**最后更新**: 2026-02-28
