@@ -49,6 +49,7 @@ data/*.sqlite
 
 # Config & Secrets
 core/config/config.yaml
+core/manifest/config/config.yaml
 *.env
 *.env.local
 .env
