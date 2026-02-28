@@ -76,7 +76,10 @@ export const authService = {
   async setup2FA() {
     if (USE_MOCK) {
       await simulateDelay(400);
-      return { secret: "MOCKSECRET123", qr_url: "otpauth://totp/AllFi?secret=MOCKSECRET123&issuer=AllFi" };
+      return {
+        secret: "MOCKSECRET123",
+        qr_url: "otpauth://totp/AllFi?secret=MOCKSECRET123&issuer=AllFi",
+      };
     }
     return post("/auth/2fa/setup");
   },
@@ -119,7 +122,26 @@ export const authService = {
       return { success: true, token: "mock-jwt-token-2fa-" + Date.now() };
     }
     return post("/auth/2fa/verify", { code });
-  }
+  },
+
+  /**
+   * 切换密码类型
+   * @param {string} currentPassword - 当前密码
+   * @param {string} newType - 新类型（pin/complex）
+   * @param {string} newPassword - 新密码
+   * @returns {Promise<{success: boolean}>}
+   */
+  async switchPasswordType(currentPassword, newType, newPassword) {
+    if (USE_MOCK) {
+      await simulateDelay(400);
+      return { success: true };
+    }
+    return post("/auth/switch-type", {
+      current_password: currentPassword,
+      new_type: newType,
+      new_password: newPassword,
+    });
+  },
 };
 
 // ========== 资产服务 ==========
@@ -1837,11 +1859,41 @@ export const analyticsService = {
         total_return: (Math.random() - 0.3) * 3000,
         total_percent: (Math.random() - 0.3) * 5,
         attributions: [
-          { symbol: "BTC", source: "binance", contribution: 950, weight: 42, return: 3.5 },
-          { symbol: "ETH", source: "ethereum", contribution: 420, weight: 28, return: 2.3 },
-          { symbol: "SOL", source: "binance", contribution: -180, weight: 8, return: -3.5 },
-          { symbol: "USDC", source: "coinbase", contribution: 12, weight: 15, return: 0.1 },
-          { symbol: "MATIC", source: "polygon", contribution: -65, weight: 7, return: -1.4 },
+          {
+            symbol: "BTC",
+            source: "binance",
+            contribution: 950,
+            weight: 42,
+            return: 3.5,
+          },
+          {
+            symbol: "ETH",
+            source: "ethereum",
+            contribution: 420,
+            weight: 28,
+            return: 2.3,
+          },
+          {
+            symbol: "SOL",
+            source: "binance",
+            contribution: -180,
+            weight: 8,
+            return: -3.5,
+          },
+          {
+            symbol: "USDC",
+            source: "coinbase",
+            contribution: 12,
+            weight: 15,
+            return: 0.1,
+          },
+          {
+            symbol: "MATIC",
+            source: "polygon",
+            contribution: -65,
+            weight: 7,
+            return: -1.4,
+          },
         ],
         days: { "7d": 7, "30d": 30, "90d": 90, "1y": 365 }[range] || 7,
         currency,
