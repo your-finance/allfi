@@ -40,6 +40,7 @@ import { useToast } from '../composables/useToast'
 import { useWebPush } from '../composables/useWebPush'
 import { settingsService } from '../api/index.js'
 import { transactionService } from '../api/transactionService.js'
+import QRCode from 'qrcode'
 
 // 使用主题 Store 和多语言
 const themeStore = useThemeStore()
@@ -136,15 +137,50 @@ const disableError = ref('')
 const isDisabling = ref(false)
 const codeCopied = ref(false)
 
-// 模拟密钥
-const twoFASecret = ref('JBSWY3DPEHPK3PXP')
+// 2FA 设置数据（从后端 API 获取）
+const twoFASecret = ref('')
+const twoFAQrUrl = ref('')
+const qrDataUrl = ref('')
+const isSetupLoading = ref(false)
+const setupError = ref('')
 
 // 开始设置2FA
-const startSetup2FA = () => {
+const startSetup2FA = async () => {
   show2FASetupModal.value = true
   setupStep.value = 1
   verifyCode.value = ''
   verifyError.value = ''
+  twoFASecret.value = ''
+  twoFAQrUrl.value = ''
+  qrDataUrl.value = ''
+  setupError.value = ''
+  isSetupLoading.value = true
+
+  try {
+    // 调用后端 API 获取真正的 TOTP 密钥和二维码 URL
+    const result = await authStore.setup2FA()
+    if (result) {
+      twoFASecret.value = result.secret || ''
+      twoFAQrUrl.value = result.qr_url || ''
+
+      // 使用 qrcode 库生成二维码图片
+      if (twoFAQrUrl.value) {
+        qrDataUrl.value = await QRCode.toDataURL(twoFAQrUrl.value, {
+          width: 200,
+          margin: 2,
+          color: {
+            dark: '#000000',
+            light: '#ffffff'
+          }
+        })
+      }
+    }
+  } catch (err) {
+    setupError.value = err.message || '获取 2FA 配置失败'
+    console.error('获取 2FA 配置失败:', err)
+  } finally {
+    isSetupLoading.value = false
+  }
 }
 
 // 复制密钥
@@ -1050,33 +1086,55 @@ onMounted(() => {
                 </div>
                 
                 <div class="modal-body">
-                  <!-- QR Code 占位 -->
-                  <div class="qr-code-container">
-                    <div class="qr-placeholder">
-                      <PhQrCode :size="80" />
-                      <span>{{ t('settings.twoFA.scanQR') }}</span>
+                  <!-- 加载中状态 -->
+                  <div v-if="isSetupLoading" class="qr-code-container">
+                    <div class="qr-loading">
+                      <PhArrowsClockwise :size="48" class="spin" />
+                      <span>{{ t('common.loading') || '加载中...' }}</span>
                     </div>
                   </div>
-                  
-                  <!-- 密钥显示 -->
-                  <div class="secret-key">
-                    <span class="secret-label">{{ t('settings.twoFA.secretKey') }}</span>
-                    <div class="secret-value">
-                      <code>{{ twoFASecret }}</code>
-                      <button class="copy-btn" @click="copySecret">
-                        <PhCheck v-if="codeCopied" :size="16" />
-                        <PhCopy v-else :size="16" />
+
+                  <!-- 加载失败状态 -->
+                  <div v-else-if="setupError" class="qr-code-container">
+                    <div class="qr-error">
+                      <PhWarning :size="48" weight="fill" />
+                      <span>{{ setupError }}</span>
+                      <button class="btn btn-secondary btn-sm" @click="startSetup2FA">
+                        {{ t('common.retry') || '重试' }}
                       </button>
                     </div>
-                    <span class="secret-hint">{{ t('settings.twoFA.manualEntry') }}</span>
                   </div>
+
+                  <!-- QR Code 显示 -->
+                  <template v-else>
+                    <div class="qr-code-container">
+                      <img v-if="qrDataUrl" :src="qrDataUrl" alt="2FA QR Code" class="qr-code-img" />
+                      <div v-else class="qr-placeholder">
+                        <PhQrCode :size="80" />
+                        <span>{{ t('settings.twoFA.scanQR') }}</span>
+                      </div>
+                    </div>
+
+                    <!-- 密钥显示 -->
+                    <div class="secret-key">
+                      <span class="secret-label">{{ t('settings.twoFA.secretKey') }}</span>
+                      <div class="secret-value">
+                        <code>{{ twoFASecret || '-' }}</code>
+                        <button class="copy-btn" @click="copySecret" :disabled="!twoFASecret">
+                          <PhCheck v-if="codeCopied" :size="16" />
+                          <PhCopy v-else :size="16" />
+                        </button>
+                      </div>
+                      <span class="secret-hint">{{ t('settings.twoFA.manualEntry') }}</span>
+                    </div>
+                  </template>
                 </div>
-                
+
                 <div class="modal-actions">
                   <button class="btn btn-secondary" @click="show2FASetupModal = false">
                     {{ t('common.cancel') }}
                   </button>
-                  <button class="btn btn-primary" @click="setupStep = 2">
+                  <button class="btn btn-primary" @click="setupStep = 2" :disabled="isSetupLoading || !qrDataUrl">
                     {{ t('settings.twoFA.next') }}
                   </button>
                 </div>
@@ -1976,8 +2034,53 @@ onMounted(() => {
   font-size: 12px;
 }
 
+.qr-loading {
+  width: 200px;
+  height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap-md);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.qr-loading .spin {
+  animation: spin 1s linear infinite;
+}
+
+.qr-error {
+  width: 200px;
+  padding: var(--gap-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap-sm);
+  background: color-mix(in srgb, var(--color-error) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-error) 30%, transparent);
+  border-radius: var(--radius-md);
+  color: var(--color-error);
+  font-size: 13px;
+  text-align: center;
+}
+
+.qr-code-img {
+  width: 200px;
+  height: 200px;
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  padding: var(--gap-sm);
+}
+
 .secret-key {
   text-align: center;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .secret-label {
@@ -1996,14 +2099,20 @@ onMounted(() => {
   padding: var(--gap-sm) var(--gap-md);
   border-radius: var(--radius-sm);
   margin-bottom: var(--gap-xs);
+  max-width: 100%;
+  flex-wrap: wrap;
 }
 
 .secret-value code {
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--color-text-primary);
-  letter-spacing: 2px;
+  letter-spacing: 0.5px;
+  word-break: break-all;
+  line-height: 1.5;
+  flex: 1;
+  min-width: 0;
 }
 
 .copy-btn {
