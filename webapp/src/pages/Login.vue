@@ -1,9 +1,10 @@
 <script setup>
 /**
- * Login 页面 - PIN 认证
- * 支持首次设置 PIN 和 PIN 登录两种模式
+ * Login 页面 - 密码认证
+ * 支持首次设置密码和密码登录两种模式
+ * 支持简单 PIN 和复杂密码两种类型
  */
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   PhLock,
@@ -14,18 +15,26 @@ import {
 import { useAuthStore } from '../stores/authStore'
 import { useThemeStore } from '../stores/themeStore'
 import { useI18n } from '../composables/useI18n'
+import PinInput from '../components/PinInput.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const themeStore = useThemeStore()
 const { t } = useI18n()
 
-// 页面模式：setup（首次设置 PIN）或 login（登录）
+// 页面模式：setup（首次设置）或 login（登录）
 const mode = ref('login')
 const pin = ref('')
 const confirmPin = ref('')
 const pinError = ref('')
 const isChecking = ref(true)
+
+// 密码类型（从 authStore 获取）
+const passwordType = computed(() => authStore.passwordType)
+const isPinMode = computed(() => passwordType.value === 'pin')
+
+// 首次设置时的密码类型选择
+const setupType = ref('pin')
 
 // 初始化：检查认证状态
 onMounted(async () => {
@@ -36,11 +45,18 @@ onMounted(async () => {
   isChecking.value = false
 })
 
-// 验证 PIN 格式
-const validatePin = (value) => {
-  if (!value) return '请输入 PIN'
-  if (!/^\d+$/.test(value)) return 'PIN 只能包含数字'
-  if (value.length < 4 || value.length > 8) return 'PIN 长度为 4-8 位'
+// 验证密码格式
+const validatePassword = (value, type) => {
+  if (!value) return '请输入密码'
+  if (type === 'pin') {
+    if (!/^\d+$/.test(value)) return 'PIN 只能包含数字'
+    if (value.length < 4 || value.length > 20) return 'PIN 长度为 4-20 位'
+  } else {
+    if (value.length < 8 || value.length > 20) return '密码长度为 8-20 位'
+    if (!/[a-z]/.test(value)) return '密码必须包含小写字母'
+    if (!/[A-Z]/.test(value)) return '密码必须包含大写字母'
+    if (!/\d/.test(value)) return '密码必须包含数字'
+  }
   return ''
 }
 
@@ -51,10 +67,10 @@ const handleSubmit = async () => {
 
   if (mode.value === 'setup') {
     // 首次设置模式
-    const err = validatePin(pin.value)
+    const err = validatePassword(pin.value, setupType.value)
     if (err) { pinError.value = err; return }
     if (pin.value !== confirmPin.value) {
-      pinError.value = '两次输入的 PIN 不一致'
+      pinError.value = '两次输入的密码不一致'
       return
     }
     const success = await authStore.setupPIN(pin.value)
@@ -63,7 +79,7 @@ const handleSubmit = async () => {
     }
   } else {
     // 登录模式
-    if (!pin.value) { pinError.value = '请输入 PIN'; return }
+    if (!pin.value) { pinError.value = '请输入密码'; return }
     const result = await authStore.login(pin.value)
     if (result.success) {
       if (result.requires2FA) {
@@ -98,7 +114,8 @@ const handleSubmit = async () => {
           </div>
           <h1 class="auth-title">AllFi</h1>
           <p class="auth-subtitle">
-            {{ mode === 'setup' ? '首次使用，请设置 PIN 码' : '请输入 PIN 码解锁' }}
+            <template v-if="mode === 'setup'">首次使用，请设置密码</template>
+            <template v-else>请输入{{ isPinMode ? 'PIN 码' : '密码' }}解锁</template>
           </p>
         </div>
 
@@ -115,40 +132,80 @@ const handleSubmit = async () => {
             <span>{{ authStore.error || pinError }}</span>
           </div>
 
-          <!-- PIN 表单 -->
+          <!-- 密码表单 -->
           <form @submit.prevent="handleSubmit" class="auth-form">
-            <!-- PIN 输入 -->
+            <!-- 首次设置：选择密码类型 -->
+            <div v-if="mode === 'setup'" class="password-type-selector">
+              <button
+                type="button"
+                class="type-btn"
+                :class="{ active: setupType === 'pin' }"
+                @click="setupType = 'pin'; pin = ''; confirmPin = ''"
+              >
+                <span class="type-label">简单 PIN</span>
+                <span class="type-desc">4-20 位数字</span>
+              </button>
+              <button
+                type="button"
+                class="type-btn"
+                :class="{ active: setupType === 'complex' }"
+                @click="setupType = 'complex'; pin = ''; confirmPin = ''"
+              >
+                <span class="type-label">复杂密码</span>
+                <span class="type-desc">8-20 位，含大小写字母+数字</span>
+              </button>
+            </div>
+
+            <!-- PIN/密码输入 -->
             <div class="form-group">
               <label class="form-label">
-                {{ mode === 'setup' ? '设置 PIN 码（4-8 位数字）' : 'PIN 码' }}
+                <template v-if="mode === 'setup'">
+                  {{ setupType === 'pin' ? '设置 PIN 码（4-20 位数字）' : '设置密码（8-20 位，含大小写字母和数字）' }}
+                </template>
+                <template v-else>
+                  {{ isPinMode ? 'PIN 码' : '密码' }}
+                </template>
               </label>
-              <div class="input-wrapper" :class="{ 'has-error': pinError }">
+
+              <!-- PIN 模式：格子输入（登录时或设置 PIN 时） -->
+              <PinInput
+                v-if="(mode === 'login' && isPinMode) || (mode === 'setup' && setupType === 'pin')"
+                v-model="pin"
+                :length="6"
+                :disabled="authStore.isLoading"
+                @complete="handleSubmit"
+              />
+
+              <!-- 复杂密码模式：普通输入框 -->
+              <div v-else class="input-wrapper" :class="{ 'has-error': pinError }">
                 <PhLock :size="20" class="input-icon" />
                 <input
                   type="password"
                   v-model="pin"
                   class="form-input"
-                  placeholder="输入 PIN 码"
-                  inputmode="numeric"
-                  maxlength="8"
-                  autocomplete="off"
+                  :placeholder="mode === 'setup' ? '输入密码' : '输入密码'"
+                  autocomplete="current-password"
+                  maxlength="20"
+                  @keyup.enter="handleSubmit"
                   @input="pinError = ''; authStore.clearError()"
                 />
               </div>
             </div>
 
-            <!-- 确认 PIN（仅设置模式） -->
+            <!-- 确认密码（仅设置模式） -->
             <div v-if="mode === 'setup'" class="form-group">
-              <label class="form-label">确认 PIN 码</label>
+              <label class="form-label">
+                {{ setupType === 'pin' ? '确认 PIN 码' : '确认密码' }}
+              </label>
               <div class="input-wrapper">
                 <PhShieldCheck :size="20" class="input-icon" />
                 <input
                   type="password"
                   v-model="confirmPin"
                   class="form-input"
-                  placeholder="再次输入 PIN 码"
-                  inputmode="numeric"
-                  maxlength="8"
+                  :placeholder="setupType === 'pin' ? '再次输入 PIN 码' : '再次输入密码'"
+                  :inputmode="setupType === 'pin' ? 'numeric' : 'text'"
+                  maxlength="20"
                   autocomplete="off"
                   @input="pinError = ''"
                 />
@@ -162,14 +219,14 @@ const handleSubmit = async () => {
               :disabled="authStore.isLoading"
             >
               <PhSpinner v-if="authStore.isLoading" :size="20" class="spin" />
-              <span v-else>{{ mode === 'setup' ? '设置 PIN 并进入' : '解锁' }}</span>
+              <span v-else>{{ mode === 'setup' ? '设置密码并进入' : '解锁' }}</span>
             </button>
           </form>
 
           <!-- 安全提示 -->
           <div class="security-note">
             <PhShieldCheck :size="16" />
-            <span>PIN 使用 bcrypt 加密存储，所有数据仅保存在本地</span>
+            <span>密码使用 bcrypt 加密存储，所有数据仅保存在本地</span>
           </div>
         </template>
       </div>
@@ -343,6 +400,47 @@ const handleSubmit = async () => {
 
 .input-wrapper.has-error .form-input {
   border-color: var(--color-error);
+}
+
+/* 密码类型选择器 */
+.password-type-selector {
+  display: flex;
+  gap: var(--gap-sm);
+  margin-bottom: var(--gap-md);
+}
+
+.type-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--gap-md);
+  background: var(--color-bg-tertiary);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.type-btn:hover {
+  border-color: var(--color-accent-primary);
+}
+
+.type-btn.active {
+  border-color: var(--color-accent-primary);
+  background: color-mix(in srgb, var(--color-accent-primary) 10%, transparent);
+}
+
+.type-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.type-desc {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: var(--gap-xs);
 }
 
 /* 按钮 */
