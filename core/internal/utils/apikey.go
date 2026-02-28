@@ -16,6 +16,16 @@ import (
 // apiKeyPrefix 数据库中 API Key 的存储前缀
 const apiKeyPrefix = "apikey."
 
+// isContextCanceled 检查 context 是否已取消（用于避免不必要的操作和日志噪音）
+func isContextCanceled(ctx context.Context) bool {
+	select {
+	case <-ctx.Done():
+		return true
+	default:
+		return false
+	}
+}
+
 // providerEnvMap 服务商到环境变量的映射
 var providerEnvMap = map[string]string{
 	"etherscan":    "ETHERSCAN_API_KEY",
@@ -33,6 +43,11 @@ var providerEnvMap = map[string]string{
 // 优先级：数据库（加密存储）> 环境变量 > 空字符串
 // provider: 服务商标识（etherscan / bscscan / coingecko）
 func ResolveAPIKey(ctx context.Context, provider string) string {
+	// 如果 context 已取消，直接返回空字符串（避免产生不必要的数据库查询和错误日志）
+	if isContextCanceled(ctx) {
+		return ""
+	}
+
 	// 1. 先查数据库
 	masterKey := g.Cfg().MustGet(ctx, "security.masterKey").String()
 	if len(masterKey) == 32 {

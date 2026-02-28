@@ -131,6 +131,20 @@ func (s *sMarket) GetGasPrice(ctx context.Context) (*model.MultiChainGasResponse
 //   - chainName: 链标识（ethereum / bsc / polygon）
 //   - envKey: API Key 对应的环境变量名
 func (s *sMarket) getChainGasPrice(ctx context.Context, chainName string, envKey string) *etherscan.GasPrice {
+	// 如果 context 已取消（客户端断开连接），直接返回缓存或零值，避免产生错误日志
+	select {
+	case <-ctx.Done():
+		s.gasCacheMu.RLock()
+		if cached, ok := s.gasCache[chainName]; ok && cached.data != nil {
+			data := cached.data
+			s.gasCacheMu.RUnlock()
+			return data
+		}
+		s.gasCacheMu.RUnlock()
+		return &etherscan.GasPrice{}
+	default:
+	}
+
 	// 先检查缓存（读锁）
 	s.gasCacheMu.RLock()
 	if cached, ok := s.gasCache[chainName]; ok && cached.data != nil && time.Since(cached.time) < s.gasCacheTTL {
