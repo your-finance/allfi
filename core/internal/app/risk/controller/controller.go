@@ -19,15 +19,15 @@ func Register(group *ghttp.RouterGroup) {
 	group.Bind(ctrl)
 }
 
-// GetMetrics 获取最新风险指标
-func (c *Controller) GetMetrics(ctx context.Context, req *v1.GetMetricsReq) (res *v1.GetMetricsRes, err error) {
+// GetOverview 获取风险总览（最新风险指标）
+func (c *Controller) GetOverview(ctx context.Context, req *v1.GetOverviewReq) (res *v1.GetOverviewRes, err error) {
 	metrics, err := service.Risk().GetLatestMetrics(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	// 转换为 API 响应格式
-	res = &v1.GetMetricsRes{
+	res = &v1.GetOverviewRes{
 		Metrics: &v1.RiskMetrics{
 			MetricDate:          metrics.MetricDate,
 			PortfolioValue:      metrics.PortfolioValue,
@@ -41,15 +41,21 @@ func (c *Controller) GetMetrics(ctx context.Context, req *v1.GetMetricsReq) (res
 			Volatility:          metrics.Volatility,
 			DownsideDeviation:   metrics.DownsideDeviation,
 			CalculationPeriod:   metrics.CalculationPeriod,
+			RiskLevel:           metrics.RiskLevel,
 		},
 	}
 
 	return res, nil
 }
 
-// GetHistory 获取历史风险指标
-func (c *Controller) GetHistory(ctx context.Context, req *v1.GetHistoryReq) (res *v1.GetHistoryRes, err error) {
-	history, err := service.Risk().GetHistoryMetrics(ctx, req.Days)
+// GetMetrics 获取风险指标历史
+func (c *Controller) GetMetrics(ctx context.Context, req *v1.GetMetricsReq) (res *v1.GetMetricsRes, err error) {
+	days := req.Days
+	if days == 0 {
+		days = 30
+	}
+
+	history, err := service.Risk().GetHistoryMetrics(ctx, days)
 	if err != nil {
 		return nil, err
 	}
@@ -70,10 +76,11 @@ func (c *Controller) GetHistory(ctx context.Context, req *v1.GetHistoryReq) (res
 			Volatility:          m.Volatility,
 			DownsideDeviation:   m.DownsideDeviation,
 			CalculationPeriod:   m.CalculationPeriod,
+			RiskLevel:           m.RiskLevel,
 		})
 	}
 
-	res = &v1.GetHistoryRes{
+	res = &v1.GetMetricsRes{
 		History: apiHistory,
 	}
 
@@ -107,6 +114,7 @@ func (c *Controller) Calculate(ctx context.Context, req *v1.CalculateReq) (res *
 			Volatility:          metrics.Volatility,
 			DownsideDeviation:   metrics.DownsideDeviation,
 			CalculationPeriod:   metrics.CalculationPeriod,
+			RiskLevel:           metrics.RiskLevel,
 		},
 		Message: "风险指标计算完成",
 	}

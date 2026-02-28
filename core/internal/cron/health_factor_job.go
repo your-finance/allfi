@@ -136,7 +136,7 @@ func (j *HealthFactorJob) sendAlert(ctx context.Context, pos interface{}) {
 
 	// 发送通知（需要用户ID，这里简化处理）
 	// 实际应该从 pos 中获取用户ID
-	err := notificationService.Notification().Create(ctx, 1, "health_factor_alert", title, content, nil)
+	err := notificationService.Notification().Send(ctx, 1, "health_factor_alert", title, content)
 	if err != nil {
 		g.Log().Errorf(ctx, "[Cron] 发送健康因子预警通知失败: %v", err)
 	}

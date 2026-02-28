@@ -119,6 +119,7 @@ type CronManager struct {
 	reportJob       *ReportJob
 	strategyJob     *StrategyJob
 	riskAlertJob    *RiskAlertJob
+	riskMetricsJob  *RiskMetricsJob
 	exchangeRateJob *ExchangeRateJob
 }
 
@@ -132,6 +133,7 @@ func NewCronManager() *CronManager {
 		reportJob:       NewReportJob(time.Hour),
 		strategyJob:     NewStrategyJob(30 * time.Minute),
 		riskAlertJob:    NewRiskAlertJob(time.Hour),
+		riskMetricsJob:  NewRiskMetricsJob(24 * time.Hour), // 每日 00:30 计算风险指标
 		exchangeRateJob: NewExchangeRateJob(time.Hour),
 	}
 }
@@ -155,6 +157,9 @@ func (m *CronManager) Start() {
 	}
 	if m.riskAlertJob != nil {
 		m.riskAlertJob.Start()
+	}
+	if m.riskMetricsJob != nil {
+		m.riskMetricsJob.Start()
 	}
 	if m.exchangeRateJob != nil {
 		m.exchangeRateJob.Start()
@@ -182,6 +187,9 @@ func (m *CronManager) Stop() {
 	}
 	if m.riskAlertJob != nil {
 		m.riskAlertJob.Stop()
+	}
+	if m.riskMetricsJob != nil {
+		m.riskMetricsJob.Stop()
 	}
 	if m.exchangeRateJob != nil {
 		m.exchangeRateJob.Stop()

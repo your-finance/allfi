@@ -5,26 +5,27 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 )
 
-// GetMetricsReq 获取风险指标请求
-type GetMetricsReq struct {
-	g.Meta `path:"/risk/metrics" method:"get" tags:"风险管理" summary:"获取最新风险指标"`
+// GetOverviewReq 获取风险总览请求
+type GetOverviewReq struct {
+	g.Meta `path:"/risk/overview" method:"get" tags:"风险管理" summary:"获取风险总览"`
 }
 
-// GetMetricsRes 获取风险指标响应
-type GetMetricsRes struct {
+// GetOverviewRes 获取风险总览响应
+type GetOverviewRes struct {
 	Metrics *RiskMetrics `json:"metrics" dc:"风险指标"`
 }
 
-// GetHistoryReq 获取历史风险指标请求
-type GetHistoryReq struct {
-	g.Meta `path:"/risk/history" method:"get" tags:"风险管理" summary:"获取历史风险指标"`
-	Days   int `json:"days" v:"required|min:7|max:365" dc:"查询天数（7-365）"`
+// GetMetricsReq 获取风险指标历史请求
+type GetMetricsReq struct {
+	g.Meta `path:"/risk/metrics" method:"get" tags:"风险管理" summary:"获取风险指标历史"`
+	Days   int `json:"days" v:"min:7|max:365" dc:"查询天数（7-365，默认30）" d:"30"`
 }
 
-// GetHistoryRes 获取历史风险指标响应
-type GetHistoryRes struct {
+// GetMetricsRes 获取风险指标历史响应
+type GetMetricsRes struct {
 	History []*RiskMetrics `json:"history" dc:"历史风险指标列表"`
 }
+
 
 // CalculateReq 手动触发风险指标计算请求
 type CalculateReq struct {
@@ -52,4 +53,5 @@ type RiskMetrics struct {
 	Volatility           float64 `json:"volatility" dc:"波动率（年化）"`
 	DownsideDeviation    float64 `json:"downside_deviation" dc:"下行偏差"`
 	CalculationPeriod    int     `json:"calculation_period" dc:"计算周期（天数）"`
+	RiskLevel            string  `json:"risk_level" dc:"风险等级（low/medium/high/extreme）"`
 }
