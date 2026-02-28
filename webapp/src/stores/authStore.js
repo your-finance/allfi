@@ -12,6 +12,8 @@ export const useAuthStore = defineStore("auth", () => {
   const pinSet = ref(false);
   const token = ref(null);
   const twoFAEnabled = ref(false);
+  // 密码类型（pin 或 complex）
+  const passwordType = ref("pin");
 
   // 加载状态
   const isLoading = ref(false);
@@ -37,11 +39,13 @@ export const useAuthStore = defineStore("auth", () => {
       const result = await authService.getStatus();
       pinSet.value = result.pin_set;
       twoFAEnabled.value = result.two_fa_enabled || false;
+      passwordType.value = result.password_type || "pin";
       return result.pin_set;
     } catch {
       // 后端不可用时默认不需要认证
       pinSet.value = false;
       twoFAEnabled.value = false;
+      passwordType.value = "pin";
       return false;
     }
   }
@@ -296,6 +300,35 @@ export const useAuthStore = defineStore("auth", () => {
     return true;
   }
 
+  /**
+   * 切换密码类型
+   * @param {string} currentPassword - 当前密码
+   * @param {string} newType - 新类型（pin/complex）
+   * @param {string} newPassword - 新密码
+   * @returns {Promise<boolean>}
+   */
+  async function switchPasswordType(currentPassword, newType, newPassword) {
+    isLoading.value = true;
+    error.value = null;
+
+    try {
+      const result = await authService.switchPasswordType(
+        currentPassword,
+        newType,
+        newPassword,
+      );
+      if (result.success) {
+        passwordType.value = newType;
+      }
+      return result.success;
+    } catch (err) {
+      error.value = err.message || "切换密码类型失败";
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   return {
     // State
     user,
@@ -307,6 +340,7 @@ export const useAuthStore = defineStore("auth", () => {
     pinSet,
     token,
     twoFAEnabled,
+    passwordType,
 
     // Computed
     isLoggedIn,
@@ -321,6 +355,7 @@ export const useAuthStore = defineStore("auth", () => {
     register,
     verify2FA,
     resend2FACode,
+    switchPasswordType,
 
     // 2FA
     setup2FA,
