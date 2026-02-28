@@ -153,9 +153,8 @@ func (s *sAuth) Login(ctx context.Context, pin string) (*authApi.LoginRes, error
 			return nil, gerror.Wrap(err, "生成 2FA 临时 Token 失败")
 		}
 		g.Log().Info(ctx, "PIN 校验成功，等待 2FA 验证")
-		// 前端收到 login res 后，如果有临时 token 可能需要特殊状态处理
-		// 我们直接把 token 给前端，前端调用受限于中间件的实际授权（见 middleware 调整）
-		return &authApi.LoginRes{Token: token}, nil
+		// 前端收到 login res 后，检查 requires_2fa 字段，跳转到 2FA 验证页面
+		return &authApi.LoginRes{Token: token, Requires2FA: true}, nil
 	}
 
 	// 生成完全授权 JWT Token

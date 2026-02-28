@@ -64,9 +64,14 @@ const handleSubmit = async () => {
   } else {
     // 登录模式
     if (!pin.value) { pinError.value = '请输入 PIN'; return }
-    const success = await authStore.login(pin.value)
-    if (success) {
-      router.push('/dashboard')
+    const result = await authStore.login(pin.value)
+    if (result.success) {
+      if (result.requires2FA) {
+        // 需要 2FA 验证，跳转到 2FA 页面
+        router.push('/2fa')
+      } else {
+        router.push('/dashboard')
+      }
     }
   }
 }

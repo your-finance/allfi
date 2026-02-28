@@ -185,7 +185,10 @@ onMounted(async () => {
   // 初始化需授权的业务数据
   const initAppData = async () => {
     notifStore.initialize()
-    
+
+    // 从后端获取完整的认证状态（包括 twoFAEnabled）
+    await authStore.checkAuthStatus()
+
     // 加载全局用户设置（用户偏好：语言、计价货币等）
     try {
       const data = await settingsService.getSettings()

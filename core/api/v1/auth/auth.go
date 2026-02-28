@@ -34,7 +34,8 @@ type LoginReq struct {
 
 // LoginRes 登录响应
 type LoginRes struct {
-	Token string `json:"token" dc:"JWT Token"`
+	Token       string `json:"token" dc:"JWT Token"`
+	Requires2FA bool   `json:"requires_2fa" dc:"是否需要 2FA 验证"`
 }
 
 // ChangePinReq 修改 PIN 请求

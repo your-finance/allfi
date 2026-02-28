@@ -77,7 +77,7 @@ export const useAuthStore = defineStore("auth", () => {
   /**
    * PIN 登录
    * @param {string} pin - PIN 码
-   * @returns {Promise<boolean>}
+   * @returns {Promise<{success: boolean, requires2FA: boolean}>}
    */
   async function login(pin) {
     isLoading.value = true;
@@ -86,19 +86,40 @@ export const useAuthStore = defineStore("auth", () => {
     try {
       const result = await authService.login(pin);
       token.value = result.token;
+
+      // 检查是否需要 2FA 验证
+      if (result.requires_2fa) {
+        // 需要 2FA 验证，设置标志但不完全认证
+        requires2FA.value = true;
+        isAuthenticated.value = false;
+        // 保存临时 token 到 localStorage
+        localStorage.setItem(
+          "allfi-auth",
+          JSON.stringify({
+            token: result.token,
+            isAuthenticated: false,
+            requires2FA: true,
+          }),
+        );
+        return { success: true, requires2FA: true };
+      }
+
+      // 不需要 2FA，完全认证
       isAuthenticated.value = true;
+      requires2FA.value = false;
       // 保存到 localStorage
       localStorage.setItem(
         "allfi-auth",
         JSON.stringify({
           token: result.token,
           isAuthenticated: true,
+          requires2FA: false,
         }),
       );
-      return true;
+      return { success: true, requires2FA: false };
     } catch (err) {
       error.value = err.message || "登录失败";
-      return false;
+      return { success: false, requires2FA: false };
     } finally {
       isLoading.value = false;
     }
@@ -145,6 +166,7 @@ export const useAuthStore = defineStore("auth", () => {
         const data = JSON.parse(saved);
         token.value = data.token;
         isAuthenticated.value = data.isAuthenticated || false;
+        requires2FA.value = data.requires2FA || false;
       } catch {
         localStorage.removeItem("allfi-auth");
       }
@@ -230,9 +252,43 @@ export const useAuthStore = defineStore("auth", () => {
   async function register() {
     return false;
   }
-  async function verify2FA() {
-    return true;
+
+  /**
+   * 验证 2FA 验证码（登录流程）
+   * @param {string} code - 6 位数字验证码
+   * @returns {Promise<boolean>}
+   */
+  async function verify2FA(code) {
+    isLoading.value = true;
+    error.value = null;
+
+    try {
+      const result = await authService.verify2FA(code);
+      if (result.success) {
+        // 2FA 验证成功，更新认证状态
+        token.value = result.token;
+        isAuthenticated.value = true;
+        requires2FA.value = false;
+        // 更新 localStorage
+        localStorage.setItem(
+          "allfi-auth",
+          JSON.stringify({
+            token: result.token,
+            isAuthenticated: true,
+            requires2FA: false,
+          }),
+        );
+        return true;
+      }
+      return false;
+    } catch (err) {
+      error.value = err.message || "2FA 验证失败";
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
   }
+
   async function resend2FACode() {
     return true;
   }

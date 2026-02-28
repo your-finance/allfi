@@ -30,13 +30,13 @@ const fullCode = computed(() => code.value.join(''))
 // 初始化
 onMounted(() => {
   themeStore.initTheme()
-  
-  // 检查是否需要 2FA
-  if (!authStore.isAuthenticated || !authStore.requires2FA) {
+
+  // 检查是否需要 2FA（requires2FA 为 true 且有 token）
+  if (!authStore.requires2FA || !authStore.token) {
     router.replace('/login')
     return
   }
-  
+
   // 聚焦第一个输入框
   nextTick(() => {
     if (inputRefs.value[0]) {

@@ -164,11 +164,17 @@ router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
 
   // 恢复会话
-  if (!authStore.isAuthenticated) {
+  if (!authStore.isAuthenticated && !authStore.requires2FA) {
     authStore.restoreSession();
   }
 
   const requiresAuth = to.meta.requiresAuth !== false;
+  const is2FAPage = to.path === "/2fa";
+
+  // 需要 2FA 验证的用户只能访问 2FA 页面
+  if (authStore.requires2FA && !is2FAPage) {
+    return next("/2fa");
+  }
 
   // 需要认证的页面
   if (requiresAuth) {
