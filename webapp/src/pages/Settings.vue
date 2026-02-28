@@ -395,24 +395,6 @@ const currencyOptions = [
   { value: 'CNY', label: '人民币', symbol: '¥' }
 ]
 
-// 刷新间隔选项（使用翻译）
-const refreshIntervalOptions = computed(() => [
-  { value: 60, label: `1 ${t('settings.minute')}` },
-  { value: 300, label: `5 ${t('settings.minute')}` },
-  { value: 600, label: `10 ${t('settings.minute')}` },
-  { value: 1800, label: `30 ${t('settings.minute')}` },
-  { value: 3600, label: `1 ${t('settings.hour')}` }
-])
-
-// 保留天数选项（使用翻译）
-const retentionOptions = computed(() => [
-  { value: 30, label: `30 ${t('settings.day')}` },
-  { value: 60, label: `60 ${t('settings.day')}` },
-  { value: 90, label: `90 ${t('settings.day')}` },
-  { value: 180, label: `180 ${t('settings.day')}` },
-  { value: 365, label: `1 ${t('settings.year')}` }
-])
-
 // 获取字体名称（从CSS字体栈中提取第一个）
 const getFontName = (fontStack) => {
   if (!fontStack) return ''
@@ -673,13 +655,13 @@ onMounted(() => {
     </header>
 
     <div class="settings-grid">
-      <!-- 🎨 主题设置 - 新增! -->
+      <!-- 🎨 主题设置 - 全宽 -->
       <section class="settings-section full-width">
         <div class="section-header">
           <PhPaintBrush :size="20" weight="duotone" />
           <h2 class="section-title">{{ t('settings.themeSection') }}</h2>
         </div>
-        
+
         <div class="themes-grid">
           <button
             v-for="theme in themeStore.availableThemes"
@@ -692,19 +674,19 @@ onMounted(() => {
             <div class="theme-preview" :style="{ background: theme.preview }">
               <span class="theme-icon">{{ theme.icon }}</span>
             </div>
-            
+
             <!-- 主题信息 -->
             <div class="theme-info">
               <span class="theme-name" :style="{ fontFamily: theme.fonts?.heading }">{{ theme.name }}</span>
               <span class="theme-desc">{{ theme.description }}</span>
               <span class="theme-font">{{ getFontName(theme.fonts?.heading) }}</span>
             </div>
-            
+
             <!-- 选中标识 -->
             <div v-if="themeStore.currentThemeId === theme.id" class="theme-check">
               <PhCheck :size="16" weight="bold" />
             </div>
-            
+
             <!-- 模式标签 -->
             <span class="theme-mode" :class="theme.mode">
               <PhMoon v-if="theme.mode === 'dark'" :size="12" />
@@ -715,500 +697,505 @@ onMounted(() => {
         </div>
       </section>
 
-      <!-- 显示设置 -->
-      <section class="settings-section">
-        <div class="section-header">
-          <PhPalette :size="20" weight="duotone" />
-          <h2 class="section-title">{{ t('settings.displaySection') }}</h2>
-        </div>
-        
-        <div class="glass-card settings-card">
-          <!-- 语言 -->
-          <div class="setting-item">
-            <div class="setting-info">
-              <span class="setting-label">{{ t('settings.language') }}</span>
-              <span class="setting-desc">{{ t('settings.languageDesc') }}</span>
-            </div>
-            <select 
-              :value="themeStore.currentLanguageCode"
-              @change="themeStore.setLanguage($event.target.value)"
-              class="input select setting-select"
-            >
-              <option 
-                v-for="lang in languageOptions" 
-                :key="lang.value" 
-                :value="lang.value"
-              >
-                {{ lang.label }}
-              </option>
-            </select>
+      <!-- 左栏容器：交易同步 + 显示设置 + API 配置 -->
+      <div class="left-column-group">
+        <!-- 交易同步设置 -->
+        <section class="settings-section compact-section">
+          <div class="section-header">
+            <PhClockClockwise :size="20" weight="duotone" />
+            <h2 class="section-title">{{ t('settings.txSyncSection') }}</h2>
           </div>
 
-          <div class="setting-divider" />
-
-          <!-- 计价货币 -->
-          <div class="setting-item">
-            <div class="setting-info">
-              <span class="setting-label">{{ t('settings.currency') }}</span>
-              <span class="setting-desc">{{ t('settings.currencyDesc') }}</span>
+          <div class="glass-card settings-card">
+            <!-- 同步开关 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">{{ t('settings.txSyncEnabled') }}</span>
+                <span class="setting-desc">{{ t('settings.txSyncEnabledDesc') }}</span>
+              </div>
+              <label class="toggle">
+                <input
+                  type="checkbox"
+                  :checked="txSyncSettings.enabled"
+                  @change="updateTxSyncSetting('enabled', $event.target.checked)"
+                >
+                <span class="toggle-slider"></span>
+              </label>
             </div>
-            <div class="currency-selector">
-              <button
-                v-for="curr in currencyOptions"
-                :key="curr.value"
-                class="currency-btn"
-                :class="{ active: settings.currency === curr.value }"
-                @click="changeCurrency(curr.value)"
+
+            <!-- 开启同步后的警告提示 -->
+            <div v-if="txSyncSettings.enabled" class="sync-warning">
+              <PhWarning :size="16" />
+              <span>{{ t('settings.txSyncWarning') }}</span>
+            </div>
+
+            <div class="setting-divider" />
+
+            <!-- 同步间隔 -->
+            <div class="setting-item" :class="{ disabled: !txSyncSettings.enabled }">
+              <div class="setting-info">
+                <span class="setting-label">{{ t('settings.txSyncInterval') }}</span>
+                <span class="setting-desc">{{ t('settings.txSyncIntervalDesc') }}</span>
+              </div>
+              <select
+                class="input select setting-select"
+                :value="txSyncSettings.interval_minutes"
+                :disabled="!txSyncSettings.enabled"
+                @change="updateTxSyncSetting('interval_minutes', Number($event.target.value))"
               >
-                <span class="currency-symbol">{{ curr.symbol }}</span>
-                <span class="currency-code">{{ curr.value }}</span>
+                <option
+                  v-for="opt in txSyncIntervalOptions"
+                  :key="opt.value"
+                  :value="opt.value"
+                >
+                  {{ opt.label }}
+                </option>
+              </select>
+            </div>
+
+            <div class="setting-divider" />
+
+            <!-- 回溯天数 -->
+            <div class="setting-item" :class="{ disabled: !txSyncSettings.enabled }">
+              <div class="setting-info">
+                <span class="setting-label">{{ t('settings.txSyncLookback') }}</span>
+                <span class="setting-desc">{{ t('settings.txSyncLookbackDesc') }}</span>
+              </div>
+              <select
+                class="input select setting-select"
+                :value="txSyncSettings.lookback_days"
+                :disabled="!txSyncSettings.enabled"
+                @change="updateTxSyncSetting('lookback_days', Number($event.target.value))"
+              >
+                <option
+                  v-for="opt in txSyncLookbackOptions"
+                  :key="opt.value"
+                  :value="opt.value"
+                >
+                  {{ opt.label }}
+                </option>
+              </select>
+            </div>
+
+            <div class="setting-divider" />
+
+            <!-- 手动同步按钮 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">{{ t('settings.txSyncNow') }}</span>
+                <span class="setting-desc">
+                  {{ txSyncSettings.enabled ? t('settings.txSyncEnabledDesc') : t('settings.txSyncDisabledHint') }}
+                </span>
+              </div>
+              <button
+                class="btn btn-primary btn-sm"
+                :disabled="!txSyncSettings.enabled || txSyncing"
+                @click="triggerSync"
+              >
+                <PhArrowsClockwise v-if="txSyncing" :size="16" class="spin" />
+                <span>{{ txSyncing ? t('settings.txSyncSyncing') : t('settings.txSyncNow') }}</span>
               </button>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <!-- 数据设置 -->
-      <section class="settings-section">
-        <div class="section-header">
-          <PhDatabase :size="20" weight="duotone" />
-          <h2 class="section-title">{{ t('settings.dataSection') }}</h2>
-        </div>
-        
-        <div class="glass-card settings-card">
-          <!-- 自动刷新 -->
-          <div class="setting-item">
-            <div class="setting-info">
-              <span class="setting-label">{{ t('settings.autoRefresh') }}</span>
-              <span class="setting-desc">{{ t('settings.autoRefreshDesc') }}</span>
-            </div>
-            <label class="toggle">
-              <input 
-                type="checkbox" 
-                v-model="settings.autoRefresh"
-              >
-              <span class="toggle-slider"></span>
-            </label>
+        <!-- 显示设置 -->
+        <section class="settings-section compact-section">
+          <div class="section-header">
+            <PhPalette :size="20" weight="duotone" />
+            <h2 class="section-title">{{ t('settings.displaySection') }}</h2>
           </div>
 
-          <div class="setting-divider" />
-
-          <!-- 刷新间隔 -->
-          <div class="setting-item" :class="{ disabled: !settings.autoRefresh }">
-            <div class="setting-info">
-              <span class="setting-label">{{ t('settings.refreshInterval') }}</span>
-              <span class="setting-desc">{{ t('settings.refreshIntervalDesc') }}</span>
-            </div>
-            <select 
-              v-model="settings.refreshInterval"
-              class="input select setting-select"
-              :disabled="!settings.autoRefresh"
-            >
-              <option 
-                v-for="interval in refreshIntervalOptions" 
-                :key="interval.value" 
-                :value="interval.value"
-              >
-                {{ interval.label }}
-              </option>
-            </select>
-          </div>
-
-          <div class="setting-divider" />
-
-          <!-- 历史数据保留 -->
-          <div class="setting-item">
-            <div class="setting-info">
-              <span class="setting-label">{{ t('settings.historyRetention') }}</span>
-              <span class="setting-desc">{{ t('settings.historyRetentionDesc') }}</span>
-            </div>
-            <select 
-              v-model="settings.historyRetention"
-              class="input select setting-select"
-            >
-              <option 
-                v-for="ret in retentionOptions" 
-                :key="ret.value" 
-                :value="ret.value"
-              >
-                {{ ret.label }}
-              </option>
-            </select>
-          </div>
-        </div>
-      </section>
-
-      <!-- API 配置 -->
-      <section class="settings-section">
-        <div class="section-header">
-          <PhPlugsConnected :size="20" weight="duotone" />
-          <h2 class="section-title">{{ t('settings.apiConfigSection') }}</h2>
-        </div>
-
-        <div class="glass-card settings-card">
-          <p class="apikey-section-desc">{{ t('settings.apiConfigDesc') }}</p>
-
-          <template v-if="apiKeyLoading">
+          <div class="glass-card settings-card">
+            <!-- 语言 -->
             <div class="setting-item">
-              <span class="setting-desc">Loading...</span>
+              <div class="setting-info">
+                <span class="setting-label">{{ t('settings.language') }}</span>
+                <span class="setting-desc">{{ t('settings.languageDesc') }}</span>
+              </div>
+              <select
+                :value="themeStore.currentLanguageCode"
+                @change="themeStore.setLanguage($event.target.value)"
+                class="input select setting-select"
+              >
+                <option
+                  v-for="lang in languageOptions"
+                  :key="lang.value"
+                  :value="lang.value"
+                >
+                  {{ lang.label }}
+                </option>
+              </select>
             </div>
-          </template>
 
-          <template v-else>
-            <div
-              v-for="(item, idx) in apiKeys"
-              :key="item.provider"
-            >
-              <div class="setting-divider" v-if="idx > 0" />
-              <div class="setting-item">
-                <div class="setting-info">
-                  <span class="setting-label">{{ item.display_name }}</span>
-                  <span class="setting-desc">{{ item.description }}</span>
-                </div>
+            <div class="setting-divider" />
 
-                <!-- 编辑模式 -->
-                <div v-if="editingProvider === item.provider" class="apikey-edit">
-                  <input
-                    v-model="editingKey"
-                    type="text"
-                    class="input apikey-input"
-                    :placeholder="t('settings.apiKeyPlaceholder')"
-                    @keyup.enter="saveAPIKey(item.provider)"
-                    @keyup.escape="cancelEditAPIKey"
-                  />
-                  <button
-                    class="btn btn-primary btn-sm"
-                    :disabled="apiKeySaving || !editingKey.trim()"
-                    @click="saveAPIKey(item.provider)"
-                  >
-                    <PhArrowsClockwise v-if="apiKeySaving" :size="14" class="spin" />
-                    <PhCheck v-else :size="14" />
-                  </button>
-                  <button class="btn btn-secondary btn-sm" @click="cancelEditAPIKey">
-                    <PhX :size="14" />
-                  </button>
-                </div>
-
-                <!-- 显示模式 -->
-                <div v-else class="apikey-display">
-                  <span
-                    class="apikey-status"
-                    :class="item.configured ? 'configured' : 'not-configured'"
-                  >
-                    {{ item.configured ? item.masked_key : t('settings.apiKeyNotConfigured') }}
-                  </span>
-                  <button class="btn-icon" @click="startEditAPIKey(item.provider)">
-                    <PhPencilSimple :size="16" />
-                  </button>
-                  <button
-                    v-if="item.configured"
-                    class="btn-icon danger"
-                    @click="deleteAPIKey(item.provider)"
-                  >
-                    <PhTrash :size="16" />
-                  </button>
-                </div>
+            <!-- 计价货币 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">{{ t('settings.currency') }}</span>
+                <span class="setting-desc">{{ t('settings.currencyDesc') }}</span>
+              </div>
+              <div class="currency-selector">
+                <button
+                  v-for="curr in currencyOptions"
+                  :key="curr.value"
+                  class="currency-btn"
+                  :class="{ active: settings.currency === curr.value }"
+                  @click="changeCurrency(curr.value)"
+                >
+                  <span class="currency-symbol">{{ curr.symbol }}</span>
+                  <span class="currency-code">{{ curr.value }}</span>
+                </button>
               </div>
             </div>
-          </template>
-        </div>
-      </section>
+          </div>
+        </section>
 
-      <!-- 交易同步设置 -->
-      <section class="settings-section">
-        <div class="section-header">
-          <PhClockClockwise :size="20" weight="duotone" />
-          <h2 class="section-title">{{ t('settings.txSyncSection') }}</h2>
-        </div>
-
-        <div class="glass-card settings-card">
-          <!-- 同步开关 -->
-          <div class="setting-item">
-            <div class="setting-info">
-              <span class="setting-label">{{ t('settings.txSyncEnabled') }}</span>
-              <span class="setting-desc">{{ t('settings.txSyncEnabledDesc') }}</span>
-            </div>
-            <label class="toggle">
-              <input
-                type="checkbox"
-                :checked="txSyncSettings.enabled"
-                @change="updateTxSyncSetting('enabled', $event.target.checked)"
-              >
-              <span class="toggle-slider"></span>
-            </label>
+        <!-- API 配置 -->
+        <section class="settings-section compact-section">
+          <div class="section-header">
+            <PhPlugsConnected :size="20" weight="duotone" />
+            <h2 class="section-title">{{ t('settings.apiConfigSection') }}</h2>
           </div>
 
-          <!-- 开启同步后的警告提示 -->
-          <div v-if="txSyncSettings.enabled" class="sync-warning">
-            <PhWarning :size="16" />
-            <span>{{ t('settings.txSyncWarning') }}</span>
+          <div class="glass-card settings-card">
+            <p class="apikey-section-desc">{{ t('settings.apiConfigDesc') }}</p>
+
+            <template v-if="apiKeyLoading">
+              <div class="setting-item">
+                <span class="setting-desc">Loading...</span>
+              </div>
+            </template>
+
+            <template v-else>
+              <div
+                v-for="(item, idx) in apiKeys"
+                :key="item.provider"
+              >
+                <div class="setting-divider" v-if="idx > 0" />
+                <div class="setting-item">
+                  <div class="setting-info">
+                    <span class="setting-label">{{ item.display_name }}</span>
+                    <span class="setting-desc">{{ item.description }}</span>
+                  </div>
+
+                  <!-- 编辑模式 -->
+                  <div v-if="editingProvider === item.provider" class="apikey-edit">
+                    <input
+                      v-model="editingKey"
+                      type="text"
+                      class="input apikey-input"
+                      :placeholder="t('settings.apiKeyPlaceholder')"
+                      @keyup.enter="saveAPIKey(item.provider)"
+                      @keyup.escape="cancelEditAPIKey"
+                    />
+                    <button
+                      class="btn btn-primary btn-sm"
+                      :disabled="apiKeySaving || !editingKey.trim()"
+                      @click="saveAPIKey(item.provider)"
+                    >
+                      <PhArrowsClockwise v-if="apiKeySaving" :size="14" class="spin" />
+                      <PhCheck v-else :size="14" />
+                    </button>
+                    <button class="btn btn-secondary btn-sm" @click="cancelEditAPIKey">
+                      <PhX :size="14" />
+                    </button>
+                  </div>
+
+                  <!-- 显示模式 -->
+                  <div v-else class="apikey-display">
+                    <span
+                      class="apikey-status"
+                      :class="item.configured ? 'configured' : 'not-configured'"
+                    >
+                      {{ item.configured ? item.masked_key : t('settings.apiKeyNotConfigured') }}
+                    </span>
+                    <button class="btn-icon" @click="startEditAPIKey(item.provider)">
+                      <PhPencilSimple :size="16" />
+                    </button>
+                    <button
+                      v-if="item.configured"
+                      class="btn-icon danger"
+                      @click="deleteAPIKey(item.provider)"
+                    >
+                      <PhTrash :size="16" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </section>
+      </div>
+
+      <!-- 右栏容器：安全设置 + 通知设置 + 数据管理 + 成就 -->
+      <div class="right-column-group">
+        <!-- 安全设置 -->
+        <section class="settings-section compact-section">
+          <div class="section-header">
+            <PhShieldCheck :size="20" weight="duotone" />
+            <h2 class="section-title">{{ t('settings.securitySection') }}</h2>
           </div>
 
-          <div class="setting-divider" />
-
-          <!-- 同步间隔 -->
-          <div class="setting-item" :class="{ disabled: !txSyncSettings.enabled }">
-            <div class="setting-info">
-              <span class="setting-label">{{ t('settings.txSyncInterval') }}</span>
-              <span class="setting-desc">{{ t('settings.txSyncIntervalDesc') }}</span>
+          <div class="glass-card settings-card">
+            <!-- 两步验证 (2FA) -->
+            <div class="setting-item two-fa-item">
+              <div class="setting-info">
+                <span class="setting-label">
+                  <PhLock :size="18" class="inline-icon" />
+                  {{ t('settings.twoFA.title') }}
+                </span>
+                <span class="setting-desc">{{ t('settings.twoFA.description') }}</span>
+              </div>
+              <div class="two-fa-status">
+                <span
+                  class="status-badge"
+                  :class="is2FAEnabled ? 'enabled' : 'disabled'"
+                >
+                  {{ is2FAEnabled ? t('settings.twoFA.enabled') : t('settings.twoFA.disabled') }}
+                </span>
+                <button
+                  v-if="is2FAEnabled"
+                  class="btn btn-danger btn-sm"
+                  @click="openDisable2FA"
+                >
+                  {{ t('settings.twoFA.disable') }}
+                </button>
+                <button
+                  v-else
+                  class="btn btn-primary btn-sm"
+                  @click="startSetup2FA"
+                >
+                  {{ t('settings.twoFA.enable') }}
+                </button>
+              </div>
             </div>
-            <select
-              class="input select setting-select"
-              :value="txSyncSettings.interval_minutes"
-              :disabled="!txSyncSettings.enabled"
-              @change="updateTxSyncSetting('interval_minutes', Number($event.target.value))"
-            >
-              <option
-                v-for="opt in txSyncIntervalOptions"
-                :key="opt.value"
-                :value="opt.value"
-              >
-                {{ opt.label }}
-              </option>
-            </select>
-          </div>
 
-          <div class="setting-divider" />
+            <div class="setting-divider" />
 
-          <!-- 回溯天数 -->
-          <div class="setting-item" :class="{ disabled: !txSyncSettings.enabled }">
-            <div class="setting-info">
-              <span class="setting-label">{{ t('settings.txSyncLookback') }}</span>
-              <span class="setting-desc">{{ t('settings.txSyncLookbackDesc') }}</span>
-            </div>
-            <select
-              class="input select setting-select"
-              :value="txSyncSettings.lookback_days"
-              :disabled="!txSyncSettings.enabled"
-              @change="updateTxSyncSetting('lookback_days', Number($event.target.value))"
-            >
-              <option
-                v-for="opt in txSyncLookbackOptions"
-                :key="opt.value"
-                :value="opt.value"
-              >
-                {{ opt.label }}
-              </option>
-            </select>
-          </div>
-
-          <div class="setting-divider" />
-
-          <!-- 手动同步按钮 -->
-          <div class="setting-item">
-            <div class="setting-info">
-              <span class="setting-label">{{ t('settings.txSyncNow') }}</span>
-              <span class="setting-desc">
-                {{ txSyncSettings.enabled ? t('settings.txSyncEnabledDesc') : t('settings.txSyncDisabledHint') }}
-              </span>
-            </div>
-            <button
-              class="btn btn-primary btn-sm"
-              :disabled="!txSyncSettings.enabled || txSyncing"
-              @click="triggerSync"
-            >
-              <PhArrowsClockwise v-if="txSyncing" :size="16" class="spin" />
-              <span>{{ txSyncing ? t('settings.txSyncSyncing') : t('settings.txSyncNow') }}</span>
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <!-- 通知设置 -->
-      <section class="settings-section">
-        <div class="section-header">
-          <PhBell :size="20" weight="duotone" />
-          <h2 class="section-title">{{ t('settings.notificationSection') }}</h2>
-        </div>
-
-        <div class="glass-card settings-card">
-          <!-- 推送通知 -->
-          <div class="setting-item">
-            <div class="setting-info">
-              <span class="setting-label">{{ t('settings.pushEnabled') }}</span>
-              <span class="setting-desc">{{ t('settings.pushEnabledDesc') }}</span>
-              <span v-if="!webPushSupported" class="setting-hint warning">当前浏览器不支持 WebPush</span>
-              <span v-else-if="permissionState === 'denied'" class="setting-hint warning">通知权限已被拒绝，请在浏览器设置中开启</span>
-              <span v-else-if="webPushError" class="setting-hint warning">{{ webPushError }}</span>
-            </div>
-            <label class="toggle" :class="{ disabled: !webPushSupported || webPushLoading }">
-              <input
-                type="checkbox"
-                :checked="webPushSubscribed"
-                :disabled="!webPushSupported || webPushLoading"
-                @change="handlePushToggle($event.target.checked)"
-              >
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-
-          <div class="setting-divider" />
-
-          <!-- 邮件通知 -->
-          <div class="setting-item">
-            <div class="setting-info">
-              <span class="setting-label">{{ t('settings.emailEnabled') }}</span>
-              <span class="setting-desc">{{ t('settings.emailEnabledDesc') }}</span>
-            </div>
-            <label class="toggle">
-              <input
-                type="checkbox"
-                :checked="notifStore.preferences?.email_enabled"
-                @change="updateNotifPreference('email_enabled', $event.target.checked)"
-              >
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-
-          <div class="setting-divider" />
-
-          <!-- 价格预警 -->
-          <div class="setting-item">
-            <div class="setting-info">
-              <span class="setting-label">{{ t('settings.priceAlert') }}</span>
-              <span class="setting-desc">{{ t('settings.priceAlertDesc') }}</span>
-            </div>
-            <label class="toggle">
-              <input
-                type="checkbox"
-                :checked="notifStore.preferences?.price_alert"
-                @change="updateNotifPreference('price_alert', $event.target.checked)"
-              >
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-
-          <div class="setting-divider" />
-
-          <!-- 资产变动通知 -->
-          <div class="setting-item">
-            <div class="setting-info">
-              <span class="setting-label">{{ t('settings.assetAlert') }}</span>
-              <span class="setting-desc">{{ t('settings.assetAlertDesc') }}</span>
-            </div>
-            <label class="toggle">
-              <input
-                type="checkbox"
-                :checked="notifStore.preferences?.portfolio_alert"
-                @change="updateNotifPreference('portfolio_alert', $event.target.checked)"
-              >
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-
-          <div class="setting-divider" />
-
-          <!-- 系统通知 -->
-          <div class="setting-item">
-            <div class="setting-info">
-              <span class="setting-label">{{ t('settings.systemNotice') }}</span>
-              <span class="setting-desc">{{ t('settings.systemNoticeDesc') }}</span>
-            </div>
-            <label class="toggle">
-              <input
-                type="checkbox"
-                :checked="notifStore.preferences?.system_notice"
-                @change="updateNotifPreference('system_notice', $event.target.checked)"
-              >
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-        </div>
-      </section>
-
-      <!-- 安全设置 -->
-      <section class="settings-section">
-        <div class="section-header">
-          <PhShieldCheck :size="20" weight="duotone" />
-          <h2 class="section-title">{{ t('settings.securitySection') }}</h2>
-        </div>
-        
-        <div class="glass-card settings-card">
-          <!-- 两步验证 (2FA) -->
-          <div class="setting-item two-fa-item">
-            <div class="setting-info">
-              <span class="setting-label">
-                <PhLock :size="18" class="inline-icon" />
-                {{ t('settings.twoFA.title') }}
-              </span>
-              <span class="setting-desc">{{ t('settings.twoFA.description') }}</span>
-            </div>
-            <div class="two-fa-status">
-              <span 
-                class="status-badge"
-                :class="is2FAEnabled ? 'enabled' : 'disabled'"
-              >
-                {{ is2FAEnabled ? t('settings.twoFA.enabled') : t('settings.twoFA.disabled') }}
-              </span>
-              <button 
-                v-if="is2FAEnabled"
-                class="btn btn-danger btn-sm"
-                @click="openDisable2FA"
-              >
-                {{ t('settings.twoFA.disable') }}
-              </button>
-              <button 
-                v-else
-                class="btn btn-primary btn-sm"
-                @click="startSetup2FA"
-              >
-                {{ t('settings.twoFA.enable') }}
+            <!-- 密码类型设置 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">
+                  <PhKey :size="18" class="inline-icon" />
+                  密码类型
+                </span>
+                <span class="setting-desc">当前：{{ authStore.passwordType === 'pin' ? '简单 PIN' : '复杂密码' }}</span>
+              </div>
+              <button class="btn btn-secondary btn-sm" @click="showSwitchModal = true">
+                切换类型
               </button>
             </div>
-          </div>
 
-          <div class="setting-divider" />
+            <div class="setting-divider" />
 
-          <!-- 密码类型设置 -->
-          <div class="setting-item">
-            <div class="setting-info">
-              <span class="setting-label">
-                <PhKey :size="18" class="inline-icon" />
-                密码类型
-              </span>
-              <span class="setting-desc">当前：{{ authStore.passwordType === 'pin' ? '简单 PIN' : '复杂密码' }}</span>
+            <!-- 显示余额（隐私模式） -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">{{ t('settings.showBalance') }}</span>
+                <span class="setting-desc">{{ t('settings.showBalanceDesc') }}</span>
+              </div>
+              <label class="toggle">
+                <input
+                  type="checkbox"
+                  :checked="!themeStore.privacyMode"
+                  @change="themeStore.togglePrivacyMode()"
+                >
+                <span class="toggle-slider"></span>
+              </label>
             </div>
-            <button class="btn btn-secondary btn-sm" @click="showSwitchModal = true">
-              切换类型
-            </button>
-          </div>
 
-          <div class="setting-divider" />
+            <div class="setting-divider" />
 
-          <!-- 显示余额（隐私模式） -->
-          <div class="setting-item">
-            <div class="setting-info">
-              <span class="setting-label">{{ t('settings.showBalance') }}</span>
-              <span class="setting-desc">{{ t('settings.showBalanceDesc') }}</span>
+            <!-- 操作确认 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">{{ t('settings.confirmSensitive') }}</span>
+                <span class="setting-desc">{{ t('settings.confirmSensitiveDesc') }}</span>
+              </div>
+              <label class="toggle">
+                <input
+                  type="checkbox"
+                  v-model="settings.confirmOperations"
+                >
+                <span class="toggle-slider"></span>
+              </label>
             </div>
-            <label class="toggle">
-              <input
-                type="checkbox"
-                :checked="!themeStore.privacyMode"
-                @change="themeStore.togglePrivacyMode()"
-              >
-              <span class="toggle-slider"></span>
-            </label>
+          </div>
+        </section>
+
+        <!-- 通知设置 -->
+        <section class="settings-section compact-section">
+          <div class="section-header">
+            <PhBell :size="20" weight="duotone" />
+            <h2 class="section-title">{{ t('settings.notificationSection') }}</h2>
           </div>
 
-          <div class="setting-divider" />
-
-          <!-- 操作确认 -->
-          <div class="setting-item">
-            <div class="setting-info">
-              <span class="setting-label">{{ t('settings.confirmSensitive') }}</span>
-              <span class="setting-desc">{{ t('settings.confirmSensitiveDesc') }}</span>
+          <div class="glass-card settings-card">
+            <!-- 推送通知 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">{{ t('settings.pushEnabled') }}</span>
+                <span class="setting-desc">{{ t('settings.pushEnabledDesc') }}</span>
+                <span v-if="!webPushSupported" class="setting-hint warning">当前浏览器不支持 WebPush</span>
+                <span v-else-if="permissionState === 'denied'" class="setting-hint warning">通知权限已被拒绝，请在浏览器设置中开启</span>
+                <span v-else-if="webPushError" class="setting-hint warning">{{ webPushError }}</span>
+              </div>
+              <label class="toggle" :class="{ disabled: !webPushSupported || webPushLoading }">
+                <input
+                  type="checkbox"
+                  :checked="webPushSubscribed"
+                  :disabled="!webPushSupported || webPushLoading"
+                  @change="handlePushToggle($event.target.checked)"
+                >
+                <span class="toggle-slider"></span>
+              </label>
             </div>
-            <label class="toggle">
-              <input 
-                type="checkbox" 
-                v-model="settings.confirmOperations"
-              >
-              <span class="toggle-slider"></span>
-            </label>
+
+            <div class="setting-divider" />
+
+            <!-- 邮件通知 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">{{ t('settings.emailEnabled') }}</span>
+                <span class="setting-desc">{{ t('settings.emailEnabledDesc') }}</span>
+              </div>
+              <label class="toggle">
+                <input
+                  type="checkbox"
+                  :checked="notifStore.preferences?.email_enabled"
+                  @change="updateNotifPreference('email_enabled', $event.target.checked)"
+                >
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="setting-divider" />
+
+            <!-- 价格预警 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">{{ t('settings.priceAlert') }}</span>
+                <span class="setting-desc">{{ t('settings.priceAlertDesc') }}</span>
+              </div>
+              <label class="toggle">
+                <input
+                  type="checkbox"
+                  :checked="notifStore.preferences?.price_alert"
+                  @change="updateNotifPreference('price_alert', $event.target.checked)"
+                >
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="setting-divider" />
+
+            <!-- 资产变动通知 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">{{ t('settings.assetAlert') }}</span>
+                <span class="setting-desc">{{ t('settings.assetAlertDesc') }}</span>
+              </div>
+              <label class="toggle">
+                <input
+                  type="checkbox"
+                  :checked="notifStore.preferences?.portfolio_alert"
+                  @change="updateNotifPreference('portfolio_alert', $event.target.checked)"
+                >
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="setting-divider" />
+
+            <!-- 系统通知 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">{{ t('settings.systemNotice') }}</span>
+                <span class="setting-desc">{{ t('settings.systemNoticeDesc') }}</span>
+              </div>
+              <label class="toggle">
+                <input
+                  type="checkbox"
+                  :checked="notifStore.preferences?.system_notice"
+                  @change="updateNotifPreference('system_notice', $event.target.checked)"
+                >
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+
+        <!-- 数据管理 -->
+        <section class="settings-section compact-section">
+          <div class="section-header">
+            <PhDatabase :size="20" weight="duotone" />
+            <h2 class="section-title">{{ t('settings.dataManageSection') }}</h2>
+          </div>
+
+          <div class="glass-card settings-card">
+            <div class="data-actions">
+              <button class="data-action-btn" @click="openExportDialog">
+                <div class="action-icon export">
+                  <PhDownloadSimple :size="24" />
+                </div>
+                <div class="action-info">
+                  <span class="action-title">{{ t('settings.exportData') }}</span>
+                  <span class="action-desc">{{ t('settings.exportDataDesc') }}</span>
+                </div>
+                <PhCaretRight :size="20" class="action-arrow" />
+              </button>
+
+              <button class="data-action-btn" @click="clearCache">
+                <div class="action-icon cache">
+                  <PhArrowsClockwise :size="24" />
+                </div>
+                <div class="action-info">
+                  <span class="action-title">{{ t('settings.clearCache') }}</span>
+                  <span class="action-desc">{{ t('settings.clearCacheDesc') }}</span>
+                </div>
+                <PhCaretRight :size="20" class="action-arrow" />
+              </button>
+
+              <button class="data-action-btn danger" @click="showResetDialog = true">
+                <div class="action-icon reset">
+                  <PhTrash :size="24" />
+                </div>
+                <div class="action-info">
+                  <span class="action-title">{{ t('settings.resetSettings') }}</span>
+                  <span class="action-desc">{{ t('settings.resetSettingsDesc') }}</span>
+                </div>
+                <PhCaretRight :size="20" class="action-arrow" />
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 成就系统 -->
+        <section class="settings-section compact-section">
+          <div class="section-header">
+            <PhTrophy :size="20" weight="duotone" />
+            <h2 class="section-title">{{ t('achievement.title') }}</h2>
+          </div>
+          <div class="glass-card settings-card">
+            <div class="achievement-entry" @click="showAchievements = true">
+              <div class="ach-progress">
+                <span class="ach-count font-mono">{{ achStore.unlockedCount }}</span>
+                <span class="ach-total"> / {{ achStore.totalCount }}</span>
+                <span class="ach-label">{{ t('achievement.unlocked') }}</span>
+              </div>
+              <PhCaretRight :size="16" class="action-arrow" />
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- 成就面板弹窗 -->
+      <AchievementPanel
+        :visible="showAchievements"
+        @close="showAchievements = false"
+      />
 
       <!-- 2FA 设置模态框 -->
       <Teleport to="body">
@@ -1575,78 +1562,6 @@ onMounted(() => {
         </Transition>
       </Teleport>
 
-
-      <!-- 成就系统 -->
-      <section class="settings-section full-width">
-        <div class="section-header">
-          <PhTrophy :size="20" weight="duotone" />
-          <h2 class="section-title">{{ t('achievement.title') }}</h2>
-        </div>
-        <div class="glass-card settings-card">
-          <div class="achievement-entry" @click="showAchievements = true">
-            <div class="ach-progress">
-              <span class="ach-count font-mono">{{ achStore.unlockedCount }}</span>
-              <span class="ach-total"> / {{ achStore.totalCount }}</span>
-              <span class="ach-label">{{ t('achievement.unlocked') }}</span>
-            </div>
-            <PhCaretRight :size="16" class="action-arrow" />
-          </div>
-        </div>
-      </section>
-
-      <!-- 成就面板弹窗 -->
-      <AchievementPanel
-        :visible="showAchievements"
-        @close="showAchievements = false"
-      />
-
-
-
-      <!-- 数据管理 -->
-      <section class="settings-section full-width">
-        <div class="section-header">
-          <PhDatabase :size="20" weight="duotone" />
-          <h2 class="section-title">{{ t('settings.dataManageSection') }}</h2>
-        </div>
-        
-        <div class="glass-card settings-card">
-          <div class="data-actions">
-            <button class="data-action-btn" @click="openExportDialog">
-              <div class="action-icon export">
-                <PhDownloadSimple :size="24" />
-              </div>
-              <div class="action-info">
-                <span class="action-title">{{ t('settings.exportData') }}</span>
-                <span class="action-desc">{{ t('settings.exportDataDesc') }}</span>
-              </div>
-              <PhCaretRight :size="20" class="action-arrow" />
-            </button>
-            
-            <button class="data-action-btn" @click="clearCache">
-              <div class="action-icon cache">
-                <PhArrowsClockwise :size="24" />
-              </div>
-              <div class="action-info">
-                <span class="action-title">{{ t('settings.clearCache') }}</span>
-                <span class="action-desc">{{ t('settings.clearCacheDesc') }}</span>
-              </div>
-              <PhCaretRight :size="20" class="action-arrow" />
-            </button>
-            
-            <button class="data-action-btn danger" @click="showResetDialog = true">
-              <div class="action-icon reset">
-                <PhTrash :size="24" />
-              </div>
-              <div class="action-info">
-                <span class="action-title">{{ t('settings.resetSettings') }}</span>
-                <span class="action-desc">{{ t('settings.resetSettingsDesc') }}</span>
-              </div>
-              <PhCaretRight :size="20" class="action-arrow" />
-            </button>
-          </div>
-        </div>
-      </section>
-
     </div>
 
   </div>
@@ -1656,8 +1571,8 @@ onMounted(() => {
 .settings-page {
   display: flex;
   flex-direction: column;
-  gap: var(--gap-xl);
-  max-width: 1400px;
+  gap: var(--gap-lg);
+  max-width: 1200px;
   margin: 0 auto;
 }
 
@@ -1668,6 +1583,8 @@ onMounted(() => {
   align-items: center;
   flex-wrap: wrap;
   gap: var(--gap-md);
+  padding-bottom: var(--gap-md);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .header-subtitle {
@@ -1675,11 +1592,11 @@ onMounted(() => {
   font-size: 13px;
 }
 
-/* ================== 设置网格 ================== */
+/* ================== 设置网格 - 两栏布局 ================== */
 .settings-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: var(--gap-xl);
+  gap: var(--gap-lg);
 }
 
 .settings-section {
@@ -1692,11 +1609,42 @@ onMounted(() => {
   grid-column: 1 / -1;
 }
 
+/* API 配置区域 - 占满左栏高度 */
+.settings-section.api-section {
+  /* 自动拉伸到与右栏相同高度 */
+}
+
+/* 左栏容器 - 垂直堆叠三个部分 */
+.left-column-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-lg);
+}
+
+/* 右栏容器 - 垂直堆叠四个部分 */
+.right-column-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-lg);
+}
+
+/* 紧凑型部分 - 两栏内的各部分 */
+.settings-section.compact-section {
+  /* 使用默认样式 */
+}
+
+/* 两栏容器内的 section 不再需要额外的 gap */
+.left-column-group .settings-section,
+.right-column-group .settings-section {
+  margin-bottom: 0;
+}
+
 .section-header {
   display: flex;
   align-items: center;
   gap: var(--gap-sm);
   color: var(--color-accent-primary);
+  margin-bottom: var(--gap-xs);
 }
 
 .section-title {
@@ -1706,11 +1654,11 @@ onMounted(() => {
   font-family: var(--font-heading);
 }
 
-/* ================== 主题选择器 ================== */
+/* ================== 主题选择器 - 四列布局 ================== */
 .themes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--gap-md);
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--gap-sm);
 }
 
 .theme-card {
@@ -1737,7 +1685,7 @@ onMounted(() => {
 }
 
 .theme-preview {
-  height: 64px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1745,44 +1693,42 @@ onMounted(() => {
 }
 
 .theme-icon {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   color: white;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .theme-info {
-  padding: var(--gap-sm) var(--gap-md);
+  padding: var(--gap-xs) var(--gap-sm);
   display: flex;
   flex-direction: column;
   gap: 1px;
 }
 
 .theme-name {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--color-text-primary);
 }
 
 .theme-desc {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .theme-font {
-  font-size: 10px;
-  color: var(--color-accent-primary);
-  font-family: var(--font-mono);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  opacity: 0.7;
+  display: none;
 }
 
 .theme-check {
   position: absolute;
-  top: var(--gap-xs);
-  right: var(--gap-xs);
-  width: 20px;
-  height: 20px;
+  top: 4px;
+  right: 4px;
+  width: 16px;
+  height: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1793,14 +1739,14 @@ onMounted(() => {
 
 .theme-mode {
   position: absolute;
-  top: var(--gap-xs);
-  left: var(--gap-xs);
+  top: 4px;
+  left: 4px;
   display: flex;
   align-items: center;
-  gap: 3px;
-  padding: 2px 6px;
+  gap: 2px;
+  padding: 1px 4px;
   border-radius: var(--radius-xs);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
   text-transform: uppercase;
 }
@@ -1824,8 +1770,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--gap-lg);
-  padding: var(--gap-md) var(--gap-lg);
+  gap: var(--gap-md);
+  padding: var(--gap-sm) var(--gap-md);
   transition: opacity var(--transition-fast);
 }
 
@@ -1849,33 +1795,43 @@ onMounted(() => {
 
 .setting-desc {
   display: block;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--color-text-muted);
+}
+
+.setting-hint {
+  display: block;
+  font-size: 10px;
+  margin-top: 2px;
+}
+
+.setting-hint.warning {
+  color: var(--color-warning);
 }
 
 .setting-divider {
   height: 1px;
   background: var(--color-border);
-  margin: 0 var(--gap-lg);
+  margin: 0 var(--gap-md);
 }
 
 .setting-select {
   width: auto;
-  min-width: 130px;
+  min-width: 120px;
 }
 
 /* 同步警告提示 */
 .sync-warning {
   display: flex;
   align-items: flex-start;
-  gap: var(--gap-sm);
-  padding: var(--gap-sm) var(--gap-lg);
-  margin: 0 var(--gap-lg);
+  gap: var(--gap-xs);
+  padding: var(--gap-xs) var(--gap-md);
+  margin: 0 var(--gap-md);
   background: color-mix(in srgb, var(--color-warning) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--color-warning) 25%, transparent);
   border-radius: var(--radius-sm);
   color: var(--color-warning);
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.4;
 }
 
@@ -1929,7 +1885,7 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   gap: 1px;
-  padding: 6px 14px;
+  padding: 4px 10px;
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--color-bg-tertiary) 50%, transparent);
   border: 1px solid transparent;
@@ -2012,7 +1968,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--gap-md) var(--gap-lg);
+  padding: var(--gap-sm) var(--gap-md);
   cursor: pointer;
   transition: background var(--transition-fast);
 }
@@ -2028,18 +1984,18 @@ onMounted(() => {
 }
 
 .ach-count {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--color-warning);
 }
 
 .ach-total {
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   color: var(--color-text-muted);
 }
 
 .ach-label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: var(--color-text-muted);
   margin-left: var(--gap-xs);
 }
@@ -2053,8 +2009,8 @@ onMounted(() => {
 .data-action-btn {
   display: flex;
   align-items: center;
-  gap: var(--gap-md);
-  padding: var(--gap-md) var(--gap-lg);
+  gap: var(--gap-sm);
+  padding: var(--gap-sm) var(--gap-md);
   background: transparent;
   border: none;
   border-bottom: 1px solid var(--color-border);
@@ -2076,8 +2032,8 @@ onMounted(() => {
 }
 
 .action-icon {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2114,7 +2070,7 @@ onMounted(() => {
 
 .action-desc {
   display: block;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--color-text-muted);
 }
 
@@ -2148,10 +2104,15 @@ onMounted(() => {
 }
 
 @media (max-width: 640px) {
+  .settings-page {
+    gap: var(--gap-md);
+  }
+
   .setting-item {
     flex-direction: column;
     align-items: flex-start;
-    gap: var(--gap-sm);
+    gap: var(--gap-xs);
+    padding: var(--gap-sm);
   }
 
   .currency-selector,
@@ -2178,7 +2139,7 @@ onMounted(() => {
   }
 
   .themes-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -2685,9 +2646,10 @@ onMounted(() => {
 
 /* ========== API Key 管理 ========== */
 .apikey-section-desc {
-  padding: var(--gap-sm) var(--gap-lg);
-  font-size: 12px;
+  padding: var(--gap-xs) var(--gap-md);
+  font-size: 11px;
   color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .apikey-edit {
@@ -2697,9 +2659,9 @@ onMounted(() => {
 }
 
 .apikey-input {
-  width: 200px;
+  width: 180px;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .apikey-display {
@@ -2709,9 +2671,9 @@ onMounted(() => {
 }
 
 .apikey-status {
-  font-size: 12px;
+  font-size: 11px;
   font-family: var(--font-mono);
-  padding: 2px 8px;
+  padding: 2px 6px;
   border-radius: var(--radius-xs);
 }
 
@@ -2729,8 +2691,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border-radius: var(--radius-xs);
   background: transparent;
   border: none;
