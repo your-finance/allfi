@@ -1,6 +1,6 @@
 # AllFi 技术基线文档
 
-> 版本：v2.1 | 更新时间：2026-02-27 | 状态：与代码实现对齐
+> 版本：v2.2 | 更新时间：2026-02-28 | 状态：与代码实现对齐
 
 ---
 
@@ -17,16 +17,17 @@
 │                      前端层 (Frontend)                            │
 │  ┌──────────────────────────────────────────────────────────┐   │
 │  │  Vue 3 + Vite 7 + Pinia 3                                │   │
-│  │  - 11 个页面 (SPA, hash 路由)                              │   │
-│  │  - 44 个组件                                               │   │
+│  │  - 13 个页面 (SPA, hash 路由)                              │   │
+│  │  - 54 个组件                                               │   │
 │  │  - 13 个 Pinia Store                                       │   │
 │  │  - Chart.js 4 数据可视化                                    │   │
 │  │  - Tailwind CSS 4 + 4 套主题                               │   │
 │  │  - 3 语言 i18n (zh-CN / zh-TW / en-US)                    │   │
+│  │  - Vitest 测试框架                                         │   │
 │  └──────────────────────────────────────────────────────────┘   │
 └────────────────────────┬────────────────────────────────────────┘
                          │ RESTful API (JSON)
-                         │ 75 条路由
+                         │ 90+ 条路由
                          ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                      后端层 (Backend)                             │
@@ -36,7 +37,7 @@
 │  │  │  中间件链: Recovery → CORS → Logger → Auth(JWT)     │   │   │
 │  │  └────────────────────────────────────────────────────┘   │   │
 │  │  ┌────────────────────────────────────────────────────┐   │   │
-│  │  │  Handler 层 (Gin 风格, 26 个服务模块)                │   │   │
+│  │  │  Handler 层 (Gin 风格, 29 个服务模块)                │   │   │
 │  │  └────────────────────────────────────────────────────┘   │   │
 │  │  ┌────────────────────────────────────────────────────┐   │   │
 │  │  │  Service 层 (20+ 服务，功能驱动)                     │   │   │
@@ -133,14 +134,31 @@ allfi/
 │   ├── manifest/
 │   │   └── config/             # 配置文件 yaml
 │   ├── internal/
-│   │   ├── app/                # 业务模块 (26个，含 auth/asset/user 等)
-│   │   │   ├── module_name/    # 具体模块目录
-│   │   │   │   ├── controller/ # 控制器接口层
-│   │   │   │   ├── service/    # 业务逻辑接口层
-│   │   │   │   ├── logic/      # 业务逻辑实现层
-│   │   │   │   ├── model/      # 数据流模型 (do/entity)
-│   │   │   │   └── dao/        # 数据访问对象层
-│   │   ├── cron/ (7 个)        # 定时任务
+│   │   ├── app/                # 业务模块 (29个)
+│   │   │   ├── auth/                    # 认证模块（含 2FA）
+│   │   │   ├── asset/                   # 资产总览模块
+│   │   │   ├── exchange/                # 交易所账户模块
+│   │   │   ├── wallet/                  # 链上钱包模块
+│   │   │   ├── manual_asset/            # 手动记账资产模块
+│   │   │   ├── cross_chain/             # 跨链资产追踪模块
+│   │   │   ├── defi/                    # DeFi 仓位模块（含借贷管理）
+│   │   │   ├── nft/                     # NFT 资产模块
+│   │   │   ├── transaction/             # 统一交易记录模块
+│   │   │   ├── exchange_rate/           # 汇率与价格服务模块
+│   │   │   ├── notification/            # 通知与聚合模块
+│   │   │   ├── pnl/                     # 盈亏分析模块
+│   │   │   ├── report/                  # 定期报告生成模块
+│   │   │   ├── health/                  # 系统健康检查模块
+│   │   │   ├── gas/                     # Gas 优化功能模块
+│   │   │   ├── risk/                    # 风险管理工具模块
+│   │   │   └── ... (共29个模块)
+│   │   │       ├── module_name/    # 具体模块目录
+│   │   │       ├── controller/ # 控制器接口层
+│   │   │       ├── service/    # 业务逻辑接口层
+│   │   │       ├── logic/      # 业务逻辑实现层
+│   │   │       ├── model/      # 数据流模型 (do/entity)
+│   │   │       └── dao/        # 数据访问对象层
+│   │   ├── cron/ (10 个)       # 定时任务
 │   │   ├── database/           # 数据库配置与初始化
 │   │   ├── middleware/ (7 个)  # HTTP 中间件
 │   │   ├── consts/             # 全局错误码和常量
@@ -175,7 +193,7 @@ allfi/
 - 所有表继承 `BaseModel`（id, created_at, updated_at, deleted_at 软删除）
 - 金额字段使用 `decimal.Decimal`（shopspring/decimal）
 
-### 4.2 数据表（18 张）
+### 4.2 数据表（23 张）
 
 | # | 表名 | 说明 | 核心字段 |
 |---|------|------|---------|
@@ -191,11 +209,17 @@ allfi/
 | 10 | `reports` | 资产报告 | report_type(daily/weekly/monthly/annual), content |
 | 11 | `unified_transactions` | 统一交易记录 | tx_type(buy/sell/swap/transfer), source, from_asset, to_asset |
 | 12 | `transaction_daily_summaries` | 交易日汇总 | date, buy_count, sell_count, total_fee_usd |
-
-| 14 | `achievements` | 成就记录 | achievement_id, unlocked_at |
-| 15 | `nfts` | NFT 资产 | chain, contract_address, token_id, collection |
-| 16 | `goals` | 目标追踪 | name, target_amount, deadline |
-| 17 | `sync_metadata` | 同步元数据 | source, last_sync_at, sync_status |
+| 13 | `achievements` | 成就记录 | achievement_id, unlocked_at |
+| 14 | `nfts` | NFT 资产 | chain, contract_address, token_id, collection |
+| 15 | `goals` | 目标追踪 | name, target_amount, deadline |
+| 16 | `sync_metadata` | 同步元数据 | source, last_sync_at, sync_status |
+| 17 | `lending_positions` | DeFi 借贷仓位 | protocol, chain, user_address, collateral_token, borrow_token, health_factor |
+| 18 | `lending_rate_history` | 借贷利率历史 | protocol, chain, deposit_apy, borrow_apy, timestamp |
+| 19 | `gas_price_history` | Gas 价格历史 | chain, gas_price, timestamp |
+| 20 | `gas_recommendations` | Gas 交易推荐 | chain, recommendation_type, optimal_time, estimated_savings |
+| 21 | `cross_chain_transactions` | 跨链交易记录 | from_chain, to_chain, bridge, amount, tx_hash |
+| 22 | `risk_metrics` | 风险指标 | var_95, sharpe_ratio, sortino_ratio, max_drawdown, calculated_at |
+| 23 | `two_factor_auth` | 2FA 配置 | secret_encrypted, backup_codes_encrypted, is_enabled |
 
 ### 4.3 支持的常量
 
@@ -326,7 +350,7 @@ Recovery → CORS → Logger → Auth(JWT) → Handler
 
 ## 8. 定时任务
 
-由 `CronManager` 统一管理 6 个定时任务：
+由 `CronManager` 统一管理 10 个定时任务：
 
 | 任务 | 默认间隔 | 说明 |
 |------|---------|------|
@@ -334,8 +358,12 @@ Recovery → CORS → Logger → Auth(JWT) → Handler
 | 通知摘要 | 每日 | 为启用摘要的用户生成每日通知 |
 | 价格预警 | 周期性 | 检查活跃预警条件 |
 | 报告生成 | 每日 | 自动生成日报/周报/月报 |
-
+| Gas 价格监控 | 5 分钟 | 更新各链 Gas 价格 |
+| 风险指标计算 | 每日 | 计算 VaR、Sharpe、Sortino 等风险指标 |
+| 健康因子监控 | 每小时 | 监控 DeFi 借贷仓位健康因子 |
+| 汇率刷新 | 60 分钟 | 刷新全局法币与数字货币基准汇率 |
 | 风险预警 | 周期性 | 检查资产集中度、波动率 |
+| 投资策略 | 15 分钟 | 定期检查重平衡条件与执行策略建议 |
 
 ---
 
@@ -457,21 +485,22 @@ sqlite3 data/allfi.db ".backup data/backup/allfi_$(date +%Y%m%d).db"
 
 | 维度 | 数量 |
 |------|------|
-| 后端 API 路由 | 75 条 |
-| 后端 Handler | 24 个 |
-| 后端服务接口 | 20+ 个 |
-| 后端 Repository | 18 个 |
-| 数据库表 | 18 张 |
-| 第三方集成 | 8 个模块 |
-| DeFi 协议 | 7 个 |
-| 定时任务 | 7 个 |
-| 前端页面 | 11 个 |
-| 前端组件 | 44 个 |
+| 后端 API 路由 | 90+ 条 |
+| 后端 Handler | 29 个 |
+| 后端服务接口 | 23 个 |
+| 后端 Repository | 23 个 |
+| 数据库表 | 23 张 |
+| 第三方集成 | 9 个模块（含跨链桥） |
+| DeFi 协议 | 9 个（含 Aave V3、Compound V3） |
+| 定时任务 | 10 个 |
+| 前端页面 | 13 个 |
+| 前端组件 | 54 个 |
 | Pinia Store | 13 个 |
-| API 服务模块 | 16 个 |
-| i18n 翻译 key | 800+ |
+| API 服务模块 | 17 个 |
+| i18n 翻译 key | 900+ |
 | 主题 | 4 套 |
 | 支持语言 | 3 种 |
+| 测试框架 | Vitest（前端） |
 
 ---
 
@@ -486,4 +515,4 @@ sqlite3 data/allfi.db ".backup data/backup/allfi_$(date +%Y%m%d).db"
 ---
 
 **文档维护者**: @allfi
-**最后更新**: 2026-02-11
+**最后更新**: 2026-02-28
