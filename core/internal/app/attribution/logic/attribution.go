@@ -79,8 +79,8 @@ func (s *sAttribution) GetAttribution(ctx context.Context, days int, currency st
 	}
 
 	// 计算总值变化
-	totalStartValue := startSnap.TotalValueUsd
-	totalEndValue := endSnap.TotalValueUsd
+	totalStartValue := float64(startSnap.TotalValueUsd)
+	totalEndValue := float64(endSnap.TotalValueUsd)
 	totalChange := totalEndValue - totalStartValue
 
 	// 构建各资产归因结果
@@ -88,16 +88,16 @@ func (s *sAttribution) GetAttribution(ctx context.Context, days int, currency st
 	var totalPriceEffect, totalQuantityEffect float64
 
 	for _, endDetail := range endDetails {
-		endBalance := endDetail.Balance
-		endPrice := endDetail.PriceUsd
-		endValue := endDetail.ValueUsd
+		endBalance := float64(endDetail.Balance)
+		endPrice := float64(endDetail.PriceUsd)
+		endValue := float64(endDetail.ValueUsd)
 
 		// 估算起始状态（基于快照比例推算）
 		// 如果没有历史明细，假设起始时数量相同，价格按总值比例变化
 		var startBalance, startPrice, startValue float64
 		if totalEndValue > 0 {
 			startBalance = endBalance
-			ratio := totalStartValue / totalEndValue
+			ratio := float64(totalStartValue) / float64(totalEndValue)
 			startPrice = endPrice * ratio
 			startValue = startBalance * startPrice
 		}
@@ -118,9 +118,9 @@ func (s *sAttribution) GetAttribution(ctx context.Context, days int, currency st
 			StartBalance:      startBalance,
 			EndBalance:        endBalance,
 			StartPrice:        math.Round(startPrice*100) / 100,
-			EndPrice:          endPrice,
+			EndPrice:          float64(endPrice),
 			StartValue:        math.Round(startValue*100) / 100,
-			EndValue:          endValue,
+			EndValue:          float64(endValue),
 			TotalChange:       math.Round((endValue-startValue)*100) / 100,
 			PriceEffect:       math.Round(priceEffect*100) / 100,
 			QuantityEffect:    math.Round(quantityEffect*100) / 100,
@@ -132,7 +132,7 @@ func (s *sAttribution) GetAttribution(ctx context.Context, days int, currency st
 		Range:          formatRange(days),
 		StartTime:      startSnap.SnapshotTime,
 		EndTime:        endSnap.SnapshotTime,
-		TotalChange:    math.Round(totalChange*100) / 100,
+		TotalChange:    math.Round(float64(totalChange)*100) / 100,
 		PriceEffect:    math.Round(totalPriceEffect*100) / 100,
 		QuantityEffect: math.Round(totalQuantityEffect*100) / 100,
 		Assets:         assets,

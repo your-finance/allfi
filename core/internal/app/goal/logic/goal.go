@@ -226,7 +226,7 @@ func (s *sGoal) calculateCurrentValue(ctx context.Context, goal *goalEntity.Goal
 		if oldest.TotalValueUsd <= 0 {
 			return 0
 		}
-		return (latest.TotalValueUsd - oldest.TotalValueUsd) / oldest.TotalValueUsd * 100
+		return float64(latest.TotalValueUsd-oldest.TotalValueUsd) / float64(oldest.TotalValueUsd) * 100
 
 	case goalModel.GoalTypeHoldingAmount:
 		// 从资产明细表查询指定 symbol 的总持仓数量

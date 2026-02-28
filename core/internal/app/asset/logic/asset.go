@@ -75,7 +75,7 @@ func (s *sAsset) GetSummary(ctx context.Context, currency string) (*assetApi.Get
 
 	var totalValue float64
 	for _, asset := range assets {
-		value := asset.ValueUsd * convRate
+		value := float64(asset.ValueUsd) * convRate
 
 		totalValue += value
 		res.BySource[asset.SourceType] += value
@@ -126,9 +126,9 @@ func (s *sAsset) GetDetails(ctx context.Context, sourceType string, currency str
 		items = append(items, assetApi.AssetDetailItem{
 			ID:         uint(asset.Id),
 			Symbol:     asset.AssetSymbol,
-			Amount:     asset.Balance,
-			Value:      asset.ValueUsd,
-			Price:      asset.PriceUsd,
+			Amount:     float64(asset.Balance),
+			Value:      float64(asset.ValueUsd),
+			Price:      float64(asset.PriceUsd),
 			Source:     asset.AssetName,
 			SourceType: asset.SourceType,
 			UpdatedAt:  asset.LastUpdated.Format("2006-01-02 15:04:05"),
@@ -177,7 +177,7 @@ func (s *sAsset) GetHistory(ctx context.Context, days int, currency string) (*as
 	for _, snap := range snapshots {
 		item := assetApi.SnapshotItem{
 			Date:       snap.SnapshotTime.Format("2006-01-02"),
-			TotalValue: snap.TotalValueUsd,
+			TotalValue: float64(snap.TotalValueUsd),
 			Currency:   currency,
 		}
 		// 解析快照中保存的汇率 JSON
@@ -403,7 +403,7 @@ func (s *sAsset) createAssetSnapshot(ctx context.Context, userID int) error {
 		OrderDesc(exchangeRateDao.ExchangeRates.Columns().FetchedAt).
 		Scan(&cnyRate)
 	if cnyErr == nil && cnyRate.Rate > 0 {
-		ratesMap["CNY"] = cnyRate.Rate
+		ratesMap["CNY"] = float64(cnyRate.Rate)
 	} else {
 		// 反向查询：DB 中存储的是 CNY→USD（如 0.1455），取倒数得到 USD→CNY（如 6.87）
 		cnyErr = exchangeRateDao.ExchangeRates.Ctx(ctx).
@@ -412,7 +412,7 @@ func (s *sAsset) createAssetSnapshot(ctx context.Context, userID int) error {
 			OrderDesc(exchangeRateDao.ExchangeRates.Columns().FetchedAt).
 			Scan(&cnyRate)
 		if cnyErr == nil && cnyRate.Rate > 0 {
-			ratesMap["CNY"] = 1.0 / cnyRate.Rate
+			ratesMap["CNY"] = 1.0 / float64(cnyRate.Rate)
 		}
 	}
 
@@ -473,7 +473,7 @@ func (s *sAsset) getConversionRate(ctx context.Context, currency string) float64
 		OrderDesc(exchangeRateDao.ExchangeRates.Columns().FetchedAt).
 		Scan(&rate)
 	if err == nil && rate.Rate > 0 {
-		return rate.Rate
+		return float64(rate.Rate)
 	}
 
 	// 2. 尝试反向查找（target -> USD），汇率取倒数（加密货币场景：BTC->USD = 65000，则 USD->BTC = 1/65000）
@@ -483,7 +483,7 @@ func (s *sAsset) getConversionRate(ctx context.Context, currency string) float64
 		OrderDesc(exchangeRateDao.ExchangeRates.Columns().FetchedAt).
 		Scan(&rate)
 	if err == nil && rate.Rate > 0 {
-		return 1.0 / rate.Rate
+		return 1.0 / float64(rate.Rate)
 	}
 
 	// 3. 对于常见加密货币，直接调用 CoinGecko 获取实时汇率

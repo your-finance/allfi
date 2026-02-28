@@ -350,8 +350,8 @@ func (s *sReport) generateDailyReport(ctx context.Context, userID int) (*reportE
 
 		var change, changePercent float64
 		if len(yesterdaySnapshots) > 0 {
-			yesterdayValue := yesterdaySnapshots[0].TotalValueUsd
-			todayValue := latest.TotalValueUsd
+			yesterdayValue := float64(yesterdaySnapshots[0].TotalValueUsd)
+			todayValue := float64(latest.TotalValueUsd)
 			if yesterdayValue > 0 {
 				change = todayValue - yesterdayValue
 				changePercent = (change / yesterdayValue) * 100
@@ -360,8 +360,8 @@ func (s *sReport) generateDailyReport(ctx context.Context, userID int) (*reportE
 
 		// 更新现有报告
 		existing.TotalValue = latest.TotalValueUsd
-		existing.Change = change
-		existing.ChangePercent = changePercent
+		existing.Change = float32(change)
+		existing.ChangePercent = float32(changePercent)
 		existing.GeneratedAt = gtime.Now().Time
 
 		_, err = dao.Reports.Ctx(ctx).
@@ -418,8 +418,8 @@ func (s *sReport) generateDailyReport(ctx context.Context, userID int) (*reportE
 
 	var change, changePercent float64
 	if len(yesterdaySnapshots) > 0 {
-		yesterdayValue := yesterdaySnapshots[0].TotalValueUsd
-		todayValue := latest.TotalValueUsd
+		yesterdayValue := float64(yesterdaySnapshots[0].TotalValueUsd)
+		todayValue := float64(latest.TotalValueUsd)
 		if yesterdayValue > 0 {
 			change = todayValue - yesterdayValue
 			changePercent = (change / yesterdayValue) * 100
@@ -431,8 +431,8 @@ func (s *sReport) generateDailyReport(ctx context.Context, userID int) (*reportE
 		Type:          reportModel.ReportTypeDaily,
 		Period:        period,
 		TotalValue:    latest.TotalValueUsd,
-		Change:        change,
-		ChangePercent: changePercent,
+		Change:        float32(change),
+		ChangePercent: float32(changePercent),
 		GeneratedAt:   gtime.Now().Time,
 	}
 
@@ -517,8 +517,8 @@ func (s *sReport) generateWeeklyReport(ctx context.Context, userID int) (*report
 
 	var change, changePercent float64
 	if len(lastWeekSnapshots) > 0 {
-		lastValue := lastWeekSnapshots[0].TotalValueUsd
-		thisValue := latest.TotalValueUsd
+		lastValue := float64(lastWeekSnapshots[0].TotalValueUsd)
+		thisValue := float64(latest.TotalValueUsd)
 		if lastValue > 0 {
 			change = thisValue - lastValue
 			changePercent = (change / lastValue) * 100
@@ -530,8 +530,8 @@ func (s *sReport) generateWeeklyReport(ctx context.Context, userID int) (*report
 		Type:          reportModel.ReportTypeWeekly,
 		Period:        period,
 		TotalValue:    latest.TotalValueUsd,
-		Change:        change,
-		ChangePercent: changePercent,
+		Change:        float32(change),
+		ChangePercent: float32(changePercent),
 		GeneratedAt:   gtime.Now().Time,
 	}
 
@@ -613,8 +613,8 @@ func (s *sReport) generateMonthlyReport(ctx context.Context, userID int, month s
 
 	var change, changePercent float64
 	if len(prevMonthSnapshots) > 0 {
-		prevValue := prevMonthSnapshots[0].TotalValueUsd
-		thisValue := latest.TotalValueUsd
+		prevValue := float64(prevMonthSnapshots[0].TotalValueUsd)
+		thisValue := float64(latest.TotalValueUsd)
 		if prevValue > 0 {
 			change = thisValue - prevValue
 			changePercent = (change / prevValue) * 100
@@ -630,8 +630,8 @@ func (s *sReport) generateMonthlyReport(ctx context.Context, userID int, month s
 	content := reportModel.ReportContent{
 		Type:          reportModel.ReportTypeMonthly,
 		TotalValue:    float64(latest.TotalValueUsd),
-		Change:        float64(change),
-		ChangePercent: float64(changePercent),
+		Change:        change,
+		ChangePercent: changePercent,
 		SnapshotCount: len(thisMonthSnapshots),
 		TopGainers:    gainers,
 		TopLosers:     losers,
@@ -644,8 +644,8 @@ func (s *sReport) generateMonthlyReport(ctx context.Context, userID int, month s
 		Type:          reportModel.ReportTypeMonthly,
 		Period:        month,
 		TotalValue:    latest.TotalValueUsd,
-		Change:        change,
-		ChangePercent: changePercent,
+		Change:        float32(change),
+		ChangePercent: float32(changePercent),
 		TopGainers:    string(gainersJSON),
 		TopLosers:     string(losersJSON),
 		Content:       string(contentJSON),
@@ -743,12 +743,12 @@ func (s *sReport) generateAnnualReport(ctx context.Context, userID int, year str
 
 	var change, changePercent float64
 	if startValue > 0 {
-		change = endValue - startValue
-		changePercent = (change / startValue) * 100
+		change = float64(endValue) - float64(startValue)
+		changePercent = (change / float64(startValue)) * 100
 	}
 
 	// 计算月度收益：按月分组快照，取每月最后一个快照的 TotalValueUsd
-	monthlyReturns := s.calcMonthlyReturns(thisYearSnapshots, startValue, yearInt)
+	monthlyReturns := s.calcMonthlyReturns(thisYearSnapshots, float64(startValue), yearInt)
 
 	// 计算最佳/最差月份
 	var bestMonth, worstMonth *reportModel.BestWorstMonth
@@ -778,8 +778,8 @@ func (s *sReport) generateAnnualReport(ctx context.Context, userID int, year str
 		Summary: reportModel.AnnualSummary{
 			TotalReturn:      math.Round(changePercent*100) / 100,
 			TotalReturnValue: math.Round(change*100) / 100,
-			StartValue:       math.Round(startValue*100) / 100,
-			EndValue:         math.Round(endValue*100) / 100,
+			StartValue:       math.Round(float64(startValue)*100) / 100,
+			EndValue:         math.Round(float64(endValue)*100) / 100,
 			BestMonth:        bestMonth,
 			WorstMonth:       worstMonth,
 		},
@@ -795,8 +795,8 @@ func (s *sReport) generateAnnualReport(ctx context.Context, userID int, year str
 		Type:          reportModel.ReportTypeAnnual,
 		Period:        year,
 		TotalValue:    latest.TotalValueUsd,
-		Change:        change,
-		ChangePercent: changePercent,
+		Change:        float32(change),
+		ChangePercent: float32(changePercent),
 		TopGainers:    string(gainersJSON),
 		TopLosers:     string(losersJSON),
 		Content:       string(contentJSON),
@@ -837,7 +837,7 @@ func (s *sReport) calcMonthlyReturns(snapshots []assetEntity.AssetSnapshots, sta
 	for _, snap := range snapshots {
 		m := int(snap.SnapshotTime.Month())
 		// 快照按时间升序，后面的覆盖前面的，最终保留每月最后一个
-		monthEndValues[m] = snap.TotalValueUsd
+		monthEndValues[m] = float64(snap.TotalValueUsd)
 	}
 
 	var results []reportModel.MonthReturn
@@ -887,9 +887,9 @@ func (s *sReport) getTopGainersLosers(ctx context.Context, userID int, topN int)
 			continue
 		}
 		if agg, ok := aggMap[d.AssetSymbol]; ok {
-			agg.TotalVal += d.ValueUsd
+			agg.TotalVal += float64(d.ValueUsd)
 		} else {
-			aggMap[d.AssetSymbol] = &assetAgg{Symbol: d.AssetSymbol, TotalVal: d.ValueUsd}
+			aggMap[d.AssetSymbol] = &assetAgg{Symbol: d.AssetSymbol, TotalVal: float64(d.ValueUsd)}
 		}
 	}
 

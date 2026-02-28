@@ -79,14 +79,14 @@ func (s *sExchangeRate) GetRates(ctx context.Context, currencies string) (*excha
 			}
 			// 反向汇率
 			if rate.Rate > 0 {
-				rates[symbol] = 1.0 / rate.Rate
+				rates[symbol] = 1.0 / float64(rate.Rate)
 			}
 		} else {
 			// 法币需要取倒数：DB 存的是 CNY→USD（0.14），前端需要 USD→CNY（7.2）
 			if fiatSet[symbol] && rate.Rate > 0 {
-				rates[symbol] = 1.0 / rate.Rate
+				rates[symbol] = 1.0 / float64(rate.Rate)
 			} else {
-				rates[symbol] = rate.Rate
+				rates[symbol] = float64(rate.Rate)
 			}
 		}
 
@@ -171,7 +171,7 @@ func (s *sExchangeRate) GetPrices(ctx context.Context, symbols string) (*exchang
 
 		prices = append(prices, exchangeRateApi.PriceItem{
 			Symbol:      symbol,
-			PriceUSD:    rate.Rate,
+			PriceUSD:    float64(rate.Rate),
 			Change24h:   change24hMap[symbol],
 			LastUpdated: rate.FetchedAt.UnixMilli(),
 		})
@@ -334,7 +334,7 @@ func (s *sExchangeRate) GetHistory(ctx context.Context, base, quote string, days
 		}
 		history = append(history, exchangeRateApi.RateHistoryItem{
 			Date:  r.FetchedAt.Format("2006-01-02"),
-			Rate:  rate,
+			Rate:  float64(rate),
 			Base:  base,
 			Quote: quote,
 		})

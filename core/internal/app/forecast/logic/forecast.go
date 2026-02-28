@@ -73,7 +73,7 @@ func (s *sForecast) GetForecast(ctx context.Context, targetValue float64, curren
 	dayMap := make(map[int]float64)
 	for _, snap := range snapshots {
 		dayIdx := int(snap.SnapshotTime.Sub(firstTime).Hours() / 24)
-		dayMap[dayIdx] = snap.TotalValueUsd
+		dayMap[dayIdx] = float64(snap.TotalValueUsd)
 	}
 
 	points := make([]dayPoint, 0, len(dayMap))
@@ -146,11 +146,11 @@ func (s *sForecast) GetForecast(ctx context.Context, targetValue float64, curren
 	// 日均增长率
 	var growthRate float64
 	if currentValue > 0 {
-		growthRate = slope / currentValue * 100
+		growthRate = slope / float64(currentValue) * 100
 	}
 
 	result := &model.ForecastResult{
-		CurrentValue: currentValue,
+		CurrentValue: float64(currentValue),
 		TargetValue:  targetValue,
 		Currency:     currency,
 		DailyGrowth:  math.Round(slope*100) / 100,
@@ -161,7 +161,7 @@ func (s *sForecast) GetForecast(ctx context.Context, targetValue float64, curren
 	}
 
 	// 预测达成目标的天数
-	if slope > 0 && targetValue > currentValue {
+	if slope > 0 && targetValue > float64(currentValue) {
 		// target = slope * futureDay + intercept
 		futureDay := (targetValue - intercept) / slope
 		daysFromNow := int(math.Ceil(futureDay - float64(currentDayIdx)))
@@ -170,7 +170,7 @@ func (s *sForecast) GetForecast(ctx context.Context, targetValue float64, curren
 			result.EstimatedDate = &estimatedDate
 			result.DaysToTarget = daysFromNow
 		}
-	} else if currentValue >= targetValue {
+	} else if float64(currentValue) >= targetValue {
 		// 已经达到目标
 		now := time.Now()
 		result.EstimatedDate = &now

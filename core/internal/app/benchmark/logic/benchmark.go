@@ -79,7 +79,7 @@ func (s *sBenchmark) calculateUserReturn(ctx context.Context, days int) (float64
 	}
 
 	// 收益率 = (最新 - 最旧) / 最旧 * 100
-	returnPct := (latest.TotalValueUsd - oldest.TotalValueUsd) / oldest.TotalValueUsd * 100
+	returnPct := float64(latest.TotalValueUsd-oldest.TotalValueUsd) / float64(oldest.TotalValueUsd) * 100
 
 	return returnPct, oldest.SnapshotTime, latest.SnapshotTime, nil
 }

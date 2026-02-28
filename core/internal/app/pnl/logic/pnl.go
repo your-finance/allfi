@@ -65,7 +65,7 @@ func (s *sPnl) GetDailyPnL(ctx context.Context, days int) (daily []*model.DailyP
 
 	for _, snap := range snapshots {
 		dateKey := snap.SnapshotTime.Format("2006-01-02")
-		val := snap.TotalValueUsd
+		val := float64(snap.TotalValueUsd)
 
 		entry, exists := dayMap[dateKey]
 		if !exists {
@@ -139,7 +139,7 @@ func (s *sPnl) GetPnLSummary(ctx context.Context) (*model.PnLSummary, error) {
 	}
 
 	// 获取当前值（最新快照）
-	currentValue := snapshots[len(snapshots)-1].TotalValueUsd
+	currentValue := float64(snapshots[len(snapshots)-1].TotalValueUsd)
 
 	// 计算各时段盈亏
 	now := time.Now()
@@ -197,14 +197,14 @@ func (s *sPnl) calculatePeriodPnL(snapshots []*assetEntity.AssetSnapshots, perio
 	var startValue float64
 	for _, snap := range snapshots {
 		if !snap.SnapshotTime.Before(periodStart) {
-			startValue = snap.TotalValueUsd
+			startValue = float64(snap.TotalValueUsd)
 			break
 		}
-		startValue = snap.TotalValueUsd
+		startValue = float64(snap.TotalValueUsd)
 	}
 
 	if startValue == 0 {
-		startValue = snapshots[0].TotalValueUsd
+		startValue = float64(snapshots[0].TotalValueUsd)
 	}
 
 	pnl := currentValue - startValue

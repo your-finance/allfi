@@ -63,17 +63,17 @@ func (s *sHealthScore) GetHealthScore(ctx context.Context, currency string) (*mo
 	platformSet := make(map[string]bool)
 
 	for _, d := range details {
-		totalValue += d.ValueUsd
+		totalValue += float64(d.ValueUsd)
 		symbol := strings.ToUpper(d.AssetSymbol)
 
 		if stableCoins[symbol] {
-			stableValue += d.ValueUsd
+			stableValue += float64(d.ValueUsd)
 		}
 		if blueChips[symbol] {
-			blueChipValue += d.ValueUsd
+			blueChipValue += float64(d.ValueUsd)
 		}
-		if d.ValueUsd > maxSingleValue {
-			maxSingleValue = d.ValueUsd
+		if float64(d.ValueUsd) > maxSingleValue {
+			maxSingleValue = float64(d.ValueUsd)
 		}
 		if d.SourceType != "" {
 			platformSet[d.SourceType] = true

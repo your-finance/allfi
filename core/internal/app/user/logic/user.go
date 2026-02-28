@@ -209,8 +209,8 @@ func (s *sUser) ExportData(ctx context.Context) (*userApi.ExportDataRes, error) 
 			ID:        uint(ma.Id),
 			AssetType: ma.AssetType,
 			AssetName: ma.AssetName,
-			Amount:    ma.Amount,
-			AmountUSD: ma.AmountUsd,
+			Amount:    float64(ma.Amount),
+			AmountUSD: float64(ma.AmountUsd),
 			Currency:  ma.Currency,
 			Notes:     ma.Notes,
 		})

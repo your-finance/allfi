@@ -50,6 +50,7 @@ import (
 	_ "your-finance/allfi/internal/app/pnl/logic"
 	_ "your-finance/allfi/internal/app/price_alert/logic"
 	_ "your-finance/allfi/internal/app/report/logic"
+	_ "your-finance/allfi/internal/app/risk/logic"
 	_ "your-finance/allfi/internal/app/strategy/logic"
 	_ "your-finance/allfi/internal/app/system/logic"
 	_ "your-finance/allfi/internal/app/transaction/logic"
@@ -78,6 +79,7 @@ import (
 	pnlCtrl "your-finance/allfi/internal/app/pnl/controller"
 	priceAlertCtrl "your-finance/allfi/internal/app/price_alert/controller"
 	reportCtrl "your-finance/allfi/internal/app/report/controller"
+	riskCtrl "your-finance/allfi/internal/app/risk/controller"
 	strategyCtrl "your-finance/allfi/internal/app/strategy/controller"
 	systemCtrl "your-finance/allfi/internal/app/system/controller"
 	transactionCtrl "your-finance/allfi/internal/app/transaction/controller"
@@ -126,6 +128,7 @@ func main() {
 		feeCtrl.Register(group)
 		benchmarkCtrl.Register(group)
 		healthScoreCtrl.Register(group)
+		riskCtrl.Register(group)
 
 		// 市场数据
 		marketCtrl.Register(group)

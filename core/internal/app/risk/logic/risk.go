@@ -16,6 +16,8 @@ import (
 
 	assetDao "your-finance/allfi/internal/app/asset/dao"
 	assetEntity "your-finance/allfi/internal/app/asset/model/entity"
+	"your-finance/allfi/internal/app/risk/dao"
+	riskEntity "your-finance/allfi/internal/app/risk/model/entity"
 	"your-finance/allfi/internal/app/risk/model"
 	"your-finance/allfi/internal/app/risk/service"
 	"your-finance/allfi/internal/consts"
@@ -32,9 +34,41 @@ func New() service.IRisk {
 
 // GetLatestMetrics 获取最新风险指标
 func (s *sRisk) GetLatestMetrics(ctx context.Context) (*model.RiskMetrics, error) {
-	// 从数据库获取最新风险指标（需要先运行 gf gen dao）
-	// 暂时返回计算结果
-	return s.CalculateMetrics(ctx, 30)
+	userID := consts.GetUserID(ctx)
+
+	// 从数据库获取最新风险指标
+	var entity riskEntity.RiskMetrics
+	err := dao.RiskMetrics.Ctx(ctx).
+		Where(dao.RiskMetrics.Columns().UserId, userID).
+		OrderDesc(dao.RiskMetrics.Columns().MetricDate).
+		Limit(1).
+		Scan(&entity)
+	if err != nil {
+		return nil, gerror.Wrap(err, "查询最新风险指标失败")
+	}
+
+	// 如果没有数据，返回计算结果
+	if entity.Id == 0 {
+		return s.CalculateMetrics(ctx, 30)
+	}
+
+	// 转换为业务模型
+	riskLevel := model.GetRiskLevel(float64(entity.Volatility), float64(entity.MaxDrawdown))
+	return &model.RiskMetrics{
+		MetricDate:          entity.MetricDate.Format("2006-01-02"),
+		PortfolioValue:      float64(entity.PortfolioValue),
+		Var95:               float64(entity.Var95),
+		Var99:               float64(entity.Var99),
+		SharpeRatio:         float64(entity.SharpeRatio),
+		SortinoRatio:        float64(entity.SortinoRatio),
+		MaxDrawdown:         float64(entity.MaxDrawdown),
+		MaxDrawdownDuration: entity.MaxDrawdownDuration,
+		Beta:                float64(entity.Beta),
+		Volatility:          float64(entity.Volatility),
+		DownsideDeviation:   float64(entity.DownsideDeviation),
+		CalculationPeriod:   entity.CalculationPeriod,
+		RiskLevel:           string(riskLevel),
+	}, nil
 }
 
 // GetHistoryMetrics 获取历史风险指标
@@ -49,11 +83,41 @@ func (s *sRisk) GetHistoryMetrics(ctx context.Context, days int) ([]*model.RiskM
 	userID := consts.GetUserID(ctx)
 	startDate := time.Now().AddDate(0, 0, -days)
 
-	// 从数据库查询历史风险指标（需要先运行 gf gen dao）
-	// 暂时返回空列表
-	g.Log().Info(ctx, "查询历史风险指标", "userID", userID, "days", days, "startDate", startDate)
+	// 从数据库查询历史风险指标
+	var entities []*riskEntity.RiskMetrics
+	err := dao.RiskMetrics.Ctx(ctx).
+		Where(dao.RiskMetrics.Columns().UserId, userID).
+		Where(dao.RiskMetrics.Columns().MetricDate+" >= ?", startDate).
+		OrderDesc(dao.RiskMetrics.Columns().MetricDate).
+		Scan(&entities)
+	if err != nil {
+		return nil, gerror.Wrap(err, "查询历史风险指标失败")
+	}
 
-	return []*model.RiskMetrics{}, nil
+	// 转换为业务模型
+	result := make([]*model.RiskMetrics, 0, len(entities))
+	for _, entity := range entities {
+		riskLevel := model.GetRiskLevel(float64(entity.Volatility), float64(entity.MaxDrawdown))
+		result = append(result, &model.RiskMetrics{
+			MetricDate:          entity.MetricDate.Format("2006-01-02"),
+			PortfolioValue:      float64(entity.PortfolioValue),
+			Var95:               float64(entity.Var95),
+			Var99:               float64(entity.Var99),
+			SharpeRatio:         float64(entity.SharpeRatio),
+			SortinoRatio:        float64(entity.SortinoRatio),
+			MaxDrawdown:         float64(entity.MaxDrawdown),
+			MaxDrawdownDuration: entity.MaxDrawdownDuration,
+			Beta:                float64(entity.Beta),
+			Volatility:          float64(entity.Volatility),
+			DownsideDeviation:   float64(entity.DownsideDeviation),
+			CalculationPeriod:   entity.CalculationPeriod,
+			RiskLevel:           string(riskLevel),
+		})
+	}
+
+	g.Log().Info(ctx, "查询历史风险指标成功", "userID", userID, "days", days, "count", len(result))
+
+	return result, nil
 }
 
 // CalculateMetrics 计算风险指标
@@ -130,8 +194,26 @@ func (s *sRisk) CalculateMetrics(ctx context.Context, period int) (*model.RiskMe
 		"volatility", metrics.Volatility,
 	)
 
-	// 6. 保存到数据库（需要先运行 gf gen dao）
-	// TODO: 保存到 risk_metrics 表
+	// 6. 保存到数据库
+	metricDate, _ := time.Parse("2006-01-02", metrics.MetricDate)
+	_, err = dao.RiskMetrics.Ctx(ctx).Data(g.Map{
+		dao.RiskMetrics.Columns().UserId:              userID,
+		dao.RiskMetrics.Columns().MetricDate:          metricDate,
+		dao.RiskMetrics.Columns().PortfolioValue:      metrics.PortfolioValue,
+		dao.RiskMetrics.Columns().Var95:               metrics.Var95,
+		dao.RiskMetrics.Columns().Var99:               metrics.Var99,
+		dao.RiskMetrics.Columns().SharpeRatio:         metrics.SharpeRatio,
+		dao.RiskMetrics.Columns().SortinoRatio:        metrics.SortinoRatio,
+		dao.RiskMetrics.Columns().MaxDrawdown:         metrics.MaxDrawdown,
+		dao.RiskMetrics.Columns().MaxDrawdownDuration: metrics.MaxDrawdownDuration,
+		dao.RiskMetrics.Columns().Beta:                metrics.Beta,
+		dao.RiskMetrics.Columns().Volatility:          metrics.Volatility,
+		dao.RiskMetrics.Columns().DownsideDeviation:   metrics.DownsideDeviation,
+		dao.RiskMetrics.Columns().CalculationPeriod:   metrics.CalculationPeriod,
+	}).OnConflict(dao.RiskMetrics.Columns().UserId, dao.RiskMetrics.Columns().MetricDate).Save()
+	if err != nil {
+		g.Log().Warning(ctx, "保存风险指标失败", "error", err)
+	}
 
 	return metrics, nil
 }

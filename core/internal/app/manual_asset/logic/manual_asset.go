@@ -175,7 +175,7 @@ func (s *sManualAsset) toAssetItem(a *manualAssetEntity.ManualAssets) manualAsse
 		ID:        uint(a.Id),
 		AssetType: a.AssetType,
 		AssetName: a.AssetName,
-		Amount:    a.Amount,
+		Amount:    float64(a.Amount),
 		Currency:  a.Currency,
 		Notes:     a.Notes,
 		CreatedAt: a.CreatedAt.Format("2006-01-02T15:04:05Z"),
@@ -199,7 +199,7 @@ func (s *sManualAsset) convertToUSD(ctx context.Context, amount float64, currenc
 		OrderDesc(exchangeRateDao.ExchangeRates.Columns().FetchedAt).
 		Scan(&rate)
 	if err == nil && rate.Rate > 0 {
-		return amount * rate.Rate
+		return amount * float64(rate.Rate)
 	}
 
 	// 2. 尝试反向查找（USD -> currency），汇率取倒数
@@ -209,7 +209,7 @@ func (s *sManualAsset) convertToUSD(ctx context.Context, amount float64, currenc
 		OrderDesc(exchangeRateDao.ExchangeRates.Columns().FetchedAt).
 		Scan(&rate)
 	if err == nil && rate.Rate > 0 {
-		return amount / rate.Rate
+		return amount / float64(rate.Rate)
 	}
 
 	// 3. 对于加密货币，调用 CoinGecko 获取 USD 价格

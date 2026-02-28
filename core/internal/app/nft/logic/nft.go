@@ -365,9 +365,9 @@ func updateNFTCache(ctx context.Context, walletAddress string, nfts []alchemy.NF
 			Collection:      nft.Collection,
 			CollectionSlug:  nft.CollectionSlug,
 			Chain:           nft.Chain,
-			FloorPrice:      nft.FloorPrice,
+			FloorPrice:      float32(nft.FloorPrice),
 			FloorCurrency:   nft.FloorPriceCurrency,
-			FloorPriceUsd:   nft.FloorPriceUSD,
+			FloorPriceUsd:   float32(nft.FloorPriceUSD),
 			CachedAt:        now,
 		}
 		_, insertErr := dao.NftCaches.Ctx(ctx).Data(cache).Insert()

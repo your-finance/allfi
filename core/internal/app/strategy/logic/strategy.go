@@ -177,8 +177,8 @@ func (s *sStrategy) GetAnalysis(ctx context.Context, id uint) (*strategyApi.GetA
 	totalValue := 0.0
 	assetValues := make(map[string]float64)
 	for _, d := range details {
-		assetValues[d.AssetSymbol] += d.ValueUsd
-		totalValue += d.ValueUsd
+		assetValues[d.AssetSymbol] += float64(d.ValueUsd)
+		totalValue += float64(d.ValueUsd)
 	}
 
 	currentAlloc := make(map[string]float64)
