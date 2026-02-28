@@ -48,7 +48,7 @@ func TestController_AuthFlow(t *testing.T) {
 		resp, err := client.Get(ctx, "/api/v1/auth/status")
 		t.AssertNil(err)
 		t.Assert(resp.StatusCode, 200)
-		t.Assert(resp.ReadAllString(), `{"code":0,"message":"OK","data":{"pin_set":false}}`)
+		t.Assert(resp.ReadAllString(), `{"code":0,"message":"OK","data":{"pin_set":false,"two_fa_enabled":false,"password_type":"pin"}}`)
 		resp.Close()
 
 		// 2. Setup PIN
@@ -64,7 +64,7 @@ func TestController_AuthFlow(t *testing.T) {
 		resp, err = client.Get(ctx, "/api/v1/auth/status")
 		t.AssertNil(err)
 		t.Assert(resp.StatusCode, 200)
-		t.Assert(resp.ReadAllString(), `{"code":0,"message":"OK","data":{"pin_set":true}}`)
+		t.Assert(resp.ReadAllString(), `{"code":0,"message":"OK","data":{"pin_set":true,"two_fa_enabled":false,"password_type":"pin"}}`)
 		resp.Close()
 
 		// 4. Login PIN
