@@ -53,6 +53,11 @@ func (c *Controller) Verify2FA(ctx context.Context, req *authApi.Verify2FAReq) (
 	return service.Auth().Verify2FA(ctx, req.Code)
 }
 
+// SwitchType 切换密码类型
+func (c *Controller) SwitchType(ctx context.Context, req *authApi.SwitchTypeReq) (res *authApi.SwitchTypeRes, err error) {
+	return service.Auth().SwitchType(ctx, req.CurrentPassword, req.NewType, req.NewPassword)
+}
+
 // Register 注册认证模块路由（公开接口，无需认证）
 func Register(group *ghttp.RouterGroup) {
 	group.Bind(&Controller{})
