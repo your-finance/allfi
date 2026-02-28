@@ -71,18 +71,20 @@ const allocationChartData = computed(() => {
   const labels = hd.labels
   const totalValues = hd.values || []
 
-  // 模拟各类资产占比随时间变化（基于当前分类比例 + 随机波动）
+  // 基于当前分类比例计算各类资产占比
   const dist = assetStore.platformDistribution
-  const cexRatio = (dist[0]?.percentage || 60) / 100
-  const chainRatio = (dist[1]?.percentage || 30) / 100
-  const manualRatio = (dist[2]?.percentage || 10) / 100
+  // 使用 find 按 id 查找，避免数组索引依赖；使用 ?? 避免 percentage=0 时的 falsy 问题
+  const cexRatio = (dist.find(p => p.id === 'cex')?.percentage ?? 0) / 100
+  const chainRatio = (dist.find(p => p.id === 'blockchain')?.percentage ?? 0) / 100
+  const manualRatio = (dist.find(p => p.id === 'manual')?.percentage ?? 0) / 100
 
   return {
     labels,
     datasets: [
       {
         label: t('dashboard.cexAssets'),
-        data: totalValues.map((v, i) => v * (cexRatio + (Math.sin(i * 0.3) * 0.05))),
+        // 如果 cexRatio 为 0，直接显示 0，不添加波动
+        data: totalValues.map((v, i) => cexRatio > 0 ? v * (cexRatio + (Math.sin(i * 0.3) * 0.05)) : 0),
         backgroundColor: `${colors.value.accentPrimary}66`,
         borderColor: colors.value.accentPrimary,
         borderWidth: 1,
@@ -92,7 +94,8 @@ const allocationChartData = computed(() => {
       },
       {
         label: t('dashboard.blockchainAssets'),
-        data: totalValues.map((v, i) => v * (chainRatio + (Math.cos(i * 0.3) * 0.03))),
+        // 如果 chainRatio 为 0，直接显示 0，不添加波动
+        data: totalValues.map((v, i) => chainRatio > 0 ? v * (chainRatio + (Math.cos(i * 0.3) * 0.03)) : 0),
         backgroundColor: `${colors.value.accentSecondary}66`,
         borderColor: colors.value.accentSecondary,
         borderWidth: 1,
@@ -102,7 +105,8 @@ const allocationChartData = computed(() => {
       },
       {
         label: t('dashboard.manualAssets'),
-        data: totalValues.map(() => totalValues[0] * manualRatio),
+        // 如果 manualRatio 为 0，直接显示 0
+        data: totalValues.map(() => manualRatio > 0 ? totalValues[0] * manualRatio : 0),
         backgroundColor: `${colors.value.accentTertiary}66`,
         borderColor: colors.value.accentTertiary,
         borderWidth: 1,
