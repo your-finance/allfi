@@ -25,11 +25,14 @@ const hasError = ref(false)
 
 const rangeToApi = { '7D': '7d', '30D': '30d', '90D': '90d' }
 
+// 固定使用 USDC 计价，不进行计价方式切换
+const FIXED_CURRENCY = 'USDC'
+
 const loadData = async () => {
   isLoading.value = true
   hasError.value = false
   try {
-    data.value = await analyticsService.getAttribution(rangeToApi[selectedRange.value])
+    data.value = await analyticsService.getAttribution(rangeToApi[selectedRange.value], FIXED_CURRENCY)
   } catch (err) {
     console.error('加载归因数据失败:', err)
     hasError.value = true
