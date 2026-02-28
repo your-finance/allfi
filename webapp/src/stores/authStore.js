@@ -20,7 +20,10 @@ export const useAuthStore = defineStore("auth", () => {
   // 兼容旧代码的计算属性
   const isLoggedIn = computed(() => isAuthenticated.value);
   const requires2FA = ref(false);
-  const is2FAVerified = ref(true);
+  // is2FAVerified: 2FA 已验证状态，只有在 isAuthenticated 且不需要 2FA 时才为 true
+  const is2FAVerified = computed(
+    () => isAuthenticated.value && !requires2FA.value,
+  );
   const user = ref(null);
   const userEmail = computed(() => "");
   const userName = computed(() => "AllFi User");

@@ -268,9 +268,15 @@ func (s *sAuth) Enable2FA(ctx context.Context, code string) (*authApi.Enable2FAR
 		return nil, gerror.New("尚未配置 2FA，请先调用 Setup")
 	}
 
+	// 检查锁定状态
+	if s.isLocked(ctx) {
+		return nil, gerror.New("账户已锁定，请稍后再试")
+	}
+
 	// 验证 TOTP Code
 	valid := totp.Validate(code, secret)
 	if !valid {
+		s.recordFailure(ctx) // 防爆破记录
 		return nil, gerror.New("2FA 验证码错误")
 	}
 
