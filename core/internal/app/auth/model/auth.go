@@ -15,6 +15,8 @@ const (
 	ConfigKey2faSecret = "auth.2fa_secret"
 	// ConfigKey2faEnabled 2FA 启用状态存储键
 	ConfigKey2faEnabled = "auth.2fa_enabled"
+	// ConfigKeyPasswordType 密码类型存储键
+	ConfigKeyPasswordType = "auth.password_type"
 
 	// PINMinLength PIN 最小长度
 	PINMinLength = 4
@@ -46,3 +48,11 @@ type Verify2FAOutput struct {
 	Success bool
 	Token   string
 }
+
+// 密码类型常量
+const (
+	// PasswordTypePin 简单 PIN（4-20 位数字）
+	PasswordTypePin = "pin"
+	// PasswordTypeComplex 复杂密码（8-20 位，含大小写字母和数字）
+	PasswordTypeComplex = "complex"
+)

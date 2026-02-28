@@ -84,6 +84,7 @@ certs/
 
 # Documentation build
 docs/lib
+docs/superpowers
 .playwright-mcp
 core/server
 .sisyphus

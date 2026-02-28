@@ -11,8 +11,9 @@ type GetStatusReq struct {
 
 // GetStatusRes 获取认证状态响应
 type GetStatusRes struct {
-	PinSet       bool `json:"pin_set" dc:"是否已设置 PIN"`
-	TwoFAEnabled bool `json:"two_fa_enabled" dc:"是否已启用 2FA"`
+	PinSet       bool   `json:"pin_set" dc:"是否已设置 PIN"`
+	TwoFAEnabled bool   `json:"two_fa_enabled" dc:"是否已启用 2FA"`
+	PasswordType string `json:"password_type" dc:"密码类型（pin/complex）"`
 }
 
 // SetupReq 首次设置 PIN 请求
@@ -93,4 +94,17 @@ type Verify2FAReq struct {
 type Verify2FARes struct {
 	Success bool   `json:"success" dc:"是否验证成功"`
 	Token   string `json:"token" dc:"重新颁发的完全授权 JWT Token"`
+}
+
+// SwitchTypeReq 切换密码类型请求
+type SwitchTypeReq struct {
+	g.Meta          `path:"/auth/switch-type" method:"post" summary:"切换密码类型" tags:"认证"`
+	CurrentPassword string `json:"current_password" v:"required" dc:"当前密码"`
+	NewType         string `json:"new_type" v:"required|in:pin,complex" dc:"新密码类型（pin/complex）"`
+	NewPassword     string `json:"new_password" v:"required" dc:"新密码"`
+}
+
+// SwitchTypeRes 切换密码类型响应
+type SwitchTypeRes struct {
+	Success bool `json:"success" dc:"是否切换成功"`
 }
