@@ -39,6 +39,9 @@ const themeStore = useThemeStore()
 const { formatNumber, currencySymbol } = useFormatters()
 const { t } = useI18n()
 
+// 资产集中度固定使用 USDC 计价
+const USDC_SYMBOL = '$'
+
 // 时间范围
 const selectedTimeRange = ref('30D')
 const timeRanges = ['7D', '30D', '90D', '1Y']
@@ -419,7 +422,7 @@ const platformChartOptions = computed(() => ({
                 <span class="conc-dot" :style="{ background: concentrationChartData.datasets[0].backgroundColor[i] }" />
                 <span class="conc-name">{{ asset.symbol }}</span>
                 <span class="conc-pct font-mono">{{ asset.percentage.toFixed(1) }}%</span>
-                <span class="conc-val font-mono">{{ currencySymbol }}{{ formatNumber(asset.value, 0) }}</span>
+                <span class="conc-val font-mono">{{ USDC_SYMBOL }}{{ formatNumber(asset.value, 0) }}</span>
               </div>
             </div>
           </div>

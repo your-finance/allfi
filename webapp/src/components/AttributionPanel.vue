@@ -10,9 +10,12 @@ import { useFormatters } from '../composables/useFormatters'
 import { useThemeStore } from '../stores/themeStore'
 import { useI18n } from '../composables/useI18n'
 
-const { formatNumber, currencySymbol } = useFormatters()
+const { formatNumber } = useFormatters()
 const themeStore = useThemeStore()
 const { t } = useI18n()
+
+// 固定使用 USDC 计价，货币符号固定为 $
+const USDC_SYMBOL = '$'
 
 // 时间范围
 const selectedRange = ref('7D')
@@ -109,7 +112,7 @@ const getContributionWidth = (contribution) => {
         <div class="summary-card">
           <span class="summary-label">{{ t('analytics.attribution.totalReturn') }}</span>
           <span class="summary-value font-mono" :class="totalReturn >= 0 ? 'positive' : 'negative'">
-            {{ totalReturn >= 0 ? '+' : '' }}{{ currencySymbol }}{{ formatNumber(Math.abs(totalReturn), 2) }}
+            {{ totalReturn >= 0 ? '+' : '' }}{{ USDC_SYMBOL }}{{ formatNumber(Math.abs(totalReturn), 2) }}
           </span>
           <span class="summary-pct font-mono" :class="totalPercent >= 0 ? 'positive' : 'negative'">
             {{ totalPercent >= 0 ? '+' : '' }}{{ totalPercent.toFixed(2) }}%
@@ -141,7 +144,7 @@ const getContributionWidth = (contribution) => {
               <td class="col-contribution">
                 <div class="contribution-cell">
                   <span class="contribution-value font-mono" :class="a.contribution >= 0 ? 'positive' : 'negative'">
-                    {{ a.contribution >= 0 ? '+' : '' }}{{ currencySymbol }}{{ formatNumber(Math.abs(a.contribution), 0) }}
+                    {{ a.contribution >= 0 ? '+' : '' }}{{ USDC_SYMBOL }}{{ formatNumber(Math.abs(a.contribution), 0) }}
                   </span>
                   <div class="contribution-bar-bg">
                     <div
