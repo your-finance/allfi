@@ -199,6 +199,9 @@ func (m *CronManager) Stop() {
 	if m.exchangeRateJob != nil {
 		m.exchangeRateJob.Stop()
 	}
+	if m.gasPriceJob != nil {
+		m.gasPriceJob.Stop()
+	}
 
 	g.Log().Info(context.Background(), "[Cron] 所有定时任务已停止")
 }

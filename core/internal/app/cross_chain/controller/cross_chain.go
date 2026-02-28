@@ -5,7 +5,7 @@ import (
 	"time"
 
 	v1 "your-finance/allfi/api/v1"
-	"your-finance/allfi/internal/app/cross_chain/logic"
+	"your-finance/allfi/internal/app/cross_chain/service"
 
 	"github.com/gogf/gf/v2/util/gconv"
 )
@@ -32,7 +32,7 @@ func (c *cCrossChain) GetTransactions(ctx context.Context, req *v1.CrossChainTra
 	}
 
 	// 查询交易列表
-	transactions, total, err := logic.CrossChain().GetTransactions(ctx, userId, req.Page, req.PageSize)
+	transactions, total, err := service.CrossChain().GetTransactions(ctx, userId, req.Page, req.PageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func (c *cCrossChain) GetAssetFlow(ctx context.Context, req *v1.CrossChainFlowRe
 	}
 
 	// 查询资产流向
-	flowData, err := logic.CrossChain().GetAssetFlow(ctx, userId, startTime, endTime)
+	flowData, err := service.CrossChain().GetAssetFlow(ctx, userId, startTime, endTime)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func (c *cCrossChain) GetFeeStats(ctx context.Context, req *v1.CrossChainFeeStat
 	}
 
 	// 查询手续费统计
-	stats, err := logic.CrossChain().GetFeeStats(ctx, userId, startTime, endTime)
+	stats, err := service.CrossChain().GetFeeStats(ctx, userId, startTime, endTime)
 	if err != nil {
 		return nil, err
 	}
@@ -141,31 +141,13 @@ func (c *cCrossChain) GetFeeStats(ctx context.Context, req *v1.CrossChainFeeStat
 
 // GetBridges 获取支持的跨链桥列表
 func (c *cCrossChain) GetBridges(ctx context.Context, req *v1.CrossChainBridgesReq) (res *v1.CrossChainBridgesRes, err error) {
-	bridges, err := logic.CrossChain().GetBridges(ctx)
+	bridges, err := service.CrossChain().GetBridges(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	res = &v1.CrossChainBridgesRes{
 		Bridges: bridges,
-	}
-	return res, nil
-}
-
-// InitMockData 初始化模拟数据（仅用于开发测试）
-func (c *cCrossChain) InitMockData(ctx context.Context, req *v1.CrossChainInitMockReq) (res *v1.CrossChainInitMockRes, err error) {
-	userId := gconv.Int64(ctx.Value("user_id"))
-	if userId == 0 {
-		userId = 1
-	}
-
-	err = logic.CrossChain().InitMockData(ctx, userId)
-	if err != nil {
-		return nil, err
-	}
-
-	res = &v1.CrossChainInitMockRes{
-		Message: "Mock data initialized successfully",
 	}
 	return res, nil
 }
