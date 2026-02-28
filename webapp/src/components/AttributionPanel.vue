@@ -23,7 +23,6 @@ const rangeOptions = ['7D', '30D', '90D']
 
 // 数据
 const data = ref(null)
-const isLoading = ref(false)
 const hasError = ref(false)
 
 const rangeToApi = { '7D': '7d', '30D': '30d', '90D': '90d' }
@@ -32,15 +31,13 @@ const rangeToApi = { '7D': '7d', '30D': '30d', '90D': '90d' }
 const FIXED_CURRENCY = 'USDC'
 
 const loadData = async () => {
-  isLoading.value = true
+  // 不重置 isLoading，避免切换时闪烁，保留旧数据直到新数据加载完成
   hasError.value = false
   try {
     data.value = await analyticsService.getAttribution(rangeToApi[selectedRange.value], FIXED_CURRENCY)
   } catch (err) {
     console.error('加载归因数据失败:', err)
     hasError.value = true
-  } finally {
-    isLoading.value = false
   }
 }
 
@@ -90,13 +87,8 @@ const getContributionWidth = (contribution) => {
       </div>
     </div>
 
-    <!-- 加载中 -->
-    <div v-if="isLoading" class="loading-state">
-      {{ t('common.loading') }}
-    </div>
-
     <!-- 错误 -->
-    <div v-else-if="hasError" class="empty-state">
+    <div v-if="hasError" class="empty-state">
       <p>{{ t('analytics.attribution.error') }}</p>
     </div>
 
@@ -137,7 +129,7 @@ const getContributionWidth = (contribution) => {
                 <span class="asset-symbol">{{ a.symbol }}</span>
                 <span v-if="a.source" class="asset-source">{{ a.source }}</span>
               </td>
-              <td class="col-num right font-mono">{{ a.weight }}%</td>
+              <td class="col-num right font-mono">{{ a.weight.toFixed(1) }}%</td>
               <td class="col-num right font-mono" :class="a.return >= 0 ? 'positive' : 'negative'">
                 {{ a.return >= 0 ? '+' : '' }}{{ a.return.toFixed(2) }}%
               </td>
