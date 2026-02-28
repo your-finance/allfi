@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"your-finance/allfi/internal/app/cross_chain/service"
 	"your-finance/allfi/internal/dao"
 	"your-finance/allfi/internal/integrations/bridge"
 	"your-finance/allfi/internal/model/entity"
@@ -13,34 +14,6 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 )
-
-// AssetFlowData 资产流向数据
-type AssetFlowData struct {
-	Nodes []FlowNode `json:"nodes"` // 节点列表（链）
-	Links []FlowLink `json:"links"` // 连接列表（流向）
-}
-
-// FlowNode 流向节点
-type FlowNode struct {
-	Name  string `json:"name"`  // 节点名称（链名）
-	Value int    `json:"value"` // 节点值（交易次数）
-}
-
-// FlowLink 流向连接
-type FlowLink struct {
-	Source string  `json:"source"` // 源节点
-	Target string  `json:"target"` // 目标节点
-	Value  float64 `json:"value"`  // 流向值（金额）
-}
-
-// FeeStatsData 手续费统计数据
-type FeeStatsData struct {
-	TotalFee       float64            `json:"total_fee"`         // 总手续费
-	AvgFee         float64            `json:"avg_fee"`           // 平均手续费
-	FeeByBridge    map[string]float64 `json:"fee_by_bridge"`     // 按跨链桥统计
-	FeeByChain     map[string]float64 `json:"fee_by_chain"`      // 按链统计
-	TransactionCnt int                `json:"transaction_count"` // 交易次数
-}
 
 type sCrossChain struct {
 	bridgeManager *bridge.BridgeManager
@@ -71,7 +44,7 @@ func (s *sCrossChain) GetTransactions(ctx context.Context, userId int64, page, p
 }
 
 // GetAssetFlow 获取资产流向数据
-func (s *sCrossChain) GetAssetFlow(ctx context.Context, userId int64, startTime, endTime *time.Time) (*AssetFlowData, error) {
+func (s *sCrossChain) GetAssetFlow(ctx context.Context, userId int64, startTime, endTime *time.Time) (*service.AssetFlowData, error) {
 	// 构建查询条件
 	m := dao.CrossChainTransaction.Ctx(ctx).Where("user_id", userId)
 	if startTime != nil {
@@ -103,35 +76,35 @@ func (s *sCrossChain) GetAssetFlow(ctx context.Context, userId int64, startTime,
 	}
 
 	// 构建节点列表
-	nodes := make([]FlowNode, 0, len(nodeMap))
+	nodes := make([]service.FlowNode, 0, len(nodeMap))
 	for name, value := range nodeMap {
-		nodes = append(nodes, FlowNode{
+		nodes = append(nodes, service.FlowNode{
 			Name:  name,
 			Value: value,
 		})
 	}
 
 	// 构建连接列表
-	links := make([]FlowLink, 0, len(linkMap))
+	links := make([]service.FlowLink, 0, len(linkMap))
 	for key, value := range linkMap {
 		// 解析 source 和 target
 		var source, target string
 		fmt.Sscanf(key, "%s->%s", &source, &target)
-		links = append(links, FlowLink{
+		links = append(links, service.FlowLink{
 			Source: source,
 			Target: target,
 			Value:  value,
 		})
 	}
 
-	return &AssetFlowData{
+	return &service.AssetFlowData{
 		Nodes: nodes,
 		Links: links,
 	}, nil
 }
 
 // GetFeeStats 获取跨链手续费统计
-func (s *sCrossChain) GetFeeStats(ctx context.Context, userId int64, startTime, endTime *time.Time) (*FeeStatsData, error) {
+func (s *sCrossChain) GetFeeStats(ctx context.Context, userId int64, startTime, endTime *time.Time) (*service.FeeStatsData, error) {
 	// 构建查询条件
 	m := dao.CrossChainTransaction.Ctx(ctx).Where("user_id", userId)
 	if startTime != nil {
@@ -149,7 +122,7 @@ func (s *sCrossChain) GetFeeStats(ctx context.Context, userId int64, startTime, 
 	}
 
 	// 统计数据
-	stats := &FeeStatsData{
+	stats := &service.FeeStatsData{
 		FeeByBridge: make(map[string]float64),
 		FeeByChain:  make(map[string]float64),
 	}

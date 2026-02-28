@@ -35,6 +35,7 @@ import (
 	_ "your-finance/allfi/internal/app/attribution/logic"
 	_ "your-finance/allfi/internal/app/auth/logic"
 	_ "your-finance/allfi/internal/app/benchmark/logic"
+	_ "your-finance/allfi/internal/app/cross_chain/logic"
 	_ "your-finance/allfi/internal/app/defi/logic"
 	_ "your-finance/allfi/internal/app/exchange/logic"
 	_ "your-finance/allfi/internal/app/exchange_rate/logic"
@@ -65,6 +66,7 @@ import (
 	attributionCtrl "your-finance/allfi/internal/app/attribution/controller"
 	authCtrl "your-finance/allfi/internal/app/auth/controller"
 	benchmarkCtrl "your-finance/allfi/internal/app/benchmark/controller"
+	crossChainCtrl "your-finance/allfi/internal/app/cross_chain/controller"
 	defiCtrl "your-finance/allfi/internal/app/defi/controller"
 	exchangeCtrl "your-finance/allfi/internal/app/exchange/controller"
 	exchangeRateCtrl "your-finance/allfi/internal/app/exchange_rate/controller"
@@ -142,6 +144,9 @@ func main() {
 
 		// 交易记录
 		transactionCtrl.Register(group)
+
+		// 跨链交易
+		crossChainCtrl.Register(group)
 
 		// 通知系统
 		notificationCtrl.Register(group)
