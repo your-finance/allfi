@@ -113,10 +113,13 @@ func main() {
 		// ===== 免认证路由 =====
 		healthCtrl.Register(group)
 		authCtrl.Register(group)
-		systemCtrl.Register(group) // 版本信息、更新检查等系统管理 API 无需认证
+		systemCtrl.RegisterPublic(group) // 仅版本信息、更新检查等只读接口
 
 		// ===== 需认证路由 =====
 		group.Middleware(middleware.Auth)
+
+		// 系统管理敏感操作（API Key 管理、更新/回滚）
+		systemCtrl.RegisterProtected(group)
 
 		// 核心资产模块
 		assetCtrl.Register(group)

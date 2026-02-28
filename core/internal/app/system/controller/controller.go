@@ -85,8 +85,29 @@ func (c *SystemController) DeleteAPIKey(ctx context.Context, req *systemApi.Dele
 	return &systemApi.DeleteAPIKeyRes{Success: true}, nil
 }
 
-// Register 注册系统管理路由
-// 使用 group.Bind 自动绑定控制器方法到路由
+// RegisterPublic 注册免认证的系统管理路由
+// 仅包含版本信息、更新检查等只读、非敏感接口
+func RegisterPublic(group *ghttp.RouterGroup) {
+	publicCtrl := &SystemController{}
+	group.GET("/system/version", publicCtrl.GetVersion)
+	group.GET("/system/update/check", publicCtrl.CheckUpdate)
+	group.GET("/system/update/status", publicCtrl.GetUpdateStatus)
+	group.GET("/system/update/history", publicCtrl.GetUpdateHistory)
+}
+
+// RegisterProtected 注册需认证的系统管理路由
+// 包含 API Key 管理、系统更新/回滚等敏感操作
+func RegisterProtected(group *ghttp.RouterGroup) {
+	protectedCtrl := &SystemController{}
+	group.GET("/system/apikeys", protectedCtrl.GetAPIKeys)
+	group.PUT("/system/apikeys", protectedCtrl.UpdateAPIKey)
+	group.DELETE("/system/apikeys", protectedCtrl.DeleteAPIKey)
+	group.POST("/system/update/apply", protectedCtrl.ApplyUpdate)
+	group.POST("/system/update/rollback", protectedCtrl.Rollback)
+}
+
+// Register 注册所有系统管理路由（兼容旧代码）
+// 注意：建议使用 RegisterPublic + RegisterProtected 分开注册
 func Register(group *ghttp.RouterGroup) {
-	group.Bind(&SystemController{})
+	RegisterPublic(group)
 }
