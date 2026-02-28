@@ -247,6 +247,79 @@ const disable2FA = async () => {
   }
 }
 
+// ========== 密码类型切换 ==========
+const showSwitchModal = ref(false)
+const switchStep = ref(1)
+const switchCurrentPassword = ref('')
+const switchNewType = ref('pin')
+const switchNewPassword = ref('')
+const switchConfirmPassword = ref('')
+const switchError = ref('')
+
+// 验证新密码
+const validateSwitchPassword = () => {
+  if (!switchCurrentPassword.value) {
+    switchError.value = '请输入当前密码'
+    return false
+  }
+  if (switchNewType.value === 'pin') {
+    if (!/^\d{4,20}$/.test(switchNewPassword.value)) {
+      switchError.value = 'PIN 必须为 4-20 位数字'
+      return false
+    }
+  } else {
+    if (switchNewPassword.value.length < 8 || switchNewPassword.value.length > 20) {
+      switchError.value = '密码长度为 8-20 位'
+      return false
+    }
+    if (!/[a-z]/.test(switchNewPassword.value)) {
+      switchError.value = '密码必须包含小写字母'
+      return false
+    }
+    if (!/[A-Z]/.test(switchNewPassword.value)) {
+      switchError.value = '密码必须包含大写字母'
+      return false
+    }
+    if (!/\d/.test(switchNewPassword.value)) {
+      switchError.value = '密码必须包含数字'
+      return false
+    }
+  }
+  if (switchNewPassword.value !== switchConfirmPassword.value) {
+    switchError.value = '两次输入的密码不一致'
+    return false
+  }
+  return true
+}
+
+// 处理切换
+const handleSwitchType = async () => {
+  switchError.value = ''
+  if (!validateSwitchPassword()) return
+
+  const success = await authStore.switchPasswordType(
+    switchCurrentPassword.value,
+    switchNewType.value,
+    switchNewPassword.value
+  )
+  if (success) {
+    switchStep.value = 3
+  } else {
+    switchError.value = authStore.error || '切换失败'
+  }
+}
+
+// 关闭弹窗
+const closeSwitchModal = () => {
+  showSwitchModal.value = false
+  switchStep.value = 1
+  switchCurrentPassword.value = ''
+  switchNewType.value = 'pin'
+  switchNewPassword.value = ''
+  switchConfirmPassword.value = ''
+  switchError.value = ''
+}
+
 // 设置状态
 const settings = ref({
   // 显示设置
@@ -1057,6 +1130,22 @@ onMounted(() => {
 
           <div class="setting-divider" />
 
+          <!-- 密码类型设置 -->
+          <div class="setting-item">
+            <div class="setting-info">
+              <span class="setting-label">
+                <PhKey :size="18" class="inline-icon" />
+                密码类型
+              </span>
+              <span class="setting-desc">当前：{{ authStore.passwordType === 'pin' ? '简单 PIN' : '复杂密码' }}</span>
+            </div>
+            <button class="btn btn-secondary btn-sm" @click="showSwitchModal = true">
+              切换类型
+            </button>
+          </div>
+
+          <div class="setting-divider" />
+
           <!-- 显示余额（隐私模式） -->
           <div class="setting-item">
             <div class="setting-info">
@@ -1248,6 +1337,105 @@ onMounted(() => {
                   <PhArrowsClockwise v-if="isDisabling" :size="18" class="spin" />
                   <span v-else>{{ t('settings.twoFA.confirmDisable') }}</span>
                 </button>
+              </div>
+            </div>
+          </div>
+        </Transition>
+      </Teleport>
+
+      <!-- 密码类型切换弹窗 -->
+      <Teleport to="body">
+        <Transition name="modal">
+          <div v-if="showSwitchModal" class="modal-overlay" @click.self="closeSwitchModal">
+            <div class="modal-content glass-card switch-modal">
+              <div class="modal-header">
+                <PhKey :size="28" weight="duotone" class="modal-icon" />
+                <h3>切换密码类型</h3>
+              </div>
+
+              <div class="modal-body">
+                <!-- 步骤 1：验证当前密码 -->
+                <div v-if="switchStep === 1" class="switch-step">
+                  <p class="step-desc">请输入当前密码以验证身份</p>
+                  <div class="input-group">
+                    <input
+                      type="password"
+                      v-model="switchCurrentPassword"
+                      class="form-input"
+                      placeholder="当前密码"
+                      @keyup.enter="switchStep = 2"
+                    />
+                  </div>
+                  <div class="modal-actions">
+                    <button class="btn btn-secondary" @click="closeSwitchModal">取消</button>
+                    <button class="btn btn-primary" @click="switchStep = 2" :disabled="!switchCurrentPassword">下一步</button>
+                  </div>
+                </div>
+
+                <!-- 步骤 2：选择新类型并输入新密码 -->
+                <div v-if="switchStep === 2" class="switch-step">
+                  <p class="step-desc">选择新的密码类型并设置新密码</p>
+
+                  <div v-if="switchError" class="error-alert">
+                    <PhWarning :size="18" />
+                    <span>{{ switchError }}</span>
+                  </div>
+
+                  <div class="type-options">
+                    <label class="type-option" :class="{ selected: switchNewType === 'pin' }">
+                      <input type="radio" value="pin" v-model="switchNewType" />
+                      <span class="option-content">
+                        <strong>简单 PIN</strong>
+                        <small>4-20 位数字</small>
+                      </span>
+                    </label>
+                    <label class="type-option" :class="{ selected: switchNewType === 'complex' }">
+                      <input type="radio" value="complex" v-model="switchNewType" />
+                      <span class="option-content">
+                        <strong>复杂密码</strong>
+                        <small>8-20 位，含大小写字母和数字</small>
+                      </span>
+                    </label>
+                  </div>
+
+                  <div class="input-group">
+                    <input
+                      type="password"
+                      v-model="switchNewPassword"
+                      class="form-input"
+                      :placeholder="switchNewType === 'pin' ? '新 PIN 码' : '新密码'"
+                    />
+                  </div>
+
+                  <div class="input-group">
+                    <input
+                      type="password"
+                      v-model="switchConfirmPassword"
+                      class="form-input"
+                      placeholder="确认新密码"
+                      @keyup.enter="handleSwitchType"
+                    />
+                  </div>
+
+                  <div class="modal-actions">
+                    <button class="btn btn-secondary" @click="switchStep = 1">上一步</button>
+                    <button
+                      class="btn btn-primary"
+                      :disabled="authStore.isLoading || !switchNewPassword || !switchConfirmPassword"
+                      @click="handleSwitchType"
+                    >
+                      <PhSpinner v-if="authStore.isLoading" :size="16" class="spin" />
+                      <span v-else>确认切换</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 步骤 3：切换成功 -->
+                <div v-if="switchStep === 3" class="switch-step success">
+                  <PhCheck :size="48" weight="duotone" class="success-icon" />
+                  <p>密码类型已切换成功</p>
+                  <button class="btn btn-primary" @click="closeSwitchModal">完成</button>
+                </div>
               </div>
             </div>
           </div>
@@ -2228,6 +2416,123 @@ onMounted(() => {
 .modal-enter-from .modal-content,
 .modal-leave-to .modal-content {
   transform: scale(0.97);
+}
+
+/* ========== 密码类型切换弹窗 ========== */
+.switch-modal .modal-header {
+  text-align: center;
+  margin-bottom: var(--gap-lg);
+}
+
+.switch-modal .modal-icon {
+  color: var(--color-accent-primary);
+  margin-bottom: var(--gap-sm);
+}
+
+.switch-modal h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  font-family: var(--font-heading);
+}
+
+.switch-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-md);
+}
+
+.switch-step .step-desc {
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.switch-step .input-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-xs);
+}
+
+.switch-step .form-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-size: 14px;
+}
+
+.switch-step .form-input:focus {
+  outline: none;
+  border-color: var(--color-accent-primary);
+}
+
+.type-options {
+  display: flex;
+  gap: var(--gap-sm);
+}
+
+.type-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--gap-md);
+  background: var(--color-bg-tertiary);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.type-option:hover {
+  border-color: var(--color-accent-primary);
+}
+
+.type-option.selected {
+  border-color: var(--color-accent-primary);
+  background: color-mix(in srgb, var(--color-accent-primary) 10%, transparent);
+}
+
+.type-option input {
+  display: none;
+}
+
+.option-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.option-content strong {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.option-content small {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: var(--gap-xs);
+}
+
+.switch-step.success {
+  align-items: center;
+  text-align: center;
+  padding: var(--gap-lg) 0;
+}
+
+.switch-step.success .success-icon {
+  color: var(--color-success);
+  margin-bottom: var(--gap-md);
+}
+
+.switch-step.success p {
+  color: var(--color-text-primary);
+  margin-bottom: var(--gap-lg);
 }
 
 /* ========== 导出弹窗 ========== */
