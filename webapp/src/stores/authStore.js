@@ -11,6 +11,7 @@ export const useAuthStore = defineStore("auth", () => {
   const isAuthenticated = ref(false);
   const pinSet = ref(false);
   const token = ref(null);
+  const twoFAEnabled = ref(false);
 
   // 加载状态
   const isLoading = ref(false);
@@ -32,10 +33,12 @@ export const useAuthStore = defineStore("auth", () => {
     try {
       const result = await authService.getStatus();
       pinSet.value = result.pin_set;
+      twoFAEnabled.value = result.two_fa_enabled || false;
       return result.pin_set;
     } catch {
       // 后端不可用时默认不需要认证
       pinSet.value = false;
+      twoFAEnabled.value = false;
       return false;
     }
   }
@@ -187,6 +190,9 @@ export const useAuthStore = defineStore("auth", () => {
 
     try {
       const result = await authService.enable2FA(code);
+      if (result.success) {
+        twoFAEnabled.value = true;
+      }
       return result.success;
     } catch (err) {
       error.value = err.message || "启用 2FA 失败";
@@ -207,6 +213,9 @@ export const useAuthStore = defineStore("auth", () => {
 
     try {
       const result = await authService.disable2FA(code);
+      if (result.success) {
+        twoFAEnabled.value = false;
+      }
       return result.success;
     } catch (err) {
       error.value = err.message || "禁用 2FA 失败";
@@ -238,6 +247,7 @@ export const useAuthStore = defineStore("auth", () => {
     error,
     pinSet,
     token,
+    twoFAEnabled,
 
     // Computed
     isLoggedIn,

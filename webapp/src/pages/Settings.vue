@@ -125,7 +125,7 @@ const showExportDialog = ref(false)
 const showResetDialog = ref(false)
 
 // ========== 2FA 状态管理 ==========
-const is2FAEnabled = computed(() => authStore.user?.has2FA || false)
+const is2FAEnabled = computed(() => authStore.twoFAEnabled)
 const show2FASetupModal = ref(false)
 const show2FADisableModal = ref(false)
 const setupStep = ref(1) // 1: 显示二维码, 2: 验证

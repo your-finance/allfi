@@ -66,8 +66,10 @@ func (s *sAuth) initJWTSecret() {
 // GetStatus 获取认证状态
 func (s *sAuth) GetStatus(ctx context.Context) (*authApi.GetStatusRes, error) {
 	pinHash := s.getConfigValue(ctx, model.ConfigKeyPINHash)
+	twoFAEnabled := s.getConfigValue(ctx, model.ConfigKey2faEnabled)
 	return &authApi.GetStatusRes{
-		PinSet: pinHash != "",
+		PinSet:       pinHash != "",
+		TwoFAEnabled: twoFAEnabled == "true",
 	}, nil
 }
 

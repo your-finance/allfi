@@ -11,7 +11,8 @@ type GetStatusReq struct {
 
 // GetStatusRes 获取认证状态响应
 type GetStatusRes struct {
-	PinSet bool `json:"pin_set" dc:"是否已设置 PIN"`
+	PinSet       bool `json:"pin_set" dc:"是否已设置 PIN"`
+	TwoFAEnabled bool `json:"two_fa_enabled" dc:"是否已启用 2FA"`
 }
 
 // SetupReq 首次设置 PIN 请求
