@@ -126,8 +126,8 @@ With AllFi, you can activate **Privacy Mode (Ctrl+H)** with one click. It blurs 
       <img src="resource/19-dashboard-privacy-mode.png" alt="Privacy Mode">
       <br><b>Privacy Mode</b> — Ctrl+H to blur amounts ($••••), safe for screen sharing
       <br><br>
-      <img src="resource/21-login.png" alt="PIN Login">
-      <br><b>PIN Authentication</b> — Simple and secure PIN login with bcrypt integration
+      <img src="resource/21-login.png" alt="Authentication">
+      <br><b>Flexible Auth</b> — PIN or complex password optional, 2FA supported, bcrypt secured
     </td>
     <td width="50%" align="center">
       <img src="resource/20-dashboard-mobile.png" alt="Mobile Adapted" width="260">
@@ -341,7 +341,7 @@ Visit http://localhost:3174 — all data is simulated.
 |-------|-----------|
 | Backend | Go 1.24 + GoFrame v2.10 + GoFrame ORM + SQLite3 |
 | Frontend | Vue 3.5 + Vite 7.3 + Tailwind CSS 4 + Pinia 3 + Chart.js 4 + Phosphor Icons + VueUse |
-| Authentication | PIN code bcrypt + JWT Bearer Token |
+| Authentication | PIN / Complex Password (bcrypt) + JWT Bearer Token + 2FA (TOTP) |
 | Encryption | AES-256-GCM (API key storage) |
 | Deployment | Docker Compose (read-only containers + no-new-privileges + healthcheck) |
 | API Docs | OpenAPI 3.0 + Swagger UI (`/api/v1/docs`) |
@@ -413,7 +413,10 @@ Full documentation index: [docs/README.md](./docs/README.md)
 ## Security
 
 - API keys encrypted with **AES-256-GCM** — no plaintext in the database
-- PIN code hashed with **bcrypt** — irreversible
+- Password hashed with **bcrypt** — irreversible
+  - **PIN mode** (4-20 digits) or **Complex Password mode** (8-20 chars with upper/lower case letters and numbers)
+  - Switch password type anytime with current password verification
+- **2FA Two-Factor Authentication** (TOTP standard) — sensitive operations require secondary verification
 - Fully **self-hosted** — data never leaves your server
 - Recommend **read-only** API key permissions — no withdrawal/trading access
 - Docker containers run as **non-privileged + read-only**

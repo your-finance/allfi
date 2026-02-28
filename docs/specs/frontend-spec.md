@@ -108,21 +108,32 @@ const routes = [
 
 ### 4.1 登录页（Login.vue）
 
-**认证方式：PIN 码（非 Email/Password）**
+**认证方式：灵活密码模式**
 
-- 双模式：首次设置 PIN / 已有 PIN 登录
-- PIN 长度：4-8 位纯数字
-- 后端使用 bcrypt 加密存储
-- 登录成功获取 JWT Token，存储在 `localStorage['allfi-auth']`
+支持两种密码模式，用户可在设置页面随时切换：
+- **PIN 码模式**：4-20 位纯数字，显示格子输入界面
+- **复杂密码模式**：8-20 位，必须包含大小写字母和数字，显示普通密码输入框
+
+**首次设置流程**：
+1. 系统检测未设置密码，显示设置界面
+2. 用户可选择 PIN 或复杂密码模式
+3. 根据选择显示对应的输入界面
+4. 设置成功后自动获取 JWT Token 并登录
+
+**登录流程**：
+- 已有密码登录，返回 JWT Token
+- Token 存储在 `localStorage['allfi-auth']`
 - 连续 5 次失败锁定 15 分钟
+- 若启用 2FA，登录后需验证 2FA 码
 
 ```javascript
 // authStore 核心方法
-setupPIN(pin)         // 首次设置
-login(pin)            // 验证登录
-changePIN(old, new)   // 修改 PIN
-logout()              // 登出
-restoreSession()      // 恢复会话
+setupPIN(pin)              // 首次设置（自动检测类型）
+login(password)            // 验证登录
+changePassword(old, new)   // 修改密码
+switchPasswordType(currentPassword, newType, newPassword, twoFACode)  // 切换密码类型
+logout()                   // 登出
+restoreSession()           // 恢复会话
 ```
 
 ### 4.2 仪表盘（Dashboard.vue）
@@ -187,11 +198,16 @@ restoreSession()      // 恢复会话
 |------|--------|
 | 通用 | 默认计价货币、语言（3 种）、主题（4 套） |
 | 刷新 | 自动刷新间隔、价格缓存 TTL |
-| 安全 | 修改 PIN、2FA 设置 |
+| 安全 | 密码管理（修改密码、切换密码类型）、2FA 设置 |
 | 通知 | 通知偏好、WebPush 订阅 |
 | 数据 | 导出数据、清除缓存、重置设置 |
 | 交易同步 | 同步设置、增量同步触发 |
 | 关于 | 版本号、GitHub 链接 |
+
+**密码类型切换功能**：
+- 支持在 PIN 码和复杂密码之间切换
+- 切换流程：输入当前密码 → 选择新类型 → 输入新密码 → （若启用 2FA）验证 2FA
+- 前端根据密码类型动态显示输入界面
 
 ---
 

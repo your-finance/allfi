@@ -127,8 +127,8 @@ AllFi 为此而生。它不是一个 SaaS 服务，而是一个**完全开源、
       <img src="resource/19-dashboard-privacy-mode.png" alt="隐私模式">
       <br><b>隐私模式</b> — Ctrl+H 一键隐藏金额（$••••），屏幕共享时保护隐私
       <br><br>
-      <img src="resource/21-login.png" alt="PIN 登录">
-      <br><b>PIN 认证</b> — 简洁安全的 PIN 码登录，bcrypt 加密
+      <img src="resource/21-login.png" alt="登录认证">
+      <br><b>灵活认证</b> — PIN 码或复杂密码可选，支持 2FA 双因素认证，bcrypt 加密
     </td>
     <td width="50%" align="center">
       <img src="resource/20-dashboard-mobile.png" alt="移动端适配" width="260">
@@ -356,7 +356,7 @@ make swagger        # 打开 Swagger UI
 |------|------|
 | 后端 | Go 1.24 + GoFrame v2.10 + GoFrame ORM + SQLite3 |
 | 前端 | Vue 3.5 + Vite 7.3 + Tailwind CSS 4 + Pinia 3 + Chart.js 4 + Phosphor Icons + VueUse |
-| 认证 | PIN 码 bcrypt + JWT Bearer Token |
+| 认证 | PIN 码 / 复杂密码（bcrypt）+ JWT Bearer Token + 2FA（TOTP） |
 | 加密 | AES-256-GCM（API Key 加密存储） |
 | 部署 | Docker Compose（只读容器 + 非特权 + healthcheck） |
 | API 文档 | OpenAPI 3.0 + Swagger UI（`/api/v1/docs`） |
@@ -428,7 +428,10 @@ allfi/
 ## 安全说明
 
 - API Key 使用 **AES-256-GCM** 加密存储，数据库中无明文
-- PIN 码使用 **bcrypt** 哈希，不可逆
+- 密码使用 **bcrypt** 哈希，不可逆
+  - 支持 **PIN 码模式**（4-20 位数字）或 **复杂密码模式**（8-20 位，含大小写字母和数字）
+  - 可随时切换密码类型，切换时需验证当前密码
+- 支持 **2FA 双因素认证**（TOTP 标准），敏感操作需二次验证
 - 完全**自托管**，数据不离开你的服务器
 - 建议 API Key 仅授予**只读权限**，禁止提现/交易权限
 - Docker 容器以**非特权 + 只读**模式运行

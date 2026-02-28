@@ -194,19 +194,27 @@ Authorization: Bearer <jwt_token>
 GET /api/v1/auth/status
 ```
 
-**功能**：检查是否已设置 PIN 码
+**功能**：检查是否已设置密码，返回密码类型
 
 **响应**：
 ```json
 {
   "code": 0,
   "data": {
-    "pin_set": false
+    "pin_set": true,
+    "two_fa_enabled": false,
+    "password_type": "pin"
   }
 }
 ```
 
-### 5.2 首次设置 PIN
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| pin_set | bool | 是否已设置密码 |
+| two_fa_enabled | bool | 是否启用 2FA |
+| password_type | string | 密码类型（pin/complex） |
+
+### 5.2 首次设置密码
 
 ```
 POST /api/v1/auth/setup
@@ -221,7 +229,11 @@ POST /api/v1/auth/setup
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| pin | string | 是 | 4-20 位 PIN 码 |
+| pin | string | 是 | 密码（4-20 位 PIN 或 8-20 位复杂密码） |
+
+系统自动检测密码类型：
+- **PIN 码**：4-20 位纯数字
+- **复杂密码**：8-20 位，必须包含大小写字母和数字
 
 **响应**：
 ```json
@@ -233,7 +245,7 @@ POST /api/v1/auth/setup
 }
 ```
 
-### 5.3 PIN 登录
+### 5.3 密码登录
 
 ```
 POST /api/v1/auth/login
@@ -246,7 +258,7 @@ POST /api/v1/auth/login
 }
 ```
 
-**响应**：
+**响应（未启用 2FA）**：
 ```json
 {
   "code": 0,
@@ -256,7 +268,18 @@ POST /api/v1/auth/login
 }
 ```
 
-### 5.4 修改 PIN
+**响应（已启用 2FA）**：
+```json
+{
+  "code": 0,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIs...",
+    "requires_2fa": true
+  }
+}
+```
+
+### 5.4 修改密码
 
 ```
 POST /api/v1/auth/change
@@ -272,8 +295,8 @@ POST /api/v1/auth/change
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| current_pin | string | 是 | 当前 PIN 码 |
-| new_pin | string | 是 | 新 PIN 码（4-20 位） |
+| current_pin | string | 是 | 当前密码 |
+| new_pin | string | 是 | 新密码（4-20 位） |
 
 **响应**：
 ```json
@@ -281,6 +304,52 @@ POST /api/v1/auth/change
   "code": 0,
   "data": {
     "success": true
+  }
+}
+```
+
+### 5.5 切换密码类型
+
+```
+POST /api/v1/auth/switch-type
+```
+
+**功能**：在 PIN 码和复杂密码之间切换
+
+**请求体**：
+```json
+{
+  "current_password": "123456",
+  "new_type": "complex",
+  "new_password": "NewPass123",
+  "two_fa_code": "123456"
+}
+```
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| current_password | string | 是 | 当前密码 |
+| new_type | string | 是 | 新密码类型（pin/complex） |
+| new_password | string | 是 | 新密码 |
+| two_fa_code | string | 条件 | 2FA 验证码（若启用 2FA 则必填） |
+
+**响应（成功）**：
+```json
+{
+  "code": 0,
+  "data": {
+    "success": true
+  }
+}
+```
+
+**响应（需要 2FA）**：
+```json
+{
+  "code": 0,
+  "data": {
+    "success": false,
+    "requires_2fa": true
   }
 }
 ```
