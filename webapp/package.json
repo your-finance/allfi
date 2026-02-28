@@ -10,7 +10,10 @@
     "dev": "bash -c \"vite\"",
     "dev:mock": "bash -c \"VITE_USE_MOCK_API=true vite\"",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
   },
   "dependencies": {
     "@phosphor-icons/vue": "^2.2.1",
