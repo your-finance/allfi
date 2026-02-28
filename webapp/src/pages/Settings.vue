@@ -255,57 +255,84 @@ const switchNewType = ref('pin')
 const switchNewPassword = ref('')
 const switchConfirmPassword = ref('')
 const switchError = ref('')
+const switch2FACode = ref('')
+const switchNeeds2FA = ref(false)
 
 // 验证新密码
 const validateSwitchPassword = () => {
   if (!switchCurrentPassword.value) {
-    switchError.value = '请输入当前密码'
-    return false
+    return '请输入当前密码'
   }
   if (switchNewType.value === 'pin') {
     if (!/^\d{4,20}$/.test(switchNewPassword.value)) {
-      switchError.value = 'PIN 必须为 4-20 位数字'
-      return false
+      return 'PIN 必须为 4-20 位数字'
     }
   } else {
     if (switchNewPassword.value.length < 8 || switchNewPassword.value.length > 20) {
-      switchError.value = '密码长度为 8-20 位'
-      return false
+      return '密码长度为 8-20 位'
     }
     if (!/[a-z]/.test(switchNewPassword.value)) {
-      switchError.value = '密码必须包含小写字母'
-      return false
+      return '密码必须包含小写字母'
     }
     if (!/[A-Z]/.test(switchNewPassword.value)) {
-      switchError.value = '密码必须包含大写字母'
-      return false
+      return '密码必须包含大写字母'
     }
     if (!/\d/.test(switchNewPassword.value)) {
-      switchError.value = '密码必须包含数字'
-      return false
+      return '密码必须包含数字'
     }
   }
   if (switchNewPassword.value !== switchConfirmPassword.value) {
-    switchError.value = '两次输入的密码不一致'
-    return false
+    return '两次输入的密码不一致'
   }
-  return true
+  return ''
 }
 
-// 处理切换
+// 处理切换（Step 2 → 提交）
 const handleSwitchType = async () => {
   switchError.value = ''
-  if (!validateSwitchPassword()) return
+  const validationError = validateSwitchPassword()
+  if (validationError) {
+    switchError.value = validationError
+    return
+  }
 
-  const success = await authStore.switchPasswordType(
+  const result = await authStore.switchPasswordType(
     switchCurrentPassword.value,
     switchNewType.value,
-    switchNewPassword.value
+    switchNewPassword.value,
+    '' // 第一次不传 2FA 码
   )
-  if (success) {
+
+  if (result.success) {
+    switchStep.value = 4 // 成功
+  } else if (result.requires2FA) {
+    // 需要 2FA 验证，跳转到 2FA 输入步骤
+    switchNeeds2FA.value = true
     switchStep.value = 3
   } else {
     switchError.value = authStore.error || '切换失败'
+  }
+}
+
+// 处理 2FA 验证后重新提交
+const handleSwitchWith2FA = async () => {
+  switchError.value = ''
+  if (!switch2FACode.value || switch2FACode.value.length !== 6) {
+    switchError.value = '请输入 6 位验证码'
+    return
+  }
+
+  const result = await authStore.switchPasswordType(
+    switchCurrentPassword.value,
+    switchNewType.value,
+    switchNewPassword.value,
+    switch2FACode.value
+  )
+
+  if (result.success) {
+    switchStep.value = 4 // 成功
+  } else {
+    switchError.value = authStore.error || '2FA 验证失败'
   }
 }
 
@@ -318,6 +345,8 @@ const closeSwitchModal = () => {
   switchNewPassword.value = ''
   switchConfirmPassword.value = ''
   switchError.value = ''
+  switch2FACode.value = ''
+  switchNeeds2FA.value = false
 }
 
 // 设置状态
@@ -1430,8 +1459,43 @@ onMounted(() => {
                   </div>
                 </div>
 
-                <!-- 步骤 3：切换成功 -->
-                <div v-if="switchStep === 3" class="switch-step success">
+                <!-- 步骤 3：2FA 验证（如果启用） -->
+                <div v-if="switchStep === 3 && switchNeeds2FA" class="switch-step">
+                  <p class="step-desc">请输入 2FA 验证码以完成切换</p>
+
+                  <div v-if="switchError" class="error-alert">
+                    <PhWarning :size="18" />
+                    <span>{{ switchError }}</span>
+                  </div>
+
+                  <div class="input-group">
+                    <input
+                      type="text"
+                      v-model="switch2FACode"
+                      class="form-input"
+                      placeholder="6 位验证码"
+                      maxlength="6"
+                      inputmode="numeric"
+                      pattern="[0-9]*"
+                      @keyup.enter="handleSwitchWith2FA"
+                    />
+                  </div>
+
+                  <div class="modal-actions">
+                    <button class="btn btn-secondary" @click="switchStep = 2; switchError = ''">返回</button>
+                    <button
+                      class="btn btn-primary"
+                      :disabled="authStore.isLoading || switch2FACode.length !== 6"
+                      @click="handleSwitchWith2FA"
+                    >
+                      <PhSpinner v-if="authStore.isLoading" :size="16" class="spin" />
+                      <span v-else>验证并切换</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 步骤 4：切换成功 -->
+                <div v-if="switchStep === 4" class="switch-step success">
                   <PhCheck :size="48" weight="duotone" class="success-icon" />
                   <p>密码类型已切换成功</p>
                   <button class="btn btn-primary" @click="closeSwitchModal">完成</button>

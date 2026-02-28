@@ -305,9 +305,15 @@ export const useAuthStore = defineStore("auth", () => {
    * @param {string} currentPassword - 当前密码
    * @param {string} newType - 新类型（pin/complex）
    * @param {string} newPassword - 新密码
-   * @returns {Promise<boolean>}
+   * @param {string} twoFACode - 2FA 验证码（如果启用了 2FA）
+   * @returns {Promise<{success: boolean, requires2FA: boolean}>}
    */
-  async function switchPasswordType(currentPassword, newType, newPassword) {
+  async function switchPasswordType(
+    currentPassword,
+    newType,
+    newPassword,
+    twoFACode = "",
+  ) {
     isLoading.value = true;
     error.value = null;
 
@@ -316,14 +322,18 @@ export const useAuthStore = defineStore("auth", () => {
         currentPassword,
         newType,
         newPassword,
+        twoFACode,
       );
       if (result.success) {
         passwordType.value = newType;
       }
-      return result.success;
+      return {
+        success: result.success,
+        requires2FA: result.requires_2fa || false,
+      };
     } catch (err) {
       error.value = err.message || "切换密码类型失败";
-      return false;
+      return { success: false, requires2FA: false };
     } finally {
       isLoading.value = false;
     }

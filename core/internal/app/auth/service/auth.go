@@ -34,8 +34,8 @@ type IAuth interface {
 	// Verify2FA 验证 2FA 发放完整 Token
 	Verify2FA(ctx context.Context, code string) (*authApi.Verify2FARes, error)
 
-	// SwitchType 切换密码类型（需验证当前密码）
-	SwitchType(ctx context.Context, currentPassword string, newType string, newPassword string) (*authApi.SwitchTypeRes, error)
+	// SwitchType 切换密码类型（需验证当前密码，如果启用 2FA 还需验证 2FA）
+	SwitchType(ctx context.Context, currentPassword string, newType string, newPassword string, twoFACode string) (*authApi.SwitchTypeRes, error)
 }
 
 var localAuth IAuth

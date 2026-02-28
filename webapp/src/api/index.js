@@ -131,7 +131,12 @@ export const authService = {
    * @param {string} newPassword - 新密码
    * @returns {Promise<{success: boolean}>}
    */
-  async switchPasswordType(currentPassword, newType, newPassword) {
+  async switchPasswordType(
+    currentPassword,
+    newType,
+    newPassword,
+    twoFACode = "",
+  ) {
     if (USE_MOCK) {
       await simulateDelay(400);
       return { success: true };
@@ -140,6 +145,7 @@ export const authService = {
       current_password: currentPassword,
       new_type: newType,
       new_password: newPassword,
+      two_fa_code: twoFACode,
     });
   },
 };

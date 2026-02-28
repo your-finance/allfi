@@ -507,9 +507,10 @@ func (s *sAuth) validatePassword(password string, passwordType string) error {
 //
 // 功能说明:
 // 1. 验证当前密码
-// 2. 验证新密码格式
-// 3. 更新密码哈希和类型
-func (s *sAuth) SwitchType(ctx context.Context, currentPassword string, newType string, newPassword string) (*authApi.SwitchTypeRes, error) {
+// 2. 如果启用了 2FA，验证 2FA 验证码
+// 3. 验证新密码格式
+// 4. 更新密码哈希和类型
+func (s *sAuth) SwitchType(ctx context.Context, currentPassword string, newType string, newPassword string, twoFACode string) (*authApi.SwitchTypeRes, error) {
 	// 检查是否已设置密码
 	hash := s.getConfigValue(ctx, model.ConfigKeyPINHash)
 	if hash == "" {
@@ -525,6 +526,27 @@ func (s *sAuth) SwitchType(ctx context.Context, currentPassword string, newType 
 	if err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(currentPassword)); err != nil {
 		s.recordFailure(ctx)
 		return nil, gerror.New("当前密码错误")
+	}
+
+	// 检查是否启用了 2FA
+	twoFAEnabled := s.getConfigValue(ctx, model.ConfigKey2faEnabled)
+	if twoFAEnabled == "true" {
+		// 如果启用了 2FA，必须提供验证码
+		if twoFACode == "" {
+			return &authApi.SwitchTypeRes{Success: false, Requires2FA: true}, nil
+		}
+
+		// 验证 2FA 验证码
+		secret := s.getConfigValue(ctx, model.ConfigKey2faSecret)
+		if secret == "" {
+			return nil, gerror.New("2FA 配置异常，未找到密钥")
+		}
+
+		valid := totp.Validate(twoFACode, secret)
+		if !valid {
+			s.recordFailure(ctx)
+			return nil, gerror.New("2FA 验证码错误")
+		}
 	}
 
 	// 验证新密码格式

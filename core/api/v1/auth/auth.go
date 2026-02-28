@@ -102,9 +102,11 @@ type SwitchTypeReq struct {
 	CurrentPassword string `json:"current_password" v:"required" dc:"当前密码"`
 	NewType         string `json:"new_type" v:"required|in:pin,complex" dc:"新密码类型（pin/complex）"`
 	NewPassword     string `json:"new_password" v:"required" dc:"新密码"`
+	TwoFACode       string `json:"two_fa_code" dc:"2FA 验证码（如果启用了 2FA 则必填）"`
 }
 
 // SwitchTypeRes 切换密码类型响应
 type SwitchTypeRes struct {
-	Success bool `json:"success" dc:"是否切换成功"`
+	Success     bool `json:"success" dc:"是否切换成功"`
+	Requires2FA bool `json:"requires_2fa" dc:"是否需要 2FA 验证"`
 }

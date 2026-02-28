@@ -255,15 +255,15 @@ func TestAuth_SwitchType(t *testing.T) {
 	assert.Equal(t, "pin", status.PasswordType)
 
 	// 3. Switch to complex password with wrong current password should fail
-	_, err = authService.SwitchType(ctx, "wrong", "complex", "NewPass123")
+	_, err = authService.SwitchType(ctx, "wrong", "complex", "NewPass123", "")
 	assert.Error(t, err)
 
 	// 4. Switch to complex password with invalid new password should fail
-	_, err = authService.SwitchType(ctx, "123456", "complex", "weak")
+	_, err = authService.SwitchType(ctx, "123456", "complex", "weak", "")
 	assert.Error(t, err)
 
 	// 5. Switch to complex password with valid credentials should succeed
-	switchRes, err := authService.SwitchType(ctx, "123456", "complex", "NewPass123")
+	switchRes, err := authService.SwitchType(ctx, "123456", "complex", "NewPass123", "")
 	require.NoError(t, err)
 	assert.True(t, switchRes.Success)
 
@@ -282,7 +282,7 @@ func TestAuth_SwitchType(t *testing.T) {
 	assert.NotEmpty(t, loginRes.Token)
 
 	// 9. Switch back to PIN should succeed
-	switchRes, err = authService.SwitchType(ctx, "NewPass123", "pin", "654321")
+	switchRes, err = authService.SwitchType(ctx, "NewPass123", "pin", "654321", "")
 	require.NoError(t, err)
 	assert.True(t, switchRes.Success)
 
