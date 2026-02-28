@@ -121,6 +121,7 @@ type CronManager struct {
 	riskAlertJob    *RiskAlertJob
 	riskMetricsJob  *RiskMetricsJob
 	exchangeRateJob *ExchangeRateJob
+	gasPriceJob     *GasPriceJob
 }
 
 // NewCronManager 创建定时任务管理器
@@ -135,6 +136,7 @@ func NewCronManager() *CronManager {
 		riskAlertJob:    NewRiskAlertJob(time.Hour),
 		riskMetricsJob:  NewRiskMetricsJob(24 * time.Hour), // 每日 00:30 计算风险指标
 		exchangeRateJob: NewExchangeRateJob(time.Hour),
+		gasPriceJob:     NewGasPriceJob(5 * time.Minute), // 每 5 分钟记录一次 Gas 价格
 	}
 }
 
@@ -163,6 +165,9 @@ func (m *CronManager) Start() {
 	}
 	if m.exchangeRateJob != nil {
 		m.exchangeRateJob.Start()
+	}
+	if m.gasPriceJob != nil {
+		m.gasPriceJob.Start()
 	}
 
 	g.Log().Info(context.Background(), "[Cron] 所有定时任务已启动")

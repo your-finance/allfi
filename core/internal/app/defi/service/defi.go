@@ -36,6 +36,9 @@ type IDefi interface {
 
 	// GetLendingOptimization 获取最优借贷策略推荐
 	GetLendingOptimization(ctx context.Context) (*model.LendingOptimizationResult, error)
+
+	// GetLendingHealth 获取健康因子监控
+	GetLendingHealth(ctx context.Context, threshold float64) (*model.LendingHealthResult, error)
 }
 
 var localDefi IDefi

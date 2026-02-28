@@ -80,3 +80,23 @@ type LendingRecommendation struct {
 	ExpectedGain float64 `json:"expected_gain"` // 预期收益提升（年化USD）
 }
 
+// LendingHealthResult 健康因子监控结果
+type LendingHealthResult struct {
+	HealthyCount    int                   `json:"healthy_count"`     // 健康仓位数量
+	AtRiskCount     int                   `json:"at_risk_count"`     // 风险仓位数量
+	CriticalCount   int                   `json:"critical_count"`    // 危险仓位数量
+	AtRiskPositions []*LendingHealthItem  `json:"at_risk_positions"` // 风险仓位列表
+}
+
+// LendingHealthItem 健康因子监控条目
+type LendingHealthItem struct {
+	Protocol             string  `json:"protocol"`               // 协议名称
+	Chain                string  `json:"chain"`                  // 所在链
+	WalletAddr           string  `json:"wallet_addr"`            // 钱包地址
+	HealthFactor         float64 `json:"health_factor"`          // 健康因子
+	LiquidationThreshold float64 `json:"liquidation_threshold"`  // 清算阈值
+	SupplyValueUSD       float64 `json:"supply_value_usd"`       // 存款价值（USD）
+	BorrowValueUSD       float64 `json:"borrow_value_usd"`       // 借款价值（USD）
+	RiskLevel            string  `json:"risk_level"`             // 风险等级（low/medium/high/critical）
+}
+

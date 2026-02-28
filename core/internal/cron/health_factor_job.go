@@ -10,6 +10,7 @@ import (
 
 	"github.com/gogf/gf/v2/frame/g"
 
+	"your-finance/allfi/internal/app/defi/model"
 	defiService "your-finance/allfi/internal/app/defi/service"
 	notificationService "your-finance/allfi/internal/app/notification/service"
 )
@@ -124,18 +125,48 @@ func (j *HealthFactorJob) execute() {
 
 // sendAlert 发送健康因子预警通知
 func (j *HealthFactorJob) sendAlert(ctx context.Context, pos interface{}) {
+	// 类型断言获取仓位信息
+	position, ok := pos.(*model.LendingPositionItem)
+	if !ok {
+		g.Log().Error(ctx, "[Cron] 健康因子预警：类型断言失败")
+		return
+	}
+
+	// 判断风险等级
+	var riskEmoji, riskLevel string
+	if position.HealthFactor < 1.2 {
+		riskEmoji = "🚨"
+		riskLevel = "极高风险"
+	} else if position.HealthFactor < 1.5 {
+		riskEmoji = "⚠️"
+		riskLevel = "高风险"
+	} else {
+		riskEmoji = "⚡"
+		riskLevel = "中等风险"
+	}
+
 	// 构造通知内容
-	title := "⚠️ 借贷仓位健康因子预警"
+	title := fmt.Sprintf("%s 借贷仓位健康因子预警", riskEmoji)
 	content := fmt.Sprintf(
-		"您在 %s 的借贷仓位健康因子过低，存在清算风险！\n\n"+
+		"您在 %s (%s) 的借贷仓位健康因子过低，存在清算风险！\n\n"+
+			"钱包地址: %s\n"+
 			"健康因子: %.2f\n"+
+			"风险等级: %s\n"+
 			"清算阈值: %.2f%%\n"+
-			"建议: 增加抵押品或偿还部分借款",
-		"协议名称", 1.5, 85.0, // 这里需要从 pos 中提取实际数据
+			"存款价值: $%.2f\n"+
+			"借款价值: $%.2f\n\n"+
+			"建议: 增加抵押品或偿还部分借款以提高健康因子",
+		position.Protocol,
+		position.Chain,
+		position.WalletAddr[:6]+"..."+position.WalletAddr[len(position.WalletAddr)-4:],
+		position.HealthFactor,
+		riskLevel,
+		position.LiquidationThreshold,
+		position.SupplyValueUSD,
+		position.BorrowValueUSD,
 	)
 
-	// 发送通知（需要用户ID，这里简化处理）
-	// 实际应该从 pos 中获取用户ID
+	// 发送通知（单用户模式，userID = 1）
 	err := notificationService.Notification().Send(ctx, 1, "health_factor_alert", title, content)
 	if err != nil {
 		g.Log().Errorf(ctx, "[Cron] 发送健康因子预警通知失败: %v", err)

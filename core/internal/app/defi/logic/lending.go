@@ -477,3 +477,63 @@ func (s *sDefi) GetLendingOptimization(ctx context.Context) (*model.LendingOptim
 		Summary:          summary,
 	}, nil
 }
+
+// GetLendingHealth 获取健康因子监控
+func (s *sDefi) GetLendingHealth(ctx context.Context, threshold float64) (*model.LendingHealthResult, error) {
+	if threshold <= 0 {
+		threshold = 1.8 // 默认阈值 1.8
+	}
+
+	// 获取所有借贷仓位
+	allPositions, err := s.GetLendingPositions(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var healthyCount, atRiskCount, criticalCount int
+	var atRiskPositions []*model.LendingHealthItem
+
+	// 分类统计
+	for _, pos := range allPositions {
+		// 只统计有借款的仓位
+		if pos.BorrowAmount == 0 || pos.HealthFactor == 0 {
+			healthyCount++
+			continue
+		}
+
+		// 判断风险等级
+		var riskLevel string
+		if pos.HealthFactor >= threshold {
+			healthyCount++
+			continue
+		} else if pos.HealthFactor >= 1.5 {
+			riskLevel = "medium"
+			atRiskCount++
+		} else if pos.HealthFactor >= 1.2 {
+			riskLevel = "high"
+			atRiskCount++
+		} else {
+			riskLevel = "critical"
+			criticalCount++
+		}
+
+		// 添加到风险仓位列表
+		atRiskPositions = append(atRiskPositions, &model.LendingHealthItem{
+			Protocol:             pos.Protocol,
+			Chain:                pos.Chain,
+			WalletAddr:           pos.WalletAddr,
+			HealthFactor:         pos.HealthFactor,
+			LiquidationThreshold: pos.LiquidationThreshold,
+			SupplyValueUSD:       pos.SupplyValueUSD,
+			BorrowValueUSD:       pos.BorrowValueUSD,
+			RiskLevel:            riskLevel,
+		})
+	}
+
+	return &model.LendingHealthResult{
+		HealthyCount:    healthyCount,
+		AtRiskCount:     atRiskCount,
+		CriticalCount:   criticalCount,
+		AtRiskPositions: atRiskPositions,
+	}, nil
+}

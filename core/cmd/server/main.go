@@ -40,6 +40,7 @@ import (
 	_ "your-finance/allfi/internal/app/exchange_rate/logic"
 	_ "your-finance/allfi/internal/app/fee/logic"
 	_ "your-finance/allfi/internal/app/forecast/logic"
+	_ "your-finance/allfi/internal/app/gas/logic"
 	_ "your-finance/allfi/internal/app/goal/logic"
 	_ "your-finance/allfi/internal/app/health/logic"
 	_ "your-finance/allfi/internal/app/health_score/logic"
@@ -69,6 +70,7 @@ import (
 	exchangeRateCtrl "your-finance/allfi/internal/app/exchange_rate/controller"
 	feeCtrl "your-finance/allfi/internal/app/fee/controller"
 	forecastCtrl "your-finance/allfi/internal/app/forecast/controller"
+	gasCtrl "your-finance/allfi/internal/app/gas/controller"
 	goalCtrl "your-finance/allfi/internal/app/goal/controller"
 	healthCtrl "your-finance/allfi/internal/app/health/controller"
 	healthScoreCtrl "your-finance/allfi/internal/app/health_score/controller"
@@ -132,6 +134,7 @@ func main() {
 
 		// 市场数据
 		marketCtrl.Register(group)
+		gasCtrl.Register(group)
 
 		// DeFi / NFT
 		defiCtrl.Register(group)

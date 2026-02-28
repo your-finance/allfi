@@ -219,6 +219,38 @@ func (c *DefiController) GetLendingOptimization(ctx context.Context, req *defiAp
 }
 
 
+// GetLendingHealth 获取健康因子监控
+func (c *DefiController) GetLendingHealth(ctx context.Context, req *defiApi.GetLendingHealthReq) (res *defiApi.GetLendingHealthRes, err error) {
+	// 调用服务层获取健康因子监控
+	result, err := service.Defi().GetLendingHealth(ctx, req.Threshold)
+	if err != nil {
+		return nil, err
+	}
+
+	// 转换为 API 响应格式
+	res = &defiApi.GetLendingHealthRes{
+		HealthyCount:    result.HealthyCount,
+		AtRiskCount:     result.AtRiskCount,
+		CriticalCount:   result.CriticalCount,
+		AtRiskPositions: make([]defiApi.LendingHealthItem, 0, len(result.AtRiskPositions)),
+	}
+
+	for _, item := range result.AtRiskPositions {
+		res.AtRiskPositions = append(res.AtRiskPositions, defiApi.LendingHealthItem{
+			Protocol:             item.Protocol,
+			Chain:                item.Chain,
+			WalletAddr:           item.WalletAddr,
+			HealthFactor:         item.HealthFactor,
+			LiquidationThreshold: item.LiquidationThreshold,
+			SupplyValueUSD:       item.SupplyValueUSD,
+			BorrowValueUSD:       item.BorrowValueUSD,
+			RiskLevel:            item.RiskLevel,
+		})
+	}
+
+	return res, nil
+}
+
 // Register 注册路由
 func Register(group *ghttp.RouterGroup) {
 	group.Bind(&DefiController{})

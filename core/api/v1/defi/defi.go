@@ -160,3 +160,29 @@ type GetLendingOptimizationRes struct {
 	Summary          string                  `json:"summary" dc:"总结说明"`
 }
 
+// GetLendingHealthReq 获取健康因子监控请求
+type GetLendingHealthReq struct {
+	g.Meta    `path:"/defi/lending/health" method:"get" summary:"获取健康因子监控" tags:"DeFi"`
+	Threshold float64 `json:"threshold" in:"query" d:"1.8" dc:"健康因子阈值"`
+}
+
+// LendingHealthItem 健康因子监控条目
+type LendingHealthItem struct {
+	Protocol             string  `json:"protocol" dc:"协议名称"`
+	Chain                string  `json:"chain" dc:"所在链"`
+	WalletAddr           string  `json:"wallet_addr" dc:"钱包地址"`
+	HealthFactor         float64 `json:"health_factor" dc:"健康因子"`
+	LiquidationThreshold float64 `json:"liquidation_threshold" dc:"清算阈值"`
+	SupplyValueUSD       float64 `json:"supply_value_usd" dc:"存款价值（USD）"`
+	BorrowValueUSD       float64 `json:"borrow_value_usd" dc:"借款价值（USD）"`
+	RiskLevel            string  `json:"risk_level" dc:"风险等级（low/medium/high/critical）"`
+}
+
+// GetLendingHealthRes 获取健康因子监控响应
+type GetLendingHealthRes struct {
+	HealthyCount   int                 `json:"healthy_count" dc:"健康仓位数量"`
+	AtRiskCount    int                 `json:"at_risk_count" dc:"风险仓位数量"`
+	CriticalCount  int                 `json:"critical_count" dc:"危险仓位数量"`
+	AtRiskPositions []LendingHealthItem `json:"at_risk_positions" dc:"风险仓位列表"`
+}
+

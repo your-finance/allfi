@@ -216,3 +216,15 @@ gfcli:
         noJsonTag: false
         noModelComment: false
         jsonCase: "Snake"
+
+      # ===== Gas 优化模块 =====
+      - link: "sqlite::@file(./data/allfi.db)"
+        path: "./internal/app/gas"
+        tables: "gas_price_history,gas_recommendations"
+        stdTime: true
+        withTime: true
+        overwriteDao: false
+        descriptionTag: true
+        noJsonTag: false
+        noModelComment: false
+        jsonCase: "Snake"
