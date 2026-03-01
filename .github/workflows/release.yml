@@ -229,6 +229,9 @@ jobs:
           CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 \
             go build -ldflags="${LDFLAGS}" -o ../allfi-darwin-arm64 cmd/server/main.go
 
+      - name: 准备配置文件
+        run: cp core/manifest/config/config.example.yaml core/manifest/config/config.yaml
+
       - name: 打包发布产物
         env:
           APP_VERSION: ${{ steps.version.outputs.version }}
