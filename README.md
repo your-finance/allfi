@@ -67,6 +67,12 @@ AllFi 为此而生。它不是一个 SaaS 服务，而是一个**完全开源、
 
 ## 界面预览
 
+### 演示动图
+
+![AllFi 演示](resource/allfi-demo.gif)
+
+> 快速浏览 AllFi 的核心功能页面
+
 ### 资产总览（Nexus Pro 默认主题）
 
 ![资产总览 - 仪表盘](resource/02-dashboard-viewport.png)
@@ -94,6 +100,16 @@ AllFi 为此而生。它不是一个 SaaS 服务，而是一个**完全开源、
     <td width="50%">
       <img src="resource/13-analytics.png" alt="数据分析">
       <br><b>数据分析</b> — 每日盈亏、费用分析、归因分析、基准对比
+    </td>
+  </tr>
+  <tr valign="top">
+    <td width="50%">
+      <img src="resource/24-risk.png" alt="风险管理">
+      <br><b>风险管理</b> — 波动率、夏普比率、最大回撤、VaR 等风险指标
+    </td>
+    <td width="50%">
+      <img src="resource/25-defi.png" alt="DeFi 仓位">
+      <br><b>DeFi 仓位</b> — Lido、Aave、Compound 等协议持仓一览
     </td>
   </tr>
 </table>

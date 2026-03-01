@@ -5,6 +5,7 @@
 
 import { get, post, put, del, healthCheck, ApiError } from "./client.js";
 import * as mockData from "./mockData.js";
+import { mockGoals } from "../data/mockGoalData.js";
 
 // 是否使用 Mock 数据（后端未就绪时使用）
 // 可通过环境变量控制：VITE_USE_MOCK_API=true
@@ -24,7 +25,7 @@ export const authService = {
   async getStatus() {
     if (USE_MOCK) {
       await simulateDelay(200);
-      return { pin_set: false };
+      return { pin_set: true, password_type: "pin" };
     }
     return get("/auth/status");
   },
@@ -1922,12 +1923,16 @@ export const goalService = {
   async getGoals() {
     if (USE_MOCK) {
       await simulateDelay(200);
-      try {
-        const saved = localStorage.getItem("allfi-goals");
-        return saved ? JSON.parse(saved) : [];
-      } catch {
-        return [];
-      }
+      // 返回 mock 目标数据
+      return mockGoals.map((g) => ({
+        id: g.id,
+        title: g.title,
+        type: g.type,
+        targetValue: g.targetValue,
+        currency: g.currency,
+        deadline: g.deadline,
+        createdAt: g.createdAt,
+      }));
     }
     const result = await get("/goals");
     const goals = Array.isArray(result) ? result : result.goals || [];

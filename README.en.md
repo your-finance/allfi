@@ -66,6 +66,12 @@ With AllFi, you can activate **Privacy Mode (Ctrl+H)** with one click. It blurs 
 
 ## Interface Preview
 
+### Demo GIF
+
+![AllFi Demo](resource/allfi-demo.gif)
+
+> Quick tour of AllFi's core feature pages
+
 ### Asset Dashboard (Nexus Pro Theme)
 
 ![Asset Dashboard](resource/02-dashboard-viewport.png)
@@ -93,6 +99,16 @@ With AllFi, you can activate **Privacy Mode (Ctrl+H)** with one click. It blurs 
     <td width="50%">
       <img src="resource/13-analytics.png" alt="Analytics">
       <br><b>Analytics</b> — Daily PnL, fee analysis, attribution, and benchmark tracking
+    </td>
+  </tr>
+  <tr valign="top">
+    <td width="50%">
+      <img src="resource/24-risk.png" alt="Risk Management">
+      <br><b>Risk Management</b> — Volatility, Sharpe ratio, max drawdown, VaR metrics
+    </td>
+    <td width="50%">
+      <img src="resource/25-defi.png" alt="DeFi Positions">
+      <br><b>DeFi Positions</b> — Lido, Aave, Compound and other protocol holdings
     </td>
   </tr>
 </table>
