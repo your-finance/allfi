@@ -137,9 +137,6 @@ jobs:
 
           } > "$CHANGELOG_FILE"
 
-          # 保存当前版本的 changelog 用于 Release Notes
-          cp "$CHANGELOG_FILE" current-changelog.md
-
           echo "changelog_file=${CHANGELOG_FILE}" >> "$GITHUB_OUTPUT"
 
           echo "--- 生成的变更记录 ---"
@@ -229,14 +226,25 @@ jobs:
           CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 \
             go build -ldflags="${LDFLAGS}" -o ../allfi-darwin-arm64 cmd/server/main.go
 
+          # windows/amd64
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
+            go build -ldflags="${LDFLAGS}" -o ../allfi-windows-amd64.exe cmd/server/main.go
+
+          # windows/arm64
+          CGO_ENABLED=0 GOOS=windows GOARCH=arm64 \
+            go build -ldflags="${LDFLAGS}" -o ../allfi-windows-arm64.exe cmd/server/main.go
+
       - name: 准备配置文件
-        run: cp core/manifest/config/config.example.yaml core/manifest/config/config.yaml
+        run: |
+          sudo apt-get update && sudo apt-get install -y zip
+          cp core/manifest/config/config.example.yaml core/manifest/config/config.yaml
 
       - name: 打包发布产物
         env:
           APP_VERSION: ${{ steps.version.outputs.version }}
         run: |
           # 后端二进制 + 配置文件 + 前端产物
+          # Unix 平台
           for platform in linux-amd64 linux-arm64 darwin-amd64 darwin-arm64; do
             mkdir -p "allfi-${APP_VERSION}-${platform}"
             cp "allfi-${platform}" "allfi-${APP_VERSION}-${platform}/allfi"
@@ -245,30 +253,47 @@ jobs:
             tar -czf "allfi-${APP_VERSION}-${platform}.tar.gz" "allfi-${APP_VERSION}-${platform}"
           done
 
-      - name: 读取 CHANGEHISTORY 生成 Release Notes
+          # Windows 平台（使用 zip 格式）
+          for platform in windows-amd64 windows-arm64; do
+            mkdir -p "allfi-${APP_VERSION}-${platform}"
+            cp "allfi-${platform}.exe" "allfi-${APP_VERSION}-${platform}/allfi.exe"
+            cp core/manifest/config/config.yaml "allfi-${APP_VERSION}-${platform}/"
+            cp -r webapp/dist "allfi-${APP_VERSION}-${platform}/webapp-dist"
+            zip -r "allfi-${APP_VERSION}-${platform}.zip" "allfi-${APP_VERSION}-${platform}"
+          done
+
+      - name: 生成 Release Notes
         id: notes
         env:
+          TAG: ${{ steps.version.outputs.tag }}
+          PREV_TAG: ${{ steps.version.outputs.prev_tag }}
           APP_VERSION: ${{ steps.version.outputs.version }}
           REPO: ${{ github.repository }}
         run: |
-          # 生成 release notes：项目简介 + 当前版本变更记录 + 文档链接
+          # 从 git log 自动生成（带 short hash）
+          if [ -n "${PREV_TAG}" ]; then
+            CHANGELOG=$(git log "${PREV_TAG}..${TAG}" --pretty=format:"- %s (%h)" --no-merges | grep -v "docs: 自动更新")
+          else
+            CHANGELOG=$(git log "${TAG}" --pretty=format:"- %s (%h)" --no-merges | grep -v "docs: 自动更新")
+          fi
+
+          # 生成 release notes
           {
             echo "全栈加密资产管理平台 — 聚合 CEX、DeFi、NFT 与传统资产"
             echo ""
-
-            # 使用之前生成的当前版本 changelog
-            if [ -f current-changelog.md ]; then
-              cat current-changelog.md
-            else
-              echo "Release v${APP_VERSION}"
-            fi
-
+            echo "## AllFi ${TAG}"
+            echo ""
+            echo "### Changes"
+            echo "${CHANGELOG}"
             echo ""
             echo "---"
             echo ""
             echo "📥 **安装**"
             echo ""
-            echo "从 Assets 下载对应平台的压缩包，解压后运行 \`./allfi\` 即可启动。"
+            echo "从 Assets 下载对应平台的压缩包，解压后运行："
+            echo ""
+            echo "- **Linux/macOS**: \`./allfi\`"
+            echo "- **Windows**: \`allfi.exe\`"
             echo ""
             echo "| 平台 | 文件 |"
             echo "|------|------|"
@@ -276,6 +301,8 @@ jobs:
             echo "| Linux ARM64 | \`allfi-${APP_VERSION}-linux-arm64.tar.gz\` |"
             echo "| macOS Intel | \`allfi-${APP_VERSION}-darwin-amd64.tar.gz\` |"
             echo "| macOS Apple Silicon | \`allfi-${APP_VERSION}-darwin-arm64.tar.gz\` |"
+            echo "| Windows x86_64 | \`allfi-${APP_VERSION}-windows-amd64.zip\` |"
+            echo "| Windows ARM64 | \`allfi-${APP_VERSION}-windows-arm64.zip\` |"
             echo "| 前端产物 | \`webapp-dist.tar.gz\` |"
             echo "| 完整变更历史 | \`CHANGEHISTORY_full.md\` |"
             echo ""
@@ -284,6 +311,9 @@ jobs:
             echo "- [项目说明](https://github.com/${REPO}/blob/master/README.md)"
             echo "- [开发指南](https://github.com/${REPO}/blob/master/CLAUDE.md)"
           } > release_notes.md
+
+          echo "--- Release Notes ---"
+          cat release_notes.md
 
       - name: 创建 GitHub Release
         uses: softprops/action-gh-release@v2
@@ -297,5 +327,7 @@ jobs:
             allfi-${{ steps.version.outputs.version }}-linux-arm64.tar.gz
             allfi-${{ steps.version.outputs.version }}-darwin-amd64.tar.gz
             allfi-${{ steps.version.outputs.version }}-darwin-arm64.tar.gz
+            allfi-${{ steps.version.outputs.version }}-windows-amd64.zip
+            allfi-${{ steps.version.outputs.version }}-windows-arm64.zip
             webapp-dist.tar.gz
             CHANGEHISTORY_full.md
