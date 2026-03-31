@@ -207,7 +207,7 @@ start_full() {
     info "启动 AllFi（前端 + 后端）..."
     echo ""
     echo "  后端 API:  http://localhost:8080"
-    echo "  前端页面:  http://localhost:3174"
+    echo "  前端页面:  http://localhost:3000"
     echo "  Swagger:   http://localhost:8080/swagger/"
     echo "  按 Ctrl+C 停止所有服务"
     echo ""
@@ -240,7 +240,7 @@ start_full() {
 start_mock() {
     info "启动 AllFi Mock 模式（纯前端）..."
     echo ""
-    echo "  前端页面: http://localhost:3174"
+    echo "  前端页面: http://localhost:3000"
     echo "  数据来源: 模拟数据（无需后端）"
     echo "  按 Ctrl+C 停止"
     echo ""
@@ -258,8 +258,8 @@ start_docker() {
 
     echo ""
     success "Docker 服务已启动"
-    echo "  访问地址: http://localhost:${ALLFI_PORT:-5173}"
-    echo "  API 文档: http://localhost:${ALLFI_PORT:-5173}/swagger/"
+    echo "  访问地址: http://localhost:${ALLFI_PORT:-3000}"
+    echo "  API 文档: http://localhost:${ALLFI_PORT:-3000}/swagger/"
     echo ""
     echo "  查看日志: docker-compose logs -f"
     echo "  停止服务: docker-compose down"

@@ -19,7 +19,7 @@ services:
     restart: unless-stopped
     ports:
       # 统一端口：前端静态文件 + 后端 API 均通过此端口访问
-      - "${ALLFI_PORT:-5173}:8080"
+      - "${ALLFI_PORT:-3000}:8080"
     volumes:
       - allfi-data:/app/data
       # 时区配置：挂载宿主机时区文件，确保容器时区与宿主机一致

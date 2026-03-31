@@ -1,651 +1,240 @@
-# AllFi 后端需求规格文档
+# AllFi 后端规格
 
-> 版本：v2.2 | 更新时间：2026-02-28 | 状态：与代码实现对齐
-
----
-
-## 文档概述
-
-本文档描述 AllFi 后端的实际技术架构、API 接口、数据模型、服务层设计和第三方集成方案。所有内容均与当前代码实现对齐。
+> 审计日期：2026-03-31
+> 范围：当前仓库实现，不再描述历史 GORM / 旧路由方案。
 
 ---
 
 ## 1. 技术栈
 
-### 1.1 核心依赖
+| 类别 | 当前实现 |
+|------|---------|
+| 语言 | Go 1.24.11 |
+| Web 框架 | GoFrame `ghttp` |
+| 数据访问 | GoFrame `gdb` + DAO/DO/Entity |
+| 配置 | GoFrame `gcfg` |
+| OpenAPI | GoFrame `goai` |
+| JSON | `json-iterator/go` |
+| 认证 | bcrypt + JWT + 2FA/TOTP |
+| 加密 | AES-256-GCM |
+| 推送 | `webpush-go` |
+| 默认数据库 | SQLite |
 
-| 层 | 技术 | 说明 |
-|----|------|------|
-| 语言 | Go 1.24 | go.mod 固定 `go 1.24.11` |
-| HTTP 路由 | `net/http` (标准库) | Go 1.22+ 增强路由（`METHOD /path/{param}`） |
-| 配置管理 | GoFrame `gcfg` | YAML 配置 + 环境变量覆盖 |
-| ORM | GORM v2 | 支持 SQLite3 / MySQL 双驱动 |
-| 数据库 | SQLite3（默认） / MySQL（可选） | 自动迁移，无需手动建表 |
-| 加密 | AES-256-GCM | API Key 等敏感数据加密存储 |
-| 认证 | PIN + JWT | 单用户 PIN 锁 + Bearer Token |
-| JSON | json-iterator | 高性能 JSON 序列化 |
-| 精确计算 | shopspring/decimal | 金额使用 Decimal 类型 |
-| 推送 | webpush-go | Web Push 通知 |
-| 密码学 | golang.org/x/crypto (bcrypt) | PIN 码哈希 |
+### 重要更正
 
-### 1.2 go.mod 直接依赖
-
-```
-github.com/adshao/go-binance/v2    # Binance SDK
-github.com/ccxt/ccxt/go/v4          # CCXT 多交易所统一 SDK
-github.com/gogf/gf/v2               # GoFrame（仅用于配置管理）
-github.com/golang-jwt/jwt/v5        # JWT Token
-github.com/json-iterator/go         # 高性能 JSON
-github.com/shopspring/decimal        # 精确数值计算
-github.com/stretchr/testify          # 测试断言
-golang.org/x/crypto                  # bcrypt 密码哈希
-gorm.io/gorm                         # ORM
-gorm.io/driver/sqlite                # SQLite3 驱动
-gorm.io/driver/mysql                 # MySQL 驱动
-```
+- 当前后端不是 `net/http` 自定义路由主架构
+- 当前后端不是 GORM 主数据访问层
+- 默认文档化数据库路径是 SQLite，MySQL 仅保留零散辅助代码，不是当前主路径
 
 ---
 
-## 2. 项目结构
+## 2. 目录结构
 
-```
+```text
 core/
-├── cmd/
-│   └── server/main.go               # 服务入口
-├── config/
-│   ├── config.yaml                   # 配置文件
-│   └── config.example.yaml           # 配置模板
+├── api/v1/                  API 定义与 OpenAPI 元数据
+├── cmd/server/main.go       服务入口
 ├── internal/
-│   ├── app/                          # 模块化业务拆分（26 个模块）
-│   │   ├── auth/                    # 认证模块 (controller/logic/service/model)
-│   │   ├── asset/                   # 资产总览模块
-│   │   ├── exchange/                # 交易所账户模块
-│   │   ├── wallet/                  # 链上钱包模块
-│   │   ├── manual_asset/            # 手动记账资产模块
-│   │   ├── defi/                    # DeFi 仓位模块
-│   │   ├── nft/                     # NFT 资产模块
-│   │   ├── transaction/             # 统一交易记录模块
-│   │   ├── exchange_rate/           # 汇率与价格服务模块
-│   │   ├── notification/            # 通知与聚合模块
-│   │   ├── pnl/                     # 盈亏分析模块
-│   │   ├── report/                  # 定期报告生成模块
-│   │   ├── health/                  # 系统健康检查模块
-│   │   └── ... (共26个模块)
-│   ├── cron/                         # 定时任务（7 个）
-│   │   ├── snapshot_job.go          # 资产快照
-│   │   ├── notification_job.go      # 通知摘要
-│   │   ├── price_alert_job.go       # 价格预警检查
-│   │   ├── report_job.go            # 自动报告生成
-│   │   ├── risk_alert_job.go        # 风险预警
-│   │   ├── strategy_job.go          # 投资策略检查
-│   │   └── exchange_rate_job.go     # 汇率定时刷新
-│   ├── database/                     # 数据库初始化
-│   ├── middleware/                   # HTTP 中间件（7 个）
-│   │   ├── auth.go                  # JWT 认证
-│   │   ├── cors.go                  # 跨域控制
-│   │   ├── ctx.go                   # 上下文注入
-│   │   ├── error_handler.go         # 全局错误处理
-│   │   └── ...
-│   ├── consts/                       # 全局常量
-│   ├── integrations/                 # 第三方集成（8 个模块）
-│   │   ├── base_client.go           # HTTP 基础客户端
-│   │   ├── binance/                 # Binance API（go-binance SDK）
-│   │   ├── okx/                     # OKX API（CCXT）
-│   │   ├── coinbase/                # Coinbase API（CCXT）
-│   │   ├── etherscan/               # Etherscan 兼容 API（6 链）
-│   │   ├── coingecko/               # CoinGecko 价格 API
-│   │   ├── yahoo/                   # Yahoo Finance（法币汇率）
-│   │   ├── alchemy/                 # Alchemy NFT API
-│   │   └── defi/                    # DeFi 协议（7 个）
-│   │       ├── interface.go         # 协议接口定义
-│   │       ├── registry.go          # 协议注册表
-│   │       ├── position.go          # 仓位数据结构
-│   │       ├── lido.go              # Lido（ETH 质押）
-│   │       ├── rocketpool.go        # Rocket Pool（ETH 质押）
-│   │       ├── aave.go              # Aave（借贷）
-│   │       ├── compound.go          # Compound（借贷）
-│   │       ├── uniswap_v2.go        # Uniswap V2（DEX）
-│   │       ├── uniswap_v3.go        # Uniswap V3（DEX）
-│   │       └── curve.go             # Curve（稳定币 DEX）
-│   ├── cron/                         # 定时任务（7 个）
-│   │   ├── snapshot_job.go          # 资产快照 + CronManager
-│   │   ├── notification_job.go      # 通知摘要
-│   │   ├── price_alert_job.go       # 价格预警检查
-│   │   ├── report_job.go            # 自动报告生成
-│   │   ├── strategy_job.go          # 投资策略检查
-│   │   ├── exchange_rate_job.go     # 汇率定时刷新
-│   │   └── risk_alert_job.go        # 风险预警
-│   ├── model/                        # 业务传输对象（DTO）
-│   └── utils/                        # 工具库
-│       ├── config.go                # 配置加载（GoFrame gcfg 封装）
-│       ├── crypto.go                # AES-256-GCM 加密/解密
-│       ├── response.go              # 统一响应格式 + 错误码
-│       ├── cache.go                 # 内存缓存
-│       ├── retry.go                 # 重试工具
-│       └── ratelimit.go             # 速率限制
-├── docs/
-│   ├── swagger.yaml                  # OpenAPI 3.0 规范
-│   └── swagger.go                    # Swagger UI 处理器
-└── data/
-    └── allfi.db                      # SQLite 数据库文件
+│   ├── app/                 29 个业务模块
+│   ├── cron/                10 个定时任务
+│   ├── database/            启动建表与补充迁移
+│   ├── integrations/        第三方集成
+│   ├── middleware/          CORS / Auth / Logger / ErrorHandler / Response 等
+│   ├── statics/             嵌入式前端静态资源
+│   ├── utils/               配置、缓存、加密、响应辅助
+│   └── version/             构建时版本信息
+└── manifest/config/         配置模板与默认配置
 ```
 
 ---
 
-## 3. 认证系统
+## 3. 业务模块
 
-### 3.1 密码模式
+### 当前模块数
 
-AllFi 支持两种密码模式，用户可在设置页面随时切换：
+- 29 个 `core/internal/app/*`
 
-| 模式 | 格式要求 | 说明 |
-|------|---------|------|
-| **PIN 码** | 4-20 位纯数字 | 简单便捷，类似手机解锁 |
-| **复杂密码** | 8-20 位，必须包含大小写字母和数字，可包含特殊字符 | 更高安全性 |
+### 模块列表
 
-特殊字符支持：`!@#$%^&*()_+-=[]{}|;':",./<>?`
-
-### 3.2 认证接口
-
-| 接口 | 方法 | 说明 |
-|------|------|------|
-| `/api/v1/auth/status` | GET | 查询密码是否已设置，返回密码类型 |
-| `/api/v1/auth/setup` | POST | 首次设置密码（自动检测 PIN 或复杂密码，返回 JWT Token） |
-| `/api/v1/auth/login` | POST | 验证密码登录（返回 JWT Token） |
-| `/api/v1/auth/change` | POST | 修改密码（需验证旧密码） |
-| `/api/v1/auth/switch-type` | POST | 切换密码类型（需验证当前密码，若启用 2FA 则需验证码） |
-
-### 3.3 认证流程
-
-```
-首次使用 → 密码未设置 → 所有接口开放（无需认证）
-         → 用户调用 /auth/setup → 自动检测密码类型并存储（bcrypt 哈希）
-         → 后续访问需在 Header 中携带 Bearer Token
-
-已设置密码 → 调用 /auth/login → 返回 JWT Token
-           → 请求头: Authorization: Bearer <token>
-           → 中间件验证 Token → 放行或拒绝
-```
-
-### 3.4 白名单路由
-
-以下路由无需认证即可访问：
-- `/api/v1/health` — 健康检查
-- `/api/v1/auth/*` — 认证相关接口
-
-### 3.5 安全措施
-
-- 密码使用 `bcrypt` 哈希存储（非明文）
-- JWT Token 有过期时间（24 小时）
-- 连续错误登录触发账户锁定（5 次失败锁定 15 分钟）
-- 切换密码类型时若启用 2FA 需二次验证
+- `achievement`
+- `asset`
+- `attribution`
+- `auth`
+- `benchmark`
+- `cross_chain`
+- `defi`
+- `exchange`
+- `exchange_rate`
+- `fee`
+- `forecast`
+- `gas`
+- `goal`
+- `health`
+- `health_score`
+- `manual_asset`
+- `market`
+- `nft`
+- `notification`
+- `pnl`
+- `price_alert`
+- `report`
+- `risk`
+- `strategy`
+- `system`
+- `transaction`
+- `user`
+- `wallet`
+- `webpush`
 
 ---
 
-## 4. API 设计
+## 4. 路由与接口
 
-### 4.1 统一响应格式
+### 路由组织
 
-```json
-{
-  "code": 0,
-  "message": "成功",
-  "data": {},
-  "timestamp": 1707382800
-}
-```
+- 所有 API 统一挂载在 `/api/v1`
+- `health`、`auth`、`system` 部分接口为免认证
+- 其余业务模块通过 `middleware.Auth` 保护
 
-### 4.2 错误码体系
+### 当前接口暴露
 
-| 范围 | 类别 | 示例 |
-|------|------|------|
-| 0 | 成功 | `0` 成功 |
-| 1001-1999 | 客户端错误 | `1001` 参数错误、`1003` 资源不存在、`1005` 未授权 |
-| 2001-2999 | 服务器错误 | `2001` 内部错误、`2002` 数据库错误、`2003` 外部 API 错误 |
-| 3001-3999 | 业务错误 | `3001` 交易所 API 错误、`3004` 地址无效、`3006` 汇率获取失败 |
+- `core/api/v1/**/*.go` 中共有 78 个 `g.Meta path`
+- Swagger UI：`/swagger/`
+- OpenAPI JSON：`/api.json`
 
-### 4.3 完整路由表（90+ 条）
+### 典型模块分组
 
-#### 认证（7 条）
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/v1/auth/status` | 获取认证状态（含密码类型） |
-| POST | `/api/v1/auth/setup` | 首次设置密码（自动检测类型） |
-| POST | `/api/v1/auth/login` | 验证密码登录 |
-| POST | `/api/v1/auth/change` | 修改密码 |
-| POST | `/api/v1/auth/switch-type` | 切换密码类型 |
-| POST | `/api/v1/auth/2fa/setup` | 设置 2FA |
-| POST | `/api/v1/auth/2fa/verify` | 验证 2FA |
-
-#### 资产（8 条）
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/v1/assets/summary` | 资产总览（支持 `?currency=` 参数） |
-| GET | `/api/v1/assets/details` | 资产明细列表 |
-| GET | `/api/v1/assets/history` | 历史资产数据（支持 `?days=` 参数） |
-| POST | `/api/v1/assets/refresh` | 刷新所有资产数据 |
-| GET | `/api/v1/assets/manual` | 获取传统资产列表 |
-| POST | `/api/v1/assets/manual` | 添加传统资产 |
-| PUT | `/api/v1/assets/manual/{id}` | 更新传统资产 |
-| DELETE | `/api/v1/assets/manual/{id}` | 删除传统资产 |
-
-#### 交易所（7 条）
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/v1/exchanges/accounts` | 获取所有交易所账户 |
-| POST | `/api/v1/exchanges/accounts` | 添加交易所账户 |
-| GET | `/api/v1/exchanges/accounts/{id}` | 获取单个账户详情 |
-| PUT | `/api/v1/exchanges/accounts/{id}` | 更新账户 |
-| DELETE | `/api/v1/exchanges/accounts/{id}` | 删除账户 |
-| POST | `/api/v1/exchanges/accounts/{id}/test` | 测试 API 连接 |
-| GET | `/api/v1/exchanges/accounts/{id}/balances` | 获取账户余额 |
-
-#### 钱包（8 条）
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/v1/wallets/addresses` | 获取所有钱包地址 |
-| POST | `/api/v1/wallets/addresses` | 添加钱包地址 |
-| GET | `/api/v1/wallets/addresses/{id}` | 获取单个钱包详情 |
-| PUT | `/api/v1/wallets/addresses/{id}` | 更新钱包 |
-| DELETE | `/api/v1/wallets/addresses/{id}` | 删除钱包 |
-| GET | `/api/v1/wallets/addresses/{id}/balances` | 获取钱包余额 |
-| POST | `/api/v1/wallets/batch` | 批量导入钱包地址 |
-
-#### 汇率（3 条）
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/v1/rates/current` | 获取当前汇率 |
-| GET | `/api/v1/rates/prices` | 批量获取价格 |
-| POST | `/api/v1/rates/refresh` | 刷新汇率缓存 |
-
-#### 通知（9 条）
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/v1/notifications` | 获取通知列表（分页） |
-| GET | `/api/v1/notifications/unread-count` | 获取未读数量 |
-| POST | `/api/v1/notifications/{id}/read` | 标记已读 |
-| POST | `/api/v1/notifications/read-all` | 全部标记已读 |
-| GET | `/api/v1/notifications/preferences` | 获取通知偏好 |
-| PUT | `/api/v1/notifications/preferences` | 更新通知偏好 |
-| GET | `/api/v1/notifications/webpush/vapid` | 获取 VAPID 公钥 |
-| POST | `/api/v1/notifications/webpush/subscribe` | 订阅 WebPush |
-| POST | `/api/v1/notifications/webpush/unsubscribe` | 取消订阅 |
-
-#### 价格预警（4 条）
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/api/v1/alerts` | 创建预警 |
-| GET | `/api/v1/alerts` | 获取预警列表 |
-| PUT | `/api/v1/alerts/{id}` | 更新预警 |
-| DELETE | `/api/v1/alerts/{id}` | 删除预警 |
-
-#### 报告（3 条）
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/v1/reports` | 获取报告列表 |
-| GET | `/api/v1/reports/{id}` | 获取单个报告 |
-| POST | `/api/v1/reports/generate` | 生成报告（日报/周报/月报/年报） |
-
-#### 交易记录（5 条）
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/v1/transactions` | 分页查询交易记录（支持游标分页） |
-| POST | `/api/v1/transactions/sync` | 同步交易记录 |
-| GET | `/api/v1/transactions/stats` | 获取交易统计 |
-| GET | `/api/v1/settings/tx-sync` | 获取同步设置 |
-| PUT | `/api/v1/settings/tx-sync` | 更新同步设置 |
-
-
-
-#### DeFi（4 条）
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/v1/defi/positions` | 获取 DeFi 仓位（支持链/协议过滤） |
-| GET | `/api/v1/defi/protocols` | 获取支持的协议列表 |
-| GET | `/api/v1/defi/lending/positions` | 获取借贷仓位列表 |
-| GET | `/api/v1/defi/lending/rates` | 获取借贷利率历史 |
-
-#### NFT（1 条）
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/v1/nft/assets` | 获取 NFT 资产列表 |
-
-#### 成就系统（2 条）
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/v1/achievements` | 获取成就列表（含解锁状态） |
-| POST | `/api/v1/achievements/check` | 检查并解锁新成就 |
-
-#### 目标追踪（4 条）
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/v1/goals` | 获取目标列表（附进度） |
-| POST | `/api/v1/goals` | 创建目标 |
-| PUT | `/api/v1/goals/{id}` | 更新目标 |
-| DELETE | `/api/v1/goals/{id}` | 删除目标 |
-
-#### 跨链资产追踪（3 条）
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/v1/cross-chain/transactions` | 获取跨链交易列表（支持链/桥接过滤） |
-| GET | `/api/v1/cross-chain/bridges` | 获取支持的跨链桥列表 |
-| GET | `/api/v1/cross-chain/stats` | 获取跨链资产统计 |
-
-#### Gas 优化（5 条）
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/v1/gas/prices` | 获取各链当前 Gas 价格 |
-| GET | `/api/v1/gas/history` | 获取 Gas 价格历史（支持链/时间范围） |
-| GET | `/api/v1/gas/recommendations` | 获取交易时间建议 |
-| GET | `/api/v1/gas/optimizer` | 优化 Gas 费用建议 |
-| POST | `/api/v1/gas/track` | 追踪交易 Gas 消耗 |
-
-#### 风险管理（4 条）
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/v1/risk/metrics` | 获取风险指标（VaR、Sharpe、Sortino、最大回撤） |
-| GET | `/api/v1/risk/alerts` | 获取风险预警列表 |
-| POST | `/api/v1/risk/check` | 手动检查投资组合风险 |
-| PUT | `/api/v1/risk/preferences` | 更新风险偏好设置 |
-
-#### 双因素认证（4 条）
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/v1/auth/two-factor/status` | 查询 2FA 是否已启用 |
-| POST | `/api/v1/auth/two-factor/setup` | 首次设置 2FA（返回密钥和备份码） |
-| POST | `/api/v1/auth/two-factor/verify` | 验证 TOTP 码 |
-| POST | `/api/v1/auth/two-factor/disable` | 禁用 2FA |
-
-#### 数据分析（5 条）
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/v1/analytics/fees` | 费用分析 |
-| GET | `/api/v1/analytics/pnl/daily` | 每日盈亏 |
-| GET | `/api/v1/analytics/pnl/summary` | 盈亏汇总 |
-| GET | `/api/v1/analytics/attribution` | 资产归因分析 |
-| GET | `/api/v1/analytics/forecast` | 趋势预测 |
-
-#### 其他（7 条）
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/v1/health` | 健康检查 |
-| GET | `/api/v1/benchmark` | 基准对比（vs BTC/ETH/S&P500） |
-| GET | `/api/v1/market/gas` | Gas 费查询 |
-| GET | `/api/v1/portfolio/health` | 资产健康评分 |
-| GET | `/api/v1/docs` | Swagger UI |
-| GET | `/api/v1/docs/swagger.yaml` | OpenAPI 规范文件 |
-
----
-
-## 5. 数据模型（23 张表）
-
-所有表继承 `BaseModel`，包含 `id`（主键）、`created_at`、`updated_at`、`deleted_at`（软删除）字段。
-
-### 5.1 核心业务表
-
-| 表名 | 说明 | 关键字段 |
-|------|------|---------|
-| `exchange_accounts` | 交易所账户 | exchange, label, api_key_encrypted, api_secret_encrypted, status |
-| `wallet_addresses` | 钱包地址 | blockchain, address, label, status |
-| `manual_assets` | 传统资产 | asset_type(bank/cash/stock/fund), asset_name, institution, amount(Decimal), currency |
-| `asset_details` | 资产明细 | source_type, symbol, name, balance, price_usd, value_usd |
-| `asset_snapshots` | 资产快照 | total_value_usd, exchange_value, blockchain_value, manual_value |
-| `exchange_rates` | 汇率缓存 | from_currency, to_currency, rate, source, expires_at |
-| `system_config` | 系统配置 | config_key, config_value |
-
-### 5.2 功能扩展表
-
-| 表名 | 说明 | 关键字段 |
-|------|------|---------|
-| `notifications` | 通知消息 | user_id, type, title, content, is_read |
-| `price_alerts` | 价格预警 | symbol, condition(above/below), target_price, is_active |
-| `reports` | 资产报告 | user_id, report_type(daily/weekly/monthly/annual), content |
-| `unified_transactions` | 统一交易记录 | tx_type, source, source_id, from_asset, to_asset, value_usd, tx_hash |
-| `transaction_daily_summaries` | 交易日汇总 | date, buy_count, sell_count, total_fee_usd, net_flow_usd |
-| `achievements` | 成就记录 | achievement_id, unlocked_at |
-| `nfts` | NFT 资产 | chain, contract_address, token_id, name, collection |
-| `goals` | 目标追踪 | name, target_amount, current_amount, deadline |
-| `sync_metadata` | 同步元数据 | source, last_sync_at, sync_status |
-| `lending_positions` | DeFi 借贷仓位 | protocol, chain, user_address, collateral_token, borrow_token, health_factor, collateral_value, borrow_value |
-| `lending_rate_history` | 借贷利率历史 | protocol, chain, deposit_apy, borrow_apy, timestamp |
-| `gas_price_history` | Gas 价格历史 | chain, gas_price, timestamp |
-| `gas_recommendations` | Gas 交易推荐 | chain, recommendation_type, optimal_time, estimated_savings |
-| `cross_chain_transactions` | 跨链交易记录 | from_chain, to_chain, bridge, amount, tx_hash, timestamp |
-| `risk_metrics` | 风险指标 | var_95, sharpe_ratio, sortino_ratio, max_drawdown, calculated_at |
-| `two_factor_auth` | 2FA 配置 | secret_encrypted, backup_codes_encrypted, is_enabled |
-
-### 5.3 支持的常量
-
-```go
-// 交易所: binance, okx, coinbase
-// 区块链: ethereum, bsc, polygon
-// 资产来源: cex, blockchain, manual
-// 传统资产类型: bank, cash, stock, fund
-// 计价货币: USDC, USD, BTC, ETH, CNY
-// 交易类型: buy, sell, swap, transfer, deposit, withdraw
-```
-
----
-
-## 6. 服务层架构
-
-### 6.1 依赖注入
-
-通过 `ServiceContainer` 管理所有服务实例，构造时注入依赖：
-
-```go
-type ServiceContainer struct {
-    ExchangeService     ExchangeServiceInterface
-    BlockchainService   BlockchainServiceInterface
-    PriceService        PriceServiceInterface
-    AssetService        AssetServiceInterface
-    SnapshotService     SnapshotServiceInterface
-    NotificationService NotificationServiceInterface
-    PriceAlertService   PriceAlertServiceInterface
-    ReportService       ReportServiceInterface
-    DeFiService         DeFiServiceInterface
-    NFTService          NFTServiceInterface
-    TransactionService  TransactionServiceInterface
-    FeeService          FeeServiceInterface
-    StrategyService     StrategyServiceInterface
-    AchievementService  AchievementServiceInterface
-    BenchmarkService    BenchmarkServiceInterface
-    CrossChainService  CrossChainServiceInterface
-    GasService         GasServiceInterface
-    RiskService        RiskServiceInterface
-}
-```
-
-### 6.2 服务接口总览
-
-| 服务 | 接口 | 核心方法 |
-|------|------|---------|
-| AuthService | `AuthServiceInterface` | SetupPIN, VerifyPIN, ChangePIN, ValidateToken, SetupTwoFactor, VerifyTwoFactor, DisableTwoFactor |
-| AssetService | `AssetServiceInterface` | GetSummary, GetDetails, GetHistory, RefreshAll, 手动资产 CRUD |
-| ExchangeService | `ExchangeServiceInterface` | CRUD, TestConnection, GetBalances, RefreshAllBalances |
-| BlockchainService | `BlockchainServiceInterface` | CRUD, GetBalances, RefreshAllBalances, BatchImportWallets |
-| PriceService | `PriceServiceInterface` | GetPrice, GetPrices, GetExchangeRate, ConvertValue, RefreshRates |
-| SnapshotService | `SnapshotServiceInterface` | CreateSnapshot, GetSnapshots, CleanupOldSnapshots |
-| NotificationService | `NotificationServiceInterface` | Send, List, MarkRead, MarkAllRead, GetPreference, GenerateDailyDigest |
-| PriceAlertService | `PriceAlertServiceInterface` | CRUD, CheckAlerts |
-| ReportService | `ReportServiceInterface` | GetReports, GenerateDaily/Weekly/Monthly/AnnualReport |
-| DeFiService | `DeFiServiceInterface` | GetPositions, GetTotalValue, GetSupportedProtocols |
-| LendingService | `LendingServiceInterface` | GetLendingPositions, GetLendingRates, GetOptimalLending, UpdateLendingPosition |
-| NFTService | `NFTServiceInterface` | GetNFTs, GetCollections, GetTotalValue |
-| TransactionService | `TransactionServiceInterface` | GetTransactions(游标分页), SyncTransactions, GetStats, GetSyncSettings |
-| FeeService | `FeeServiceInterface` | GetFeeAnalytics |
-| StrategyService | `StrategyServiceInterface` | CRUD, AnalyzeRebalance, CheckStrategies |
-| AchievementService | `AchievementServiceInterface` | GetAchievements, CheckAndUnlock |
-| BenchmarkService | `BenchmarkServiceInterface` | GetBenchmark（7d/30d/90d/1y） |
-| GoalService | `GoalServiceInterface` | CRUD + GetGoals(附带进度百分比) |
-| HealthScoreService | `HealthScoreServiceInterface` | GetHealthScore |
-| CrossChainService | `CrossChainServiceInterface` | GetTransactions, GetBridges, GetStats, TrackTransaction |
-| GasService | `GasServiceInterface` | GetGasPrices, GetGasHistory, GetRecommendations, OptimizeGas, TrackGas |
-| RiskService | `RiskServiceInterface` | GetRiskMetrics, GetRiskAlerts, CheckRisk, UpdateRiskPreferences |
-| RiskAlertService | — | 风险预警后台检查 |
-| WebPushService | — | 浏览器推送通知 |
-
----
-
-## 7. 第三方集成
-
-### 7.1 交易所集成
-
-| 交易所 | SDK | 说明 |
-|--------|-----|------|
-| Binance | `go-binance/v2` | 专用 SDK，现货余额查询 |
-| OKX | `ccxt/go/v4` | 通过 CCXT 统一接口 |
-| Coinbase | `ccxt/go/v4` | 通过 CCXT 统一接口 |
-
-API Key 使用 AES-256-GCM 加密存储，添加账户时验证连接。
-
-### 7.2 区块链集成
-
-| 服务 | 说明 |
+| 模块 | 说明 |
 |------|------|
-| Etherscan | 统一客户端，支持 6 条 EVM 链（Ethereum/BSC/Polygon/Arbitrum/Optimism/Base） |
-| Alchemy | NFT 数据查询（获取 NFT 列表、收藏集、估值） |
-
-### 7.3 DeFi 协议集成
-
-通过 `defi/registry.go` 统一注册，所有协议实现相同接口：
-
-| 协议 | 文件 | 类型 |
-|------|------|------|
-| Lido | `lido.go` | ETH 质押 |
-| Rocket Pool | `rocketpool.go` | ETH 质押 |
-| Aave | `aave.go` | 借贷 |
-| Compound | `compound.go` | 借贷 |
-| Uniswap V2 | `uniswap_v2.go` | DEX 流动性 |
-| Uniswap V3 | `uniswap_v3.go` | DEX 流动性 |
-| Curve | `curve.go` | 稳定币 DEX |
-
-### 7.3 跨链桥集成
-
-| 桥接 | 文件 | 类型 |
-|------|------|------|
-| Stargate | `stargate.go` | 跨链资产转移 |
-
-### 7.4 价格数据
-
-| 数据源 | 用途 |
-|--------|------|
-| CoinGecko | 加密货币价格（BTC/ETH/USDC 等） |
-| Yahoo Finance | 法币汇率（USD/CNY 等）、传统资产价格 |
+| `auth` | 状态、设置密码、登录、改密、2FA |
+| `asset` | 汇总、明细、快照 |
+| `exchange` / `wallet` / `manual_asset` | 资产来源管理 |
+| `defi` / `nft` / `cross_chain` | Web3 扩展数据 |
+| `report` / `pnl` / `benchmark` / `risk` | 分析与报告 |
+| `system` | 版本、更新检查、更新/回滚状态 |
 
 ---
 
-## 8. 定时任务
+## 5. 中间件
 
-由 `CronManager` 统一管理，启动时开始执行，支持优雅停止：
+当前中间件集中在 `core/internal/middleware/`，主要包括：
 
-| 任务 | 文件 | 默认间隔 | 说明 |
-|------|------|---------|------|
-| 资产快照 | `snapshot_job.go` | 1 小时 | 刷新价格 → 创建快照 → 清理旧数据（90 天） |
-| 通知摘要 | `notification_job.go` | — | 为启用摘要的用户生成每日通知 |
-| 价格预警 | `price_alert_job.go` | — | 检查活跃预警条件并触发通知 |
-| 报告生成 | `report_job.go` | — | 自动生成日报/周报/月报 |
-| 风险预警 | `risk_alert_job.go` | — | 检查资产集中度、波动率等风险指标 |
-| 投资策略 | `strategy_job.go` | 15 分钟 | 定期检查重平衡条件与执行策略建议 |
-| 汇率刷新 | `exchange_rate_job.go` | 60 分钟 | 刷新全局法币与数字货币基准汇率 |
-| Gas 价格监控 | `gas_price_job.go` | 5 分钟 | 更新各链实时 Gas 价格 |
-| 风险指标计算 | `risk_metrics_job.go` | 每日 | 计算 VaR、Sharpe、Sortino、最大回撤等指标 |
-| 健康因子监控 | `health_factor_job.go` | 每小时 | 监控 DeFi 借贷仓位健康因子 |
+- CORS
+- Context 注入
+- Logger
+- ErrorHandler
+- Response 包装
+- Auth
+
+说明：
+
+- 中间件链由 `core/cmd/server/main.go` 统一注册
+- Swagger 与 `/api.json` 明确绕过 SPA fallback
 
 ---
 
-## 9. 安全设计
+## 6. 数据存储
 
-### 9.1 API Key 加密
+### 默认路径
 
-```go
-// AES-256-GCM 加密
-// 主密钥: 32 字节，从环境变量 ALLFI_MASTER_KEY 或配置文件读取
-// 存储格式: Base64(nonce + ciphertext)
-// 全局实例: utils.EncryptAPIKey() / utils.DecryptAPIKey()
+- 配置文件：`core/manifest/config/config.yaml`
+- 默认连接：`sqlite::@file(./data/allfi.db)`
+
+### 初始化方式
+
+- `core/internal/database/migrate.go` 在启动时自动执行
+- 采用手写 DDL + 补充 SQL 迁移文件
+- 不再沿用“GORM AutoMigrate”表述
+
+### 数据域示例
+
+- 系统配置
+- 用户与认证状态
+- 交易所账户
+- 钱包地址
+- 手动资产
+- 资产快照 / 资产明细
+- 汇率
+- 统一交易记录
+- 通知与通知偏好
+- 价格预警
+- 报告
+- 策略与目标
+- DeFi 借贷历史
+- NFT 缓存
+- Cross-chain 交易
+
+---
+
+## 7. 外部集成
+
+### CEX
+
+- Binance
+- OKX
+- Coinbase
+
+### 链上 / NFT
+
+- Etherscan 系列
+- Alchemy
+- Bridge/Stargate
+
+### 价格与汇率
+
+- CoinGecko
+- Yahoo
+- Frankfurter
+- GateIO
+- Binance
+- Local provider
+
+### DeFi 协议
+
+- Lido
+- Rocket Pool
+- Aave
+- Compound
+- Uniswap V2
+- Uniswap V3
+- Curve
+
+---
+
+## 8. 认证与更新
+
+### 认证
+
+- 密码模式：
+  - PIN：4-20 位数字
+  - 复杂密码：8-20 位，含大小写字母和数字
+- 支持 2FA / TOTP
+- JWT Bearer Token 用于会话
+
+### 更新
+
+| 场景 | 当前实现 |
+|------|---------|
+| 宿主机运行 | 下载 release tarball，`go-update` 原位替换 |
+| Docker 运行 | 调用 `updater` sidecar，执行 git checkout + docker build + restart |
+
+---
+
+## 9. 测试现状
+
+执行命令：
+
+```bash
+cd core && go test ./...
 ```
 
-### 9.2 PIN 码存储
+当前结果：
 
-- 使用 `golang.org/x/crypto/bcrypt` 哈希
-- 支持 4-8 位纯数字
-- 连续错误登录触发锁定
+- 默认测试当前可通过
+- 建议命令：
 
-### 9.3 中间件链
-
-请求经过的中间件顺序（从外到内）：
-
-```
-Recovery → CORS → Logger → Auth → Handler
+```bash
+cd core && go test ./... -timeout 60s
 ```
 
----
-
-## 10. 配置管理
-
-使用 GoFrame `gcfg` 管理配置，支持环境变量覆盖：
-
-| 配置项 | 环境变量 | 默认值 | 说明 |
-|--------|---------|--------|------|
-| `server.port` | `ALLFI_PORT` | 8080 | 服务端口 |
-| `server.mode` | `ALLFI_MODE` | development | 运行模式 |
-| `database.type` | `ALLFI_DB_TYPE` | sqlite | 数据库类型 |
-| `database.sqlite.path` | `ALLFI_DB_PATH` | ../data/allfi.db | SQLite 路径 |
-| `security.master_key` | `ALLFI_MASTER_KEY` | — | 加密主密钥（必填） |
-| `external_apis.etherscan.api_key` | `ETHERSCAN_API_KEY` | — | Etherscan API Key |
-| `external_apis.bscscan.api_key` | `BSCSCAN_API_KEY` | — | BscScan API Key |
-| `external_apis.coingecko.api_key` | `COINGECKO_API_KEY` | — | CoinGecko API Key |
-| `cron.snapshot_interval` | — | 3600 | 快照间隔（秒） |
-| `cron.price_cache_ttl` | — | 300 | 价格缓存时间（秒） |
-| `defaults.currency` | — | USDC | 默认计价货币 |
-| `defaults.history_retention_days` | — | 90 | 历史数据保留天数 |
-
----
-
-## 11. API 文档
-
-内置 Swagger UI，启动后访问：
-
-- **Swagger UI**: `http://localhost:8080/api/v1/docs`
-- **OpenAPI YAML**: `http://localhost:8080/api/v1/docs/swagger.yaml`
-
----
-
-## 12. 数据统计
-
-| 维度 | 数量 |
-|------|------|
-| API 模块路由 | 29 个独立模块 |
-| 数据模型 | 23 张表 |
-| 第三方集成 | 9 个模块（含跨链桥） |
-| DeFi 协议 | 9 个（含 Aave V3、Compound V3） |
-| 定时任务 | 10 个 |
-| 中间件 | 7 个 |
-| 支持交易所 | 3 个（Binance/OKX/Coinbase） |
-| 支持区块链 | 3 条（Ethereum/BSC/Polygon） |
-| Etherscan 兼容链 | 6 条（+Arbitrum/Optimism/Base） |
-| 计价货币 | 5 种（USDC/USD/BTC/ETH/CNY） |
-
----
-
-**文档维护者**: @allfi
-**最后更新**: 2026-02-28
+- `exchange_rate/provider` 中依赖公网的集成测试默认跳过，需设置 `ALLFI_RUN_ONLINE_TESTS=1` 才执行

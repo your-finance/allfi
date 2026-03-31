@@ -60,7 +60,7 @@ AllFi 为此而生。它不是一个 SaaS 服务，而是一个**完全开源、
 | 多主题 | 4 套专业金融主题（3 深色 + 1 浅色） |
 | 多语言 | 简体中文 / 繁体中文 / English |
 | PWA | 可添加到手机主屏幕，离线可用 |
-| 版本管理 | 统一版本号 + 在线更新检测 + 一键更新 + 版本回滚 |
+| 版本管理 | 统一版本号 + 在线更新检测 + 宿主机 OTA / Docker sidecar 更新 |
 
 ---
 
@@ -156,212 +156,130 @@ AllFi 为此而生。它不是一个 SaaS 服务，而是一个**完全开源、
 
 ## 快速开始
 
-### 方式一：Docker 部署（推荐） 🐳
+### 方式一：最终用户一键部署（推荐） 🐳
 
-**仅需 Docker，无需本地安装 Go / Node.js / pnpm。**
-
-前置条件：Docker 20.10+, Docker Compose v2+
-
-#### 一键脚本部署（推荐）
+**只需要 Docker，不需要本地安装 Go / Node.js / pnpm。**
 
 ```bash
-# 一键自动提取无依赖二进制代码并打包部署 Docker 服务（免克隆源码）
 curl -sSL https://raw.githubusercontent.com/your-finance/allfi/master/deploy/docker-deploy.sh | bash
 ```
 
-脚本特性：
-- **完全免环境依赖**：无需安装 git / go / node 等开发工具。
-- **自动适配架构**：自动识别 AMD64 或 ARM64 并抓取预先构建编译的程序。
-- **完整环境检查**：自动检测 Docker、Docker Compose。
-- **自动配置**：自动生成 `.env` + 安全密钥。
-- **内置 OTA 升级**：未来更新只需页面点击即可无缝平滑在线重启升级。
+这个脚本会：
 
-#### 手动 Docker 部署
+- 自动检测架构并下载最新 Release
+- 生成独立部署目录 `allfi-docker/`
+- 自动生成 `.env` 和随机密钥
+- 构建最小化运行镜像并启动服务
 
-（如果您已经克隆了代码到本地，或者想手动构建）
+默认访问地址：
+
+- 页面与 API：`http://localhost:3000`
+- Swagger：`http://localhost:3000/swagger/`
+
+> 说明：脚本生成的是最小化部署目录，当前**不包含**仓库根目录里的 `updater` sidecar，因此不要把它理解成“页面内一键更新”部署形态。升级建议是重新执行脚本或重新部署新 Release。
+
+### 方式二：宿主机二进制运行
+
+适合不想用 Docker 的用户。
+
+1. 打开 [GitHub Releases](https://github.com/your-finance/allfi/releases)
+2. 下载对应平台压缩包
+3. 解压后运行：
+
+```bash
+./allfi
+```
+
+默认访问地址：
+
+- 页面与 API：`http://localhost:8080`
+- Swagger：`http://localhost:8080/swagger/`
+
+> 宿主机模式下，当前代码已经实现 OTA 二进制更新逻辑。
+
+### 方式三：仓库内 Docker Compose（维护者）
+
+根目录 `docker-compose.yml` 更适合维护者，不是“克隆后直接 `docker compose up -d`”的纯源码体验，因为它默认引用本地镜像 `allfi-backend:latest`。
+
+推荐流程：
 
 ```bash
 git clone https://github.com/your-finance/allfi.git
 cd allfi
-
-# 生成 .env（首次必须）
 cp .env.example .env
-# 编辑 .env，至少修改 ALLFI_MASTER_KEY（或用下一行自动生成）
-sed -i "s|CHANGE_ME_USE_openssl_rand_base64_32|$(openssl rand -base64 32)|" .env
-
-# 通过源码直接开始构建（此过程需依赖较高内存）
+docker build -f core/Dockerfile -t allfi-backend:latest .
 docker compose up -d --build
 ```
 
-#### 默认端口映射
+默认访问地址：
 
-| 服务 | 容器端口 | 主机端口 | 访问地址 |
-|------|---------|---------|---------|
-| AllFi（前端 + API） | 8080 | **3174** | http://localhost:3174 |
-| AllFi（直接 API） | 8080 | **8080** | http://localhost:8080 |
+- 页面与 API：`http://localhost:3000`
+- 容器内服务端口：`8080`
 
-> AllFi 采用 Go embed 方案，前端静态文件内嵌到后端二进制中，单个端口同时提供前端页面和 API 服务。
+### 方式四：本地开发
 
-访问 [http://localhost:5173](http://localhost:5173) 即可使用。首次访问需设置 PIN 码（4-8 位数字）。
-
-> **自定义端口**：编辑 `.env` 文件修改端口映射，然后重启服务：
-> ```bash
-> # .env
-> ALLFI_PORT=3000    # 改为 3000 端口
-> ```
-> ```bash
-> docker compose up -d --build   # 修改后重启生效
-> ```
-
-#### 数据备份与迁移
-
-AllFi 数据存储在 Docker 卷 `allfi-data` 中，可以轻松备份和迁移：
-
-```bash
-# 备份数据
-docker compose exec -T allfi-backend tar czf - /app/data | gzip > allfi-backup-$(date +%Y%m%d).tar.gz
-
-# 迁移到新服务器
-# 1. 在源服务器停止并导出数据
-docker compose down
-docker run --rm -v allfi-data:/data -v $(pwd):/backup alpine:3.21 tar czf /backup/allfi-data.tar.gz -C /data .
-
-# 2. 传输到新服务器
-scp allfi-data.tar.gz user@new-server:/path/
-
-# 3. 在新服务器导入数据并启动
-docker run --rm -v allfi-data:/data -v $(pwd):/backup alpine:3.21 tar xzf /backup/allfi-data.tar.gz -C /data
-docker compose up -d
-```
-
-#### 常用 Docker 命令
-
-```bash
-docker compose logs -f       # 查看日志
-docker compose down          # 停止服务
-docker compose restart       # 重启服务
-docker compose up -d --build # 重新构建并启动
-docker compose ps            # 查看状态
-```
-
-#### 反向代理配置（生产环境推荐）
-
-如需在生产服务器上使用域名 + HTTPS 访问 AllFi，可配置 Caddy 或 Nginx 反向代理。
-
-**Caddy**（推荐，自动 HTTPS）
-
-```bash
-# 安装 Caddy: https://caddyserver.com/docs/install
-# 创建 /etc/caddy/Caddyfile
-
-allfi.example.com {
-    reverse_proxy localhost:3174
-}
-```
-
-```bash
-# 启动 Caddy（自动申请 Let's Encrypt 证书）
-sudo systemctl restart caddy
-```
-
-> Caddy 零配置自动 HTTPS，推荐用于个人服务器。仅需将 `allfi.example.com` 替换为你的域名。
-
-**Nginx**
-
-```nginx
-# /etc/nginx/sites-available/allfi
-server {
-    listen 80;
-    server_name allfi.example.com;
-    return 301 https://$host$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name allfi.example.com;
-
-    # SSL 证书（可使用 certbot 自动申请）
-    ssl_certificate     /etc/letsencrypt/live/allfi.example.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/allfi.example.com/privkey.pem;
-
-    # 安全头
-    add_header X-Frame-Options DENY;
-    add_header X-Content-Type-Options nosniff;
-    add_header X-XSS-Protection "1; mode=block";
-
-    location / {
-        proxy_pass http://127.0.0.1:3174;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-
-        # WebSocket 支持（如有实时推送）
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
-}
-```
-
-```bash
-# 申请 SSL 证书
-sudo certbot --nginx -d allfi.example.com
-
-# 启用站点并重启
-sudo ln -s /etc/nginx/sites-available/allfi /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl restart nginx
-```
-
-### 方式二：宿主机二进制运行（推荐）
-
-适合希望运行于宿主机但不熟悉 Docker 的用户。AllFi 提供了无需安装任何依赖（如 Git/Go/Node.js）的跨平台可执行包（包含前后端和 OTA 热升级模块）。
-
-1. 访问 [GitHub Releases](https://github.com/your-finance/allfi/releases) 下载适合您系统架构的压缩包（如 `allfi-1.0.0-darwin-arm64.tar.gz`）。
-2. 解压并在终端中执行该可执行文件 `./allfi` 即可一键启动后端、并内嵌访问前端。
-3. 访问 [http://localhost:8080](http://localhost:8080) 即可使用。
-
-> **OTA 一键更新**：本地二进制包启动后，可在前端界面的系统设置中实现**「一键热更新」**，AllFi 会后台自动下载最新代码并一处热替换当前进程与代码，平滑重启到最新版本，全程零环境依赖配置。
-
-### 方式三：本地开发
-
-适合需要修改代码的开发者。依赖：Go 1.24+, Node.js 20+, pnpm。
+适合需要修改代码的开发者。依赖：Go 1.24、Node.js 20+、pnpm。
 
 ```bash
 git clone https://github.com/your-finance/allfi.git
 cd allfi
-make setup    # 自动生成 .env + 安装前后端依赖
-make dev      # 同时启动前后端开发服务器
+make setup
+make dev
 ```
 
-访问 [http://localhost:3174](http://localhost:3174) 即可使用。首次访问需设置 PIN 码（4-8 位数字）。
+开发地址：
 
-> **注意**：`make setup` 会自动检测本地环境。如果缺少 Go 或 pnpm，会跳过对应的依赖安装步骤并给出提示。
+- 前端：`http://localhost:3000`
+- 后端：`http://localhost:8080`
+- Swagger：`http://localhost:8080/swagger/`
 
-### 方式四：Mock 体验（无需后端）
-
-只想快速看看 UI？不需要启动后端。依赖：Node.js 20+, pnpm。
+### 方式五：Mock 体验（无需后端）
 
 ```bash
-cd allfi
-cd webapp && pnpm install && pnpm dev:mock
+cd webapp
+pnpm install
+pnpm dev:mock
 ```
 
-访问 [http://localhost:3174](http://localhost:3174)，所有数据为模拟数据。
+访问 `http://localhost:3000` 即可体验模拟数据 UI。
 
-### 常用命令速查
+### 常用命令
 
 ```bash
-make help           # 查看所有命令
-make dev            # 启动前后端（需要 Go + pnpm）
-make dev-mock       # 纯前端 Mock 模式（需要 pnpm）
-make build          # 构建前后端
-make docker         # Docker 启动
-make health         # 健康检查
-make swagger        # 打开 Swagger UI
+make help
+make dev
+make dev-mock
+make build
+make health
+make swagger
 ```
 
-> 详细部署说明见 [部署指南](./docs/guides/deployment-guide.md)。国内用户代理配置见 [代理指南](./docs/guides/proxy-guide.md)。
+更多细节见 [部署指南](./docs/guides/deployment-guide.md) 与 [开发指南](./docs/guides/dev-guide.md)。
+
+---
+
+## 当前项目状态
+
+这是按 2026-03-31 仓库实际内容审计后的结果：
+
+| 维度 | 当前状态 |
+|------|---------|
+| 前端页面 | 12 个 |
+| 前端组件 | 58 个 |
+| Pinia Store | 13 个 |
+| 后端业务模块 | 29 个 |
+| 定时任务 | 10 个 |
+| API 定义 | 78 个 `g.Meta path` |
+| Swagger | `/swagger/` |
+| OpenAPI JSON | `/api.json` |
+
+测试现状：
+
+- `cd core && go test ./... -timeout 60s` 当前通过
+- `cd webapp && pnpm test --run` 当前 27 个测试全部通过
+- `exchange_rate/provider` 中依赖外网的集成测试已改为显式 opt-in，需要设置 `ALLFI_RUN_ONLINE_TESTS=1` 才会执行
+
+完整说明见 [项目现状文档](./docs/project-status.md)。
 
 ---
 
@@ -369,71 +287,42 @@ make swagger        # 打开 Swagger UI
 
 | 层级 | 技术 |
 |------|------|
-| 后端 | Go 1.24 + GoFrame v2.10 + GoFrame ORM + SQLite3 |
-| 前端 | Vue 3.5 + Vite 7.3 + Tailwind CSS 4 + Pinia 3 + Chart.js 4 + Phosphor Icons + VueUse |
-| 认证 | PIN 码 / 复杂密码（bcrypt）+ JWT Bearer Token + 2FA（TOTP） |
-| 加密 | AES-256-GCM（API Key 加密存储） |
-| 部署 | Docker Compose（只读容器 + 非特权 + healthcheck） |
-| API 文档 | OpenAPI 3.0 + Swagger UI（`/api/v1/docs`） |
+| 后端 | Go 1.24.11 + GoFrame v2.10 |
+| 前端 | Vue 3.5 + Vite 7.3 + Pinia 3 + Chart.js 4 + Tailwind CSS 4 |
+| 认证 | PIN / 复杂密码 + JWT + 2FA（TOTP） |
+| 加密 | AES-256-GCM |
+| 数据存储 | SQLite（默认） |
+| API 文档 | OpenAPI 3.0 + Swagger UI（`/swagger/`） |
 
-### 架构
+### 架构摘要
 
-```
-前端 (Vue 3.5 / Vite 7.3 / Tailwind CSS 4)
-    ↓ RESTful API
-后端 (Go 1.24 / GoFrame v2.10)
-    ├── api/              API 定义（RESTful 规范）
-    ├── app/              业务模块（26 个模块）
-    │   ├── controller/   控制器层
-    │   ├── logic/        业务逻辑层
-    │   └── service/      服务接口层
-    └── integrations/     第三方集成（8 个模块）
-    ↓
-数据层 (GoFrame ORM + SQLite3, 26 个实体)
-```
+```text
+浏览器 / PWA
+    │
+    ├── 开发模式：Vite dev server (:3000) -> API 代理到 :8080
+    └── 发布模式：后端 embed 前端静态资源，单端口提供页面 + API
 
----
+前端
+    Vue 3 + Vite 7 + Pinia + Vue Router
 
-## 项目结构
+后端
+    GoFrame ghttp/gdb/gcfg/goai
+    controller -> logic -> service -> dao/model
 
-```
-allfi/
-├── core/                       # 后端（Go + GoFrame v2.10）
-│   ├── cmd/server/main.go      # 服务入口
-│   ├── api/v1/                 # API 定义（RESTful 规范）
-│   ├── internal/
-│   │   ├── app/                # 业务模块（26 个）
-│   │   │   └── {module}/
-│   │   │       ├── controller/ # 控制器
-│   │   │       ├── logic/      # 业务逻辑
-│   │   │       └── service/    # 服务接口
-│   │   ├── model/entity/       # 数据模型（26 个实体）
-│   │   └── integrations/       # 第三方集成（8 个模块）
-│   └── manifest/config/        # 配置文件
-├── webapp/                     # 前端（Vue 3.5 + Tailwind CSS 4）
-│   └── src/
-│       ├── pages/              # 9 个页面
-│       ├── components/         # 39 个组件
-│       ├── stores/             # 13 个 Pinia Store
-│       └── composables/        # 8 个组合式函数
-└── docs/                       # 项目文档
-    ├── product/                # 产品文档
-    ├── tech/                   # 技术文档
-    ├── specs/                  # 需求规格
-    ├── design/                 # 设计文档
-    └── guides/                 # 使用指南
+数据
+    SQLite 默认配置
 ```
 
 ---
 
 ## 文档
 
-完整文档索引见 [docs/README.md](./docs/README.md)。
+完整索引见 [docs/README.md](./docs/README.md)。
 
 | 分类 | 文档 |
 |------|------|
-| 产品 | [业务概览](./docs/product/biz-overview.md) · [功能全景](./docs/product/feature-overview.md) |
-| 技术 | [技术基线](./docs/tech/tech-baseline.md) · [API 文档](./docs/tech/api-reference.md) · [Swagger UI](http://localhost:8080/api/v1/docs) |
+| 总览 | [项目现状](./docs/project-status.md) · [文档索引](./docs/README.md) |
+| 技术 | [技术基线](./docs/tech/tech-baseline.md) · [API 文档](./docs/tech/api-reference.md) |
 | 指南 | [部署指南](./docs/guides/deployment-guide.md) · [开发指南](./docs/guides/dev-guide.md) · [代理指南](./docs/guides/proxy-guide.md) · [用户指南](./docs/guides/user-guide.md) |
 | 设计 | [UI/UX 规范](./docs/design/ui-ux-standards.md) · [多语言系统](./docs/design/i18n.md) |
 | 规格 | [前端规格](./docs/specs/frontend-spec.md) · [后端规格](./docs/specs/backend-spec.md) |
@@ -442,22 +331,20 @@ allfi/
 
 ## 安全说明
 
-- API Key 使用 **AES-256-GCM** 加密存储，数据库中无明文
+- API Key 使用 **AES-256-GCM** 加密存储
 - 密码使用 **bcrypt** 哈希，不可逆
-  - 支持 **PIN 码模式**（4-20 位数字）或 **复杂密码模式**（8-20 位，含大小写字母和数字）
-  - 可随时切换密码类型，切换时需验证当前密码
-- 支持 **2FA 双因素认证**（TOTP 标准），敏感操作需二次验证
-- 完全**自托管**，数据不离开你的服务器
-- 建议 API Key 仅授予**只读权限**，禁止提现/交易权限
-- Docker 容器以**非特权 + 只读**模式运行
+- 支持 **PIN 模式**（4-20 位数字）与 **复杂密码模式**（8-20 位，含大小写字母和数字）
+- 支持 **2FA / TOTP**
+- 完全自托管，数据默认不离开你的机器或服务器
+- 建议交易所 API Key 仅授予**只读权限**
 
 ---
 
-## 贡献指南
+## 贡献
 
 1. Fork 本仓库
-2. 创建功能分支（`git checkout -b feature/xxx`）
-3. 编写测试（覆盖率 >70%）
+2. 创建功能分支
+3. 如改动影响行为，请补测试或更新文档
 4. 提交 Pull Request
 
 ---
@@ -467,8 +354,6 @@ allfi/
 [MIT License](LICENSE)
 
 ---
-
-**构建于 2026 年，为 Web3 从业者打造**
 
 - GitHub: https://github.com/your-finance/allfi
 - Issues: https://github.com/your-finance/allfi/issues

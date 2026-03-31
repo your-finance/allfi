@@ -18,7 +18,7 @@ func TestNewProviderManager(t *testing.T) {
 	assert.NotNil(t, manager.healthCache)
 
 	// 验证已注册的 Provider 数量
-	assert.Equal(t, 4, len(manager.providers), "应该注册4个Provider")
+	assert.Equal(t, 5, len(manager.providers), "应该注册5个Provider")
 }
 
 func TestProviderManager_RegisterProvider(t *testing.T) {
@@ -42,17 +42,22 @@ func TestProviderManager_ProviderPriority(t *testing.T) {
 	// 验证 Provider 按优先级排序
 	assert.Equal(t, "Binance", manager.providers[0].Name(), "第一个应该是Binance")
 	assert.Equal(t, "Gate.io", manager.providers[1].Name(), "第二个应该是Gate.io")
-	assert.Equal(t, "Frankfurter", manager.providers[2].Name(), "第三个应该是Frankfurter")
-	assert.Equal(t, "Local", manager.providers[3].Name(), "第四个应该是Local")
+	assert.Contains(t, []string{"Yahoo Finance", "Frankfurter"}, manager.providers[2].Name(), "第三个应该是法币Provider")
+	assert.Contains(t, []string{"Yahoo Finance", "Frankfurter"}, manager.providers[3].Name(), "第四个应该是法币Provider")
+	assert.NotEqual(t, manager.providers[2].Name(), manager.providers[3].Name(), "两个法币Provider 不应重复")
+	assert.Equal(t, "Local", manager.providers[4].Name(), "最后一个应该是Local")
 
 	// 验证优先级
 	assert.Equal(t, 1, manager.providers[0].Priority())
 	assert.Equal(t, 2, manager.providers[1].Priority())
 	assert.Equal(t, 3, manager.providers[2].Priority())
-	assert.Equal(t, 999, manager.providers[3].Priority())
+	assert.Equal(t, 3, manager.providers[3].Priority())
+	assert.Equal(t, 999, manager.providers[4].Priority())
 }
 
 func TestProviderManager_FetchRate_LocalFallback(t *testing.T) {
+	requireOnlineProviderTests(t)
+
 	manager := NewProviderManager()
 	ctx := context.Background()
 
@@ -71,6 +76,8 @@ func TestProviderManager_FetchRate_LocalFallback(t *testing.T) {
 }
 
 func TestProviderManager_FetchRate_CNY(t *testing.T) {
+	requireOnlineProviderTests(t)
+
 	manager := NewProviderManager()
 	ctx := context.Background()
 
@@ -100,9 +107,7 @@ func TestProviderManager_FetchRate_UnsupportedSymbol(t *testing.T) {
 }
 
 func TestProviderManager_FetchRates(t *testing.T) {
-	if testing.Short() {
-		t.Skip("跳过集成测试")
-	}
+	requireOnlineProviderTests(t)
 
 	manager := NewProviderManager()
 	ctx := context.Background()
@@ -145,9 +150,7 @@ func TestProviderManager_FetchRates_EmptyList(t *testing.T) {
 }
 
 func TestProviderManager_RefreshHealth(t *testing.T) {
-	if testing.Short() {
-		t.Skip("跳过集成测试")
-	}
+	requireOnlineProviderTests(t)
 
 	manager := NewProviderManager()
 	ctx := context.Background()
@@ -165,6 +168,8 @@ func TestProviderManager_RefreshHealth(t *testing.T) {
 }
 
 func TestProviderManager_GetHealthStatus(t *testing.T) {
+	requireOnlineProviderTests(t)
+
 	manager := NewProviderManager()
 	ctx := context.Background()
 
@@ -188,6 +193,8 @@ func TestProviderManager_GetLastErrors(t *testing.T) {
 }
 
 func TestProviderManager_AutoDegradation(t *testing.T) {
+	requireOnlineProviderTests(t)
+
 	// 这个测试验证当高优先级 Provider 失败时，自动降级到低优先级 Provider
 	manager := NewProviderManager()
 	ctx := context.Background()
@@ -210,9 +217,7 @@ func TestProviderManager_AutoDegradation(t *testing.T) {
 }
 
 func TestProviderManager_ConcurrentFetchRates(t *testing.T) {
-	if testing.Short() {
-		t.Skip("跳过集成测试")
-	}
+	requireOnlineProviderTests(t)
 
 	manager := NewProviderManager()
 	ctx := context.Background()

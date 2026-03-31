@@ -1,10 +1,10 @@
 # AllFi API 接口文档
 
 > **版本**：v3.0
-> **更新时间**：2026-02-12
+> **更新时间**：2026-03-31
 > **API 版本**：v1
 > **Base URL**: `http://localhost:8080/api/v1`
-> **Swagger UI**: `http://localhost:8080/api/v1/docs`
+> **Swagger UI**: `http://localhost:8080/swagger/`
 
 ---
 
@@ -57,7 +57,7 @@
 
 当前 API 版本：**v1**
 
-所有接口路径以 `/api/v1` 开头。后端同时提供 Swagger UI，访问 `/api/v1/docs` 查看交互式文档。
+所有接口路径以 `/api/v1` 开头。后端同时提供 Swagger UI，访问 `/swagger/` 查看交互式文档。
 
 ### 1.3 接口统计
 
@@ -86,7 +86,7 @@
 | 市场数据 | 1 | Gas 费 |
 | 用户设置 | 5 | 获取/更新/导出/清缓存/重置 |
 | 系统 | 1 | 健康检查 |
-| **合计** | **~87** | |
+| **合计** | **78（按 `g.Meta path` 统计）** | |
 
 ---
 
@@ -2122,12 +2122,12 @@ GET /api/v1/health
 
 ## 相关文档
 
-- [Swagger UI（交互式文档）](http://localhost:8080/api/v1/docs)
+- [Swagger UI（交互式文档）](http://localhost:8080/swagger/)
 - [技术基线](./tech-baseline.md)
 - [部署指南](../guides/deployment-guide.md)
 
 ---
 
 **文档维护者**: @allfi
-**最后更新**: 2026-02-12
+**最后更新**: 2026-03-31
 **版本**: v3.0

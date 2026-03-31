@@ -95,7 +95,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3174,
+    port: 3000,
     proxy: {
       // 代理后端 API 请求
       "/api": {

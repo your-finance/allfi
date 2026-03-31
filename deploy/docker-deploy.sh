@@ -166,7 +166,7 @@ if [ ! -f ".env" ]; then
     cat > .env << ENV_EOF
 # AllFi 配置文件（由部署脚本自动生成）
 # 端口配置
-ALLFI_PORT=3174
+ALLFI_PORT=3000
 
 # 加密密钥（自动生成，请勿外泄）
 ALLFI_MASTER_KEY=${MASTER_KEY}
@@ -226,7 +226,7 @@ services:
     container_name: allfi-backend
     restart: unless-stopped
     ports:
-      - "${ALLFI_PORT:-3174}:8080"
+      - "${ALLFI_PORT:-3000}:8080"
     volumes:
       - allfi-data:/app/data
       - /etc/localtime:/etc/localtime:ro
@@ -272,7 +272,7 @@ rm -rf ./manifest
 rm -f ./Dockerfile
 
 # 读取实际端口
-PORT=$(grep -E '^ALLFI_PORT=' .env 2>/dev/null | cut -d= -f2 | tr -d '[:space:]' || echo "3174")
+PORT=$(grep -E '^ALLFI_PORT=' .env 2>/dev/null | cut -d= -f2 | tr -d '[:space:]' || echo "3000")
 
 echo ""
 echo -e "${GREEN}╔══════════════════════════════════════════════╗${RESET}"
@@ -282,7 +282,7 @@ echo ""
 echo -e "  🌐 访问地址: ${CYAN}http://localhost:${PORT}${RESET}"
 echo -e "  📖 API 文档: ${CYAN}http://localhost:${PORT}/swagger/${RESET}"
 echo ""
-echo -e "  首次访问需设置 ${YELLOW}PIN 码${RESET}（4-8 位数字）"
+echo -e "  首次访问需设置 ${YELLOW}PIN 或复杂密码${RESET}"
 echo ""
 echo -e "${CYAN}后续维护 (进入部署目录 cd ${DEPLOY_DIR}):${RESET}"
 echo -e "  查看日志:   ${GREEN}$COMPOSE_CMD logs -f${RESET}"
@@ -292,5 +292,5 @@ echo -e "  重启服务:   ${GREEN}$COMPOSE_CMD restart${RESET}"
 echo -e "  数据目录:   ${GREEN}存储在 Docker 数据卷 allfi-data 中${RESET}"
 echo ""
 echo -e "${CYAN}版本更新:${RESET}"
-echo -e "  登录后在 ${YELLOW}系统设置${RESET} 页面点击 ${GREEN}「检查更新」${RESET} 即可 OTA 一键升级到最新版本。"
+echo -e "  当前脚本生成的是最小化部署目录。升级建议：重新执行部署脚本，或在该目录内替换为新 Release 后重建容器。"
 echo ""

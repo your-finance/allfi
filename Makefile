@@ -76,7 +76,7 @@ setup: ## 一键初始化（生成 .env + 安装前后端依赖）
 dev: ## 同时启动前后端开发服务器
 	@echo "$(CYAN)>>> 启动 AllFi 开发环境...$(RESET)"
 	@echo "  后端: http://localhost:8080"
-	@echo "  前端: http://localhost:3174"
+	@echo "  前端: http://localhost:3000"
 	@echo "  Swagger: http://localhost:8080/swagger/"
 	@echo "  按 Ctrl+C 停止所有服务"
 	@echo ""
@@ -87,7 +87,7 @@ dev: ## 同时启动前后端开发服务器
 
 dev-mock: ## 纯前端 Mock 模式（无需后端，快速体验 UI）
 	@echo "$(CYAN)>>> 启动 Mock 模式...$(RESET)"
-	@echo "  前端: http://localhost:3174（Mock 数据）"
+	@echo "  前端: http://localhost:3000（Mock 数据）"
 	@echo "  无需启动后端，所有数据为模拟数据"
 	@echo ""
 	@cd webapp && pnpm dev:mock
@@ -101,7 +101,7 @@ dev-backend: ## 仅启动后端开发服务器
 
 dev-frontend: ## 仅启动前端开发服务器
 	@echo "$(CYAN)>>> 启动前端...$(RESET)"
-	@echo "  前端: http://localhost:3174"
+	@echo "  前端: http://localhost:3000"
 	@echo ""
 	@cd webapp && pnpm dev
 
@@ -139,7 +139,7 @@ docker: _ensure-env ## Docker Compose 启动（后台运行，无需预装 Go/No
 	@echo "$(CYAN)>>> Docker Compose 启动...$(RESET)"
 	@docker compose up -d 2>/dev/null || docker-compose up -d
 	@echo "$(GREEN)  ✓ 服务已启动$(RESET)"
-	@echo "  前端: http://localhost:$${FRONTEND_PORT:-3174}"
+	@echo "  前端: http://localhost:$${ALLFI_PORT:-3000}"
 	@echo "  后端: http://localhost:$${SERVER_PORT:-8080}"
 
 docker-build: _ensure-env ## Docker Compose 重新构建并启动

@@ -56,9 +56,7 @@ func TestGateioProvider_SupportsSymbol(t *testing.T) {
 }
 
 func TestGateioProvider_FetchRate(t *testing.T) {
-	if testing.Short() {
-		t.Skip("跳过集成测试")
-	}
+	requireOnlineProviderTests(t)
 
 	p := NewGateioProvider()
 	ctx := context.Background()
@@ -75,9 +73,7 @@ func TestGateioProvider_FetchRate(t *testing.T) {
 }
 
 func TestGateioProvider_FetchRates(t *testing.T) {
-	if testing.Short() {
-		t.Skip("跳过集成测试")
-	}
+	requireOnlineProviderTests(t)
 
 	p := NewGateioProvider()
 	ctx := context.Background()
@@ -99,9 +95,7 @@ func TestGateioProvider_FetchRates(t *testing.T) {
 }
 
 func TestGateioProvider_IsHealthy(t *testing.T) {
-	if testing.Short() {
-		t.Skip("跳过集成测试")
-	}
+	requireOnlineProviderTests(t)
 
 	p := NewGateioProvider()
 	ctx := context.Background()

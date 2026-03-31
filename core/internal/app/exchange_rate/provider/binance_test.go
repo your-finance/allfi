@@ -57,9 +57,7 @@ func TestBinanceProvider_SupportsSymbol(t *testing.T) {
 }
 
 func TestBinanceProvider_FetchRate(t *testing.T) {
-	if testing.Short() {
-		t.Skip("跳过集成测试")
-	}
+	requireOnlineProviderTests(t)
 
 	p := NewBinanceProvider()
 	ctx := context.Background()
@@ -76,9 +74,7 @@ func TestBinanceProvider_FetchRate(t *testing.T) {
 }
 
 func TestBinanceProvider_FetchRates(t *testing.T) {
-	if testing.Short() {
-		t.Skip("跳过集成测试")
-	}
+	requireOnlineProviderTests(t)
 
 	p := NewBinanceProvider()
 	ctx := context.Background()
@@ -99,9 +95,7 @@ func TestBinanceProvider_FetchRates(t *testing.T) {
 }
 
 func TestBinanceProvider_IsHealthy(t *testing.T) {
-	if testing.Short() {
-		t.Skip("跳过集成测试")
-	}
+	requireOnlineProviderTests(t)
 
 	p := NewBinanceProvider()
 	ctx := context.Background()
@@ -112,9 +106,7 @@ func TestBinanceProvider_IsHealthy(t *testing.T) {
 }
 
 func TestBinanceProvider_USDCPriority(t *testing.T) {
-	if testing.Short() {
-		t.Skip("跳过集成测试")
-	}
+	requireOnlineProviderTests(t)
 
 	p := NewBinanceProvider()
 	ctx := context.Background()

@@ -1,518 +1,154 @@
-# AllFi 技术基线文档
+# AllFi 技术基线
 
-> 版本：v2.3 | 更新时间：2026-02-28 | 状态：与代码实现对齐
-
----
-
-## 1. 技术架构概览
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        用户浏览器                                 │
-│              (PWA / 响应式 / 移动端适配)                           │
-└────────────────────────┬────────────────────────────────────────┘
-                         │ HTTP(S)
-                         ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      前端层 (Frontend)                            │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  Vue 3 + Vite 7 + Pinia 3                                │   │
-│  │  - 12 个页面 (SPA, hash 路由)                              │   │
-│  │  - 57 个组件                                               │   │
-│  │  - 13 个 Pinia Store                                       │   │
-│  │  - Chart.js 4 数据可视化                                    │   │
-│  │  - Tailwind CSS 4 + 4 套主题                               │   │
-│  │  - 3 语言 i18n (zh-CN / zh-TW / en-US)                    │   │
-│  │  - Vitest 测试框架                                         │   │
-│  └──────────────────────────────────────────────────────────┘   │
-└────────────────────────┬────────────────────────────────────────┘
-                         │ RESTful API (JSON)
-                         │ 90+ 条路由
-                         ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      后端层 (Backend)                             │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  Go 1.24 + GoFrame v2.8+ (Web 框架)                      │   │
-│  │  ┌────────────────────────────────────────────────────┐   │   │
-│  │  │  中间件链: Recovery → CORS → Logger → Auth(JWT)     │   │   │
-│  │  └────────────────────────────────────────────────────┘   │   │
-│  │  ┌────────────────────────────────────────────────────┐   │   │
-│  │  │  Handler 层 (Gin 风格, 29 个服务模块)                │   │   │
-│  │  └────────────────────────────────────────────────────┘   │   │
-│  │  ┌────────────────────────────────────────────────────┐   │   │
-│  │  │  Service 层 (20+ 服务，功能驱动)                     │   │   │
-│  │  │  - ServiceContainer 全局服务调用                    │   │   │
-│  │  └────────────────────────────────────────────────────┘   │   │
-│  │  ┌────────────────────────────────────────────────────┐   │   │
-│  │  │  Repository 层 (18 个仓储，数据持久化)               │   │   │
-│  │  │  - GORM + AutoMigrate                               │   │   │
-│  │  └────────────────────────────────────────────────────┘   │   │
-│  │  ┌────────────────────────────────────────────────────┐   │   │
-│  │  │  定时任务 (7 个 CronJob)                            │   │   │
-│  │  └────────────────────────────────────────────────────┘   │   │
-│  └──────────────────────────────────────────────────────────┘   │
-└────────────────────────┬────────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    数据存储层 (Storage)                            │
-│  ┌──────────────────┐  ┌──────────────────┐                     │
-│  │  SQLite3          │  │  MySQL           │                     │
-│  │  (默认，单文件)    │  │  (可选，生产环境)  │                     │
-│  └──────────────────┘  └──────────────────┘                     │
-│  18 张业务表 · GORM AutoMigrate · 软删除                          │
-└─────────────────────────────────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    外部服务层 (External APIs)                      │
-│  ┌──────────────┐  ┌───────────────┐  ┌───────────────────┐    │
-│  │  CEX          │  │  区块链        │  │  价格数据          │    │
-│  │  - Binance    │  │  - Etherscan  │  │  - CoinGecko      │    │
-│  │  - OKX (CCXT) │  │    (6 条链)   │  │  - Yahoo Finance  │    │
-│  │  - Coinbase   │  │  - Alchemy    │  │                    │    │
-│  │    (CCXT)     │  │    (NFT)      │  │                    │    │
-│  └──────────────┘  └───────────────┘  └───────────────────┘    │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │  DeFi 协议 (7 个)                                          │  │
-│  │  Lido · Rocket Pool · Aave · Compound                     │  │
-│  │  Uniswap V2 · Uniswap V3 · Curve                         │  │
-│  └───────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
-```
+> 审计日期：2026-03-31
+> 目标：描述当前仓库真实实现，而不是历史方案。
 
 ---
 
-## 2. 技术栈
-
-### 2.1 后端
-
-| 技术/组件 | 用途 | 备注 |
-|-----------|------|------|
-| Go | 1.24 | 核心后端语言 |
-| GoFrame | v2.8+ | 核心 Web 框架 (路由/ORM/中间件) |
-| SQLite | 嵌入式配置/数据 | 默认轻量级存储 |
-| MySQL | 企业级存储支持 | 支持可扩展部署 |
-| pquerna/otp | 2FA/TOTP | 二步验证核心逻辑 |
-| webpush-go | 浏览器推送 | Web Push 通知 |
-| go-binance/v2 | Binance SDK | 专用客户端 |
-| ccxt/go/v4 | 多交易所 SDK | OKX/Coinbase 统一接口 |
-| stretchr/testify | 测试框架 | 断言和 Mock |
-
-### 2.2 前端
-
-| 技术 | 版本/说明 | 选型理由 |
-|------|----------|---------|
-| Vue 3 | Composition API + `<script setup>` | 响应式框架 |
-| Vite | 7 | 极速 HMR，原生 ESM |
-| Pinia | 3 | Vue 官方状态管理 |
-| Tailwind CSS | 4 | 原子化 CSS，快速定制 |
-| Chart.js | 4 | 轻量可视化 |
-| Phosphor Icons | — | 图标库 |
-| native Fetch API | — | 无需 Axios |
-
-### 2.3 部署
-
-| 技术 | 用途 |
-|------|------|
-| Docker + Docker Compose | 容器化部署 |
-| Nginx | 反向代理 + 静态文件服务（可选） |
-| Systemd | Linux 服务管理 |
-| Makefile | 构建自动化 |
-
----
-
-## 3. 项目结构
-
-采用 GoFrame 的标准化及模块化工程结构规范：
+## 1. 架构摘要
 
 ```text
-allfi/
-├── core/
-│   ├── cmd/
-│   │   └── server/             # 启动入口文件
-│   ├── manifest/
-│   │   └── config/             # 配置文件 yaml
-│   ├── internal/
-│   │   ├── app/                # 业务模块 (29个)
-│   │   │   ├── auth/                    # 认证模块（含 2FA）
-│   │   │   ├── asset/                   # 资产总览模块
-│   │   │   ├── exchange/                # 交易所账户模块
-│   │   │   ├── wallet/                  # 链上钱包模块
-│   │   │   ├── manual_asset/            # 手动记账资产模块
-│   │   │   ├── cross_chain/             # 跨链资产追踪模块
-│   │   │   ├── defi/                    # DeFi 仓位模块（含借贷管理）
-│   │   │   ├── nft/                     # NFT 资产模块
-│   │   │   ├── transaction/             # 统一交易记录模块
-│   │   │   ├── exchange_rate/           # 汇率与价格服务模块
-│   │   │   ├── notification/            # 通知与聚合模块
-│   │   │   ├── pnl/                     # 盈亏分析模块
-│   │   │   ├── report/                  # 定期报告生成模块
-│   │   │   ├── health/                  # 系统健康检查模块
-│   │   │   ├── gas/                     # Gas 优化功能模块
-│   │   │   ├── risk/                    # 风险管理工具模块
-│   │   │   └── ... (共29个模块)
-│   │   │       ├── module_name/    # 具体模块目录
-│   │   │       ├── controller/ # 控制器接口层
-│   │   │       ├── service/    # 业务逻辑接口层
-│   │   │       ├── logic/      # 业务逻辑实现层
-│   │   │       ├── model/      # 数据流模型 (do/entity)
-│   │   │       └── dao/        # 数据访问对象层
-│   │   ├── cron/ (10 个)       # 定时任务
-│   │   ├── database/           # 数据库配置与初始化
-│   │   ├── middleware/ (7 个)  # HTTP 中间件
-│   │   ├── consts/             # 全局错误码和常量
-│   │   ├── utils/              # 加密、HTTP 等全局工具
-│   │   └── integrations/ (8 个) # 第三方 SDK
-│   └── api/                    # API 定义 (GoFrame 通用风格)
-│       └── v1/                 # 接口定义 (Req/Res 结构)
-├── webapp/
-│   ├── src/
-│   │   ├── stores/ (13 个)            # Pinia Store
-│   │   ├── api/ (15 个模块)           # API 服务
-│   │   ├── composables/               # Vue Composables
-│   │   ├── i18n/                      # 多语言 (900+ key)
-│   │   └── data/                      # Mock 数据
-│   ├── public/
-│   └── package.json
-├── docs/                               # 项目文档
-├── docker-compose.yml
-├── Dockerfile
-├── Makefile
-└── README.md
+浏览器 / PWA
+    │
+    ├── 开发模式：Vite dev server (:3000) 代理后端 API (:8080)
+    └── 发布模式：后端内嵌前端静态资源，单端口提供页面与 API
+
+前端
+    Vue 3 + Vite 7 + Pinia + Vue Router + Chart.js + Tailwind CSS 4
+    12 页面 / 58 组件 / 13 Store / 9 Composable
+
+后端
+    Go 1.24.11 + GoFrame v2.10
+    controller -> logic -> service -> dao/model
+    29 个业务模块 / 10 个 cron / 78 个 API 定义
+
+存储
+    SQLite 默认配置（GoFrame gdb）
+    启动时由 `core/internal/database/migrate.go` 执行建表与补充迁移
+
+外部集成
+    Binance / OKX / Coinbase
+    Etherscan 系列 / Alchemy / CoinGecko / Yahoo / Frankfurter / GateIO
+    DeFi: Lido / Rocket Pool / Aave / Compound / Uniswap V2/V3 / Curve
 ```
 
 ---
 
-## 4. 数据库设计
+## 2. 前端基线
 
-### 4.1 概述
+| 维度 | 当前实现 |
+|------|---------|
+| 框架 | Vue 3.5（Composition API + `<script setup>`） |
+| 构建 | Vite 7.3 |
+| 状态管理 | Pinia 3 |
+| 路由 | Vue Router 4，`createWebHistory()` |
+| UI | CSS 变量主题系统 + `@import "tailwindcss"` |
+| 主题 | 4 套主题，主题与语言统一由 `themeStore` 管理 |
+| 国际化 | `zh-CN` / `zh-TW` / `en-US` |
+| 离线能力 | `vite-plugin-pwa` + `push-sw.js` |
+| 图表 | Chart.js + vue-chartjs |
+| 接口层 | 原生 `fetch`，支持 mock / real 双路径 |
 
-- ORM: GORM v2，使用 `AutoMigrate` 自动建表
-- 默认: SQLite3（`data/allfi.db`），可切换 MySQL
-- 所有表继承 `BaseModel`（id, created_at, updated_at, deleted_at 软删除）
-- 金额字段使用 `decimal.Decimal`（shopspring/decimal）
+### 当前目录统计
 
-### 4.2 数据表（23 张）
+- 页面：12 个
+- 组件：58 个
+- Store：13 个
+- Composable：9 个
+- API 文件：15 个
 
-| # | 表名 | 说明 | 核心字段 |
-|---|------|------|---------|
-| 1 | `exchange_accounts` | 交易所账户 | exchange, api_key_encrypted, api_secret_encrypted, status |
-| 2 | `wallet_addresses` | 钱包地址 | blockchain(eth/bsc/polygon), address, label |
-| 3 | `manual_assets` | 传统资产 | asset_type(bank/cash/stock/fund), amount(Decimal), currency |
-| 4 | `asset_details` | 资产明细快照 | source_type, symbol, balance, price_usd, value_usd |
-| 5 | `asset_snapshots` | 资产总值快照 | total_value_usd, exchange_value, blockchain_value, manual_value |
-| 6 | `exchange_rates` | 汇率缓存 | from_currency, to_currency, rate, source, expires_at |
-| 7 | `system_config` | 系统配置 KV | config_key, config_value |
-| 8 | `notifications` | 通知消息 | type, title, content, is_read |
-| 9 | `price_alerts` | 价格预警 | symbol, condition, target_price, is_active |
-| 10 | `reports` | 资产报告 | report_type(daily/weekly/monthly/annual), content |
-| 11 | `unified_transactions` | 统一交易记录 | tx_type(buy/sell/swap/transfer), source, from_asset, to_asset |
-| 12 | `transaction_daily_summaries` | 交易日汇总 | date, buy_count, sell_count, total_fee_usd |
-| 13 | `achievements` | 成就记录 | achievement_id, unlocked_at |
-| 14 | `nfts` | NFT 资产 | chain, contract_address, token_id, collection |
-| 15 | `goals` | 目标追踪 | name, target_amount, deadline |
-| 16 | `sync_metadata` | 同步元数据 | source, last_sync_at, sync_status |
-| 17 | `lending_positions` | DeFi 借贷仓位 | protocol, chain, user_address, collateral_token, borrow_token, health_factor |
-| 18 | `lending_rate_history` | 借贷利率历史 | protocol, chain, deposit_apy, borrow_apy, timestamp |
-| 19 | `gas_price_history` | Gas 价格历史 | chain, gas_price, timestamp |
-| 20 | `gas_recommendations` | Gas 交易推荐 | chain, recommendation_type, optimal_time, estimated_savings |
-| 21 | `cross_chain_transactions` | 跨链交易记录 | from_chain, to_chain, bridge, amount, tx_hash |
-| 22 | `risk_metrics` | 风险指标 | var_95, sharpe_ratio, sortino_ratio, max_drawdown, calculated_at |
-| 23 | `two_factor_auth` | 2FA 配置 | secret_encrypted, backup_codes_encrypted, is_enabled |
+### 关键实现约定
 
-### 4.3 支持的常量
-
-| 类型 | 值 |
-|------|-----|
-| 交易所 | binance, okx, coinbase |
-| 区块链 | ethereum, bsc, polygon |
-| 资产来源 | cex, blockchain, manual |
-| 传统资产类型 | bank, cash, stock, fund |
-| 计价货币 | USDC, USD, BTC, ETH, CNY |
-| 交易类型 | buy, sell, swap, transfer, deposit, withdraw |
-| 汇率数据源 | yahoo_finance, coingecko |
+- 开发模式下前端运行在 `http://localhost:3000`
+- `/api`、`/swagger`、`/api.json` 会代理到后端 `:8080`
+- 主题、语言、隐私模式、引导状态由 `webapp/src/stores/themeStore.js` 统一管理
+- 登录流程支持 PIN / 复杂密码 + 可选 2FA
 
 ---
 
-## 5. API 设计
+## 3. 后端基线
 
-### 5.1 规范
+| 维度 | 当前实现 |
+|------|---------|
+| 语言 | Go 1.24.11 |
+| 框架 | GoFrame v2.10 |
+| Web 层 | `ghttp.Server` + 路由分组 + OpenAPI |
+| 配置 | `gcfg` + YAML |
+| 数据访问 | GoFrame `gdb` + 代码生成 DAO |
+| 文档 | `goai` 生成 OpenAPI，Swagger UI 暴露于 `/swagger/` |
+| 存储 | SQLite 默认配置 |
+| 认证 | bcrypt + JWT + 2FA/TOTP |
+| 加密 | AES-256-GCM |
+| 更新 | 宿主机 OTA / Docker sidecar 更新 |
 
-- **Base URL**: `http://localhost:8080/api/v1`
-- **路由风格**: Go 1.22+ 增强路由（`METHOD /path/{param}`）
-- **响应格式**: 统一 JSON（code + message + data + timestamp）
-- **认证**: PIN 码 + JWT Bearer Token
-- **文档**: Swagger UI 内置（`/api/v1/docs`）
+### 模块与任务
 
-### 5.2 错误码体系
+- 业务模块：29 个 `core/internal/app/*`
+- 定时任务：10 个 `core/internal/cron/*.go`
+- API 定义：78 个 `g.Meta path`
 
-| 范围 | 类别 | 码值 |
-|------|------|------|
-| 0 | 成功 | 0 |
-| 1001-1999 | 客户端错误 | 1001 参数错误, 1002 验证失败, 1003 资源不存在, 1004 重复条目, 1005 未授权 |
-| 2001-2999 | 服务器错误 | 2001 内部错误, 2002 数据库错误, 2003 外部 API 错误, 2004 加密错误 |
-| 3001-3999 | 业务错误 | 3001 交易所 API 错误, 3004 地址无效, 3006 汇率获取失败, 3007 快照失败 |
+### 分层方式
 
-### 5.3 接口统计（75 条路由）
+- `core/api/v1/`：请求与响应结构、OpenAPI 元数据
+- `core/internal/app/<module>/controller`：路由注册与参数接收
+- `core/internal/app/<module>/logic`：业务逻辑
+- `core/internal/app/<module>/service`：服务接口
+- `core/internal/app/<module>/dao|model`：DAO、DO、Entity
 
-| 模块 | 数量 | 说明 |
-|------|------|------|
-| 认证 | 4 | PIN 设置/登录/修改/状态 |
-| 资产 | 8 | 总览/详情/历史/刷新 + 传统资产 CRUD |
-| 交易所 | 7 | CRUD + 测试连接 + 余额 |
-| 钱包 | 8 | CRUD + 余额 + 批量导入 |
-| 汇率 | 3 | 当前/价格/刷新 |
-| 通知 | 9 | 列表/已读/偏好 + WebPush |
-| 价格预警 | 4 | CRUD |
-| 报告 | 3 | 列表/详情/生成 |
-| 交易记录 | 5 | 列表/同步/统计/设置 |
+### 数据层现状
 
-| DeFi | 2 | 仓位 + 协议列表 |
-| NFT | 1 | 资产列表 |
-| 成就 | 2 | 列表 + 检查 |
-| 目标 | 4 | CRUD |
-| 分析 | 5 | 费用/盈亏/归因/预测 |
-| 其他 | 5 | 健康检查/基准/Gas/健康评分/文档 |
-
-详细路由表见 [后端需求规格文档](../specs/backend-spec.md#43-完整路由表75-条)。
+- 仓库默认与示例配置都使用 SQLite
+- `core/internal/database/migrate.go` 负责启动建表
+- 仓库中仍保留部分 MySQL 辅助配置代码，但并不是当前默认文档化主路径
 
 ---
 
-## 6. 认证与安全
+## 4. 部署与运行基线
 
-### 6.1 认证方式
+### 开发模式
 
-单用户 PIN 码（4-8 位数字）+ JWT Token：
+- `make dev`
+- 前端：`http://localhost:3000`
+- 后端：`http://localhost:8080`
 
-```
-首次使用 → 所有接口开放 → 用户设置 PIN
-       → PIN bcrypt 哈希存储 → 返回 JWT Token
-       → 后续请求需 Bearer Token → 中间件校验
-```
+### 发布模式
 
-白名单路由（无需认证）：`/api/v1/health`、`/api/v1/auth/*`
+- 前端 `dist` 会复制到 `core/internal/statics/dist`
+- 后端通过 `embed.FS` 提供静态页面
+- 对用户暴露单端口页面 + API
 
-### 6.2 API Key 加密
+### Docker 模式
 
-- 算法: AES-256-GCM
-- 主密钥: 32 字节，环境变量 `ALLFI_MASTER_KEY` 或配置文件
-- 存储: Base64(nonce + ciphertext)
-- 工具: `utils.EncryptAPIKey()` / `utils.DecryptAPIKey()`
+存在两条不同路径：
 
-### 6.3 中间件链
+1. 仓库根目录 `docker-compose.yml`
+   - 面向维护者
+   - 依赖本地镜像 `allfi-backend:latest`
+   - 带 `updater` sidecar
 
-```
-Recovery → CORS → Logger → Auth(JWT) → Handler
-```
-
----
-
-## 7. 第三方集成
-
-### 7.1 交易所
-
-| 交易所 | SDK | 说明 |
-|--------|-----|------|
-| Binance | `go-binance/v2` | 专用 SDK |
-| OKX | `ccxt/go/v4` | CCXT 统一接口 |
-| Coinbase | `ccxt/go/v4` | CCXT 统一接口 |
-
-### 7.2 区块链
-
-| 服务 | 说明 |
-|------|------|
-| Etherscan | 统一客户端，6 条 EVM 链（Ethereum/BSC/Polygon/Arbitrum/Optimism/Base） |
-| Alchemy | NFT 数据（列表/收藏集/估值） |
-
-### 7.3 DeFi 协议（7 个）
-
-| 协议 | 类型 |
-|------|------|
-| Lido | ETH 质押 |
-| Rocket Pool | ETH 质押 |
-| Aave | 借贷 |
-| Compound | 借贷 |
-| Uniswap V2 | DEX 流动性 |
-| Uniswap V3 | DEX 流动性 |
-| Curve | 稳定币 DEX |
-
-通过 `defi/registry.go` 注册表模式统一管理，所有协议实现同一接口。
-
-### 7.4 价格数据
-
-| 数据源 | 用途 |
-|--------|------|
-| CoinGecko | 加密货币实时价格 |
-| Yahoo Finance | 法币汇率、传统资产价格 |
+2. `deploy/docker-deploy.sh`
+   - 面向最终用户
+   - 下载 Release 二进制并生成独立部署目录
+   - 当前生成的是最小化部署，不带 `updater` sidecar
 
 ---
 
-## 8. 定时任务
+## 5. 版本与更新基线
 
-由 `CronManager` 统一管理 10 个定时任务：
-
-| 任务 | 默认间隔 | 说明 |
-|------|---------|------|
-| 资产快照 | 1 小时 | 刷新价格 → 创建快照 → 清理旧数据（90 天） |
-| 通知摘要 | 每日 | 为启用摘要的用户生成每日通知 |
-| 价格预警 | 周期性 | 检查活跃预警条件 |
-| 报告生成 | 每日 | 自动生成日报/周报/月报 |
-| Gas 价格监控 | 5 分钟 | 更新各链 Gas 价格 |
-| 风险指标计算 | 每日 | 计算 VaR、Sharpe、Sortino 等风险指标 |
-| 健康因子监控 | 每小时 | 监控 DeFi 借贷仓位健康因子 |
-| 汇率刷新 | 60 分钟 | 刷新全局法币与数字货币基准汇率 |
-| 风险预警 | 周期性 | 检查资产集中度、波动率 |
-| 投资策略 | 15 分钟 | 定期检查重平衡条件与执行策略建议 |
+| 场景 | 当前实现 |
+|------|---------|
+| 版本注入 | 通过构建参数写入 `core/internal/version` 与前端 `__APP_VERSION__` |
+| Release | `.github/workflows/release.yml` 构建多平台二进制 |
+| 宿主机更新 | 下载 GitHub Release tarball，`go-update` 原位替换 |
+| Docker 更新 | `updater` sidecar 走 git checkout + docker build + restart |
 
 ---
 
-## 9. 配置管理
+## 6. 测试与已知注意事项
 
-使用 GoFrame `gcfg` 封装，支持配置文件 + 环境变量覆盖。
-
-### 9.1 核心配置项
-
-| 配置项 | 环境变量 | 默认值 |
-|--------|---------|--------|
-| `server.port` | `ALLFI_PORT` | 8080 |
-| `server.mode` | `ALLFI_MODE` | development |
-| `database.type` | `ALLFI_DB_TYPE` | sqlite |
-| `database.sqlite.path` | `ALLFI_DB_PATH` | ../data/allfi.db |
-| `security.master_key` | `ALLFI_MASTER_KEY` | —（必填） |
-| `external_apis.etherscan.api_key` | `ETHERSCAN_API_KEY` | — |
-| `external_apis.coingecko.api_key` | `COINGECKO_API_KEY` | — |
-| `cron.snapshot_interval` | — | 3600（秒） |
-| `cron.price_cache_ttl` | — | 300（秒） |
-| `defaults.currency` | — | USDC |
-| `defaults.history_retention_days` | — | 90 |
-
----
-
-## 10. 开发规范
-
-### 10.1 Go 代码规范
-
-- 包名: 小写单词（`service`, `models`）
-- 文件名: 蛇形命名（`asset_service.go`）
-- 结构体: 大驼峰（`AssetService`）
-- 函数: 大驼峰（导出）/ 小驼峰（内部）
-- 所有注释使用中文
-
-### 10.2 数据库规范
-
-- 表名: 蛇形、复数（`exchange_accounts`）
-- 字段: 蛇形（`api_key_encrypted`）
-- 索引: `idx_表名_字段名`
-
-### 10.3 API 规范
-
-- 路径: 小写、复数名词（`/assets`, `/exchanges/accounts`）
-- 参数: 蛇形（`?currency=USDC&page_size=20`）
-
-### 10.4 测试
-
-- 测试框架: `stretchr/testify`
-- 接口测试: Mock 服务实现接口
-- 文件命名: `*_test.go`
-
----
-
-## 11. 部署方案
-
-### 11.1 Docker 部署
-
-```bash
-docker-compose up -d
-# 访问 http://localhost:8080
-```
-
-### 11.2 手动部署
-
-```bash
-# 后端
-cd core && go build -o allfi ./cmd/server && ./allfi
-
-# 前端
-cd webapp && npm install && npm run build
-# 构建产物在 dist/，由后端静态服务或 Nginx 提供
-```
-
-### 11.3 数据备份
-
-```bash
-# SQLite 备份
-sqlite3 data/allfi.db ".backup data/backup/allfi_$(date +%Y%m%d).db"
-```
-
----
-
-## 12. 技术决策记录 (ADR)
-
-### ADR-001: SQLite 作为默认数据库
-
-- 零配置、单文件、便于备份
-- 单用户场景性能充足
-- 可切换 MySQL（修改配置即可）
-
-### ADR-002: 标准库 net/http 替代 Web 框架
-
-- Go 1.22+ 增强路由功能足够（支持 `METHOD /path/{param}`）
-- 无外部框架依赖，减少升级风险
-- GoFrame 仅用于配置管理（`gcfg`）
-
-### ADR-003: AES-256-GCM 加密 API Key
-
-- 行业标准加密算法
-- 自托管环境用户完全控制主密钥
-- 数据库泄露不影响 API Key 安全
-
-### ADR-004: CCXT 统一交易所集成
-
-- OKX、Coinbase 通过 CCXT Go SDK 接入
-- 统一接口降低维护成本
-- Binance 保留专用 SDK（功能更完整）
-
-### ADR-005: 接口驱动的服务层
-
-- 所有服务定义接口（`*Interface`）
-- `ServiceContainer` 管理依赖注入
-- 便于 Mock 测试和替换实现
-
----
-
-## 13. 数据统计总览
-
-| 维度 | 数量 |
-|------|------|
-| 后端 API 路由 | 90+ 条 |
-| 后端 Handler | 29 个 |
-| 后端服务接口 | 23 个 |
-| 后端 Repository | 23 个 |
-| 数据库表 | 23 张 |
-| 第三方集成 | 9 个模块（含跨链桥） |
-| DeFi 协议 | 7 个（Aave/Compound/Lido/Rocket Pool/Uniswap V2/Uniswap V3/Curve） |
-| 定时任务 | 10 个 |
-| 前端页面 | 12 个 |
-| 前端组件 | 57 个 |
-| Pinia Store | 13 个 |
-| API 服务模块 | 15 个 |
-| i18n 翻译 key | 900+ |
-| 主题 | 4 套 |
-| 支持语言 | 3 种 |
-| 测试框架 | Vitest（前端） |
-
----
-
-## 相关文档
-
-- [后端需求规格](../specs/backend-spec.md) — API 路由表、数据模型、服务接口详情
-- [前端需求规格](../specs/frontend-spec.md) — 页面、组件、Store、路由详情
-- [API 接口文档](./api-reference.md) — 完整接口请求/响应示例
-- [UI/UX 设计规范](../design/ui-ux-standards.md) — 设计系统
-- [部署指南](../guides/deployment-guide.md) — Docker/手动部署
-
----
-
-**文档维护者**: @allfi
-**最后更新**: 2026-02-28
+- 文档曾长期把 Swagger 路径写成 `/api/v1/docs`，当前应统一为 `/swagger/`。
+- 部分旧文档把后端写成 `net/http + GORM`，与当前 GoFrame 实现不符。
+- 默认前后端测试当前可通过：
+  - `cd core && go test ./... -timeout 60s`
+  - `cd webapp && pnpm test --run`
+- `exchange_rate/provider` 中依赖外网的 Provider 测试默认跳过，需显式设置 `ALLFI_RUN_ONLINE_TESTS=1` 才执行。

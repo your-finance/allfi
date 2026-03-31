@@ -1,6 +1,6 @@
 # AllFi 用户指南
 
-> **版本**：v2.0 | **更新时间**：2026-02-11
+> **版本**：v2.1 | **更新时间**：2026-03-31
 
 ---
 
@@ -28,24 +28,20 @@
 - Node.js 18+
 - pnpm 9+
 
-### 1.2 部署步骤（Docker 推荐）
+### 1.2 部署步骤（推荐）
+
+推荐直接使用一键部署脚本：
 
 ```bash
-# 下载代码
-git clone https://github.com/your-finance/allfi.git
-cd allfi
-
-# 配置环境变量
-cp .env.example .env
-# 编辑 .env，设置 ALLFI_MASTER_KEY（用 openssl rand -base64 32 生成）
-
-# 启动服务
-docker-compose up -d
+curl -sSL https://raw.githubusercontent.com/your-finance/allfi/master/deploy/docker-deploy.sh | bash
 ```
 
-访问 http://localhost:3174 即可使用。
+默认访问地址：
 
-> 详细部署说明见 [部署指南](./deployment-guide.md)。
+- 页面与 API：`http://localhost:3000`
+- Swagger：`http://localhost:3000/swagger/`
+
+如果你是维护者，或者希望使用仓库根目录的 Docker Compose / 本地开发模式，请直接查看 [部署指南](./deployment-guide.md)。
 
 ### 1.3 首次使用流程
 
@@ -309,7 +305,7 @@ cp core/data/allfi.db ./backup/
 docker-compose ps
 
 # 检查端口占用
-lsof -i :3174
+lsof -i :3000
 lsof -i :8080
 
 # 重启服务
@@ -365,4 +361,4 @@ cp backup/allfi-latest.db core/data/allfi.db
 ---
 
 **文档维护者**: @allfi
-**最后更新**: 2026-02-11
+**最后更新**: 2026-03-31

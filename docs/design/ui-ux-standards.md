@@ -1,6 +1,6 @@
 # AllFi UI/UX 设计规范
 
-> 版本：v2.1 | 更新时间：2026-02-28
+> 版本：v2.2 | 更新时间：2026-03-31
 
 ---
 
@@ -431,27 +431,25 @@ import { PhChartPieSlice, PhWallet, PhGear } from '@phosphor-icons/vue'
 
 ## 十、组件清单
 
-### 已实现组件（57 个）
+### 已实现组件（58 个）
 
-**基础组件（7 个）**：StatCard、CryptoIcon、ToastContainer、NotificationPanel、BottomNav、PullToRefresh、VersionBadge
+**基础与导航**：StatCard、CryptoIcon、ToastContainer、BottomNav、VersionBadge、CommandPalette、PullToRefresh
 
-**对话框/抽屉（8 个）**：AddAccountDialog、PriceAlertDialog、BatchImportDialog、AddGoalDialog、AddStrategyDialog、WalletConnectDialog、AssetDetailDrawer、PortfolioShareDialog
+**表单与弹层**：AddAccountDialog、AddGoalDialog、AddStrategyDialog、BatchImportDialog、PriceAlertDialog、WalletConnectDialog、AssetDetailDrawer、PortfolioShareDialog
 
-**数据展示（5 个）**：GoalCard、HealthScoreCard、ShareCard、CalendarHeatmap、BenchmarkPanel
+**仪表盘与通用展示**：GoalCard、HealthScoreCard、ShareCard、CalendarHeatmap、DashboardCustomizer、AnnualReport、AnnualReportShare
 
-**交易记录（3 个）**：TransactionItem、TransactionTimeline、TransactionFilter
+**交易与账户**：TransactionItem、TransactionTimeline、TransactionFilter、WalletConnectButton
 
-**DeFi/NFT（11 个）**：DeFiOverview、DeFiPositionCard、DeFiMiniCard、NFTOverview、NFTGallery、NFTCard、NFTMiniCard、LendingPositionCard、LendingOptimizer、LendingRateChart、HealthFactorGauge
+**DeFi / NFT / 跨链**：DeFiOverview、DeFiPositionCard、DeFiMiniCard、NFTOverview、NFTGallery、NFTCard、NFTMiniCard、LendingPositionCard、LendingOptimizer、LendingRateChart、HealthFactorGauge、AssetFlowDiagram、BridgeComparison、CrossChainFeeChart、CrossChainTransactionList
 
-**分析与风险（7 个）**：FeeAnalytics、AttributionPanel、DrawdownChart、ForecastPanel、RiskAlertPanel、RiskMetricsChart、RiskOverviewCard、BetaComparisonCard
+**分析与风险**：FeeAnalytics、AttributionPanel、DrawdownChart、ForecastPanel、RiskAlertPanel、RiskMetricsChart、RiskOverviewCard、BetaComparisonCard、BenchmarkPanel
 
-**高级功能（8 个）**：StrategyPanel、RebalanceView、DashboardCustomizer、CommandPalette、OnboardingWizard、BenchmarkPanel、AnnualReport、AnnualReportShare、WalletConnectButton
+**策略与引导**：StrategyPanel、RebalanceView、OnboardingWizard、NotificationPanel
 
-**成就系统（3 个）**：AchievementPanel、AchievementBadge、AchievementUnlock
-
-**其他（5 个）**：WalletConnectButton、PullToRefresh、AttributionPanel、DrawdownChart、ForecastPanel、RiskAlertPanel、RiskMetricsChart、RiskOverviewCard、BetaComparisonCard
+**成就系统**：AchievementPanel、AchievementBadge、AchievementUnlock
 
 ---
 
 **文档维护者**: @allfi
-**最后更新**: 2026-02-28
+**最后更新**: 2026-03-31

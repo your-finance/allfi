@@ -76,7 +76,7 @@ describe("authStore", () => {
     const store = useAuthStore();
     const result = await store.login("1234");
 
-    expect(result).toBe(true);
+    expect(result).toEqual({ success: true, requires2FA: false });
     expect(store.isAuthenticated).toBe(true);
     expect(store.token).toBe("login-jwt-token");
   });

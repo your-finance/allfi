@@ -51,9 +51,7 @@ func TestFrankfurterProvider_SupportsSymbol(t *testing.T) {
 }
 
 func TestFrankfurterProvider_FetchRate(t *testing.T) {
-	if testing.Short() {
-		t.Skip("跳过集成测试")
-	}
+	requireOnlineProviderTests(t)
 
 	p := NewFrankfurterProvider()
 	ctx := context.Background()
@@ -80,9 +78,7 @@ func TestFrankfurterProvider_FetchRate_UnsupportedSymbol(t *testing.T) {
 }
 
 func TestFrankfurterProvider_FetchRates(t *testing.T) {
-	if testing.Short() {
-		t.Skip("跳过集成测试")
-	}
+	requireOnlineProviderTests(t)
 
 	p := NewFrankfurterProvider()
 	ctx := context.Background()
@@ -101,9 +97,7 @@ func TestFrankfurterProvider_FetchRates(t *testing.T) {
 }
 
 func TestFrankfurterProvider_IsHealthy(t *testing.T) {
-	if testing.Short() {
-		t.Skip("跳过集成测试")
-	}
+	requireOnlineProviderTests(t)
 
 	p := NewFrankfurterProvider()
 	ctx := context.Background()
